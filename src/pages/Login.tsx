@@ -16,15 +16,8 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   
-  const { signIn, user } = useAuth();
-  const navigate = useNavigate();
+  const { signIn } = useAuth();
   const { toast } = useToast();
-
-  useEffect(() => {
-    if (user) {
-      navigate("/dashboard");
-    }
-  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
