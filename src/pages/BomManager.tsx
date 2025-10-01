@@ -1,13 +1,19 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Package } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
+import { ProductList } from "@/components/bom/ProductList";
+import { BomEditor } from "@/components/bom/BomEditor";
+import { ComponentManager } from "@/components/bom/ComponentManager";
 
 export default function BomManager() {
   const { profile, loading } = useAuth();
   const navigate = useNavigate();
+  const [selectedProduct, setSelectedProduct] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!loading && !profile) {
@@ -32,41 +38,31 @@ export default function BomManager() {
           </p>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="border-border">
-            <CardHeader>
-              <CardTitle>Item Selector</CardTitle>
-              <CardDescription>
-                Search and select an item to view or edit its BOM
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-center h-64 text-muted-foreground">
-                <div className="text-center space-y-2">
-                  <Package className="h-12 w-12 mx-auto" />
-                  <p>Item selection coming soon</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <Tabs defaultValue="products" className="w-full">
+          <TabsList>
+            <TabsTrigger value="products">Products & BOM</TabsTrigger>
+            <TabsTrigger value="components">Components</TabsTrigger>
+          </TabsList>
 
-          <Card className="border-border">
-            <CardHeader>
-              <CardTitle>BOM Editor</CardTitle>
-              <CardDescription>
-                Edit components for the selected item
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-center h-64 text-muted-foreground">
-                <div className="text-center space-y-2">
-                  <Package className="h-12 w-12 mx-auto" />
-                  <p>Select an item to edit its BOM</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+          <TabsContent value="products" className="space-y-6 mt-6">
+            <div className="grid gap-6 lg:grid-cols-2">
+              <ProductList
+                onSelectProduct={(product) =>
+                  setSelectedProduct({ id: product.id, name: product.name })
+                }
+                selectedProductId={selectedProduct?.id}
+              />
+              <BomEditor
+                productId={selectedProduct?.id}
+                productName={selectedProduct?.name}
+              />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="components" className="mt-6">
+            <ComponentManager />
+          </TabsContent>
+        </Tabs>
       </div>
     </DashboardLayout>
   );
