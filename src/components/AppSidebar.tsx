@@ -5,9 +5,9 @@ import {
   Factory, 
   Barcode, 
   Warehouse,
-  LogOut,
-  Citrus
+  LogOut
 } from "lucide-react";
+import tlcLogo from "@/assets/tlc-logo.png";
 import {
   Sidebar,
   SidebarContent,
@@ -75,9 +75,11 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-2 px-2 py-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-            <Citrus className="h-6 w-6 text-primary-foreground" />
-          </div>
+          <img 
+            src={tlcLogo} 
+            alt="The Lemon Co Logo" 
+            className="h-10 w-10 rounded-lg"
+          />
           {state === "expanded" && (
             <div className="flex flex-col">
               <span className="text-lg font-bold text-sidebar-foreground">
