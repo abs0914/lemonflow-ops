@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { SetupDemoButton } from "@/components/SetupDemoButton";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -101,16 +102,19 @@ export default function Login() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm">Demo Credentials</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-1 text-sm">
-                <p className="text-muted-foreground">
-                  <span className="font-medium">Admin:</span> admin@lemonco.com / admin123
-                </p>
-                <p className="text-muted-foreground">
-                  <span className="font-medium">Production:</span> production@lemonco.com / prod123
-                </p>
-                <p className="text-muted-foreground">
-                  <span className="font-medium">Warehouse:</span> warehouse@lemonco.com / wh123
-                </p>
+              <CardContent className="space-y-3 text-sm">
+                <div className="space-y-1">
+                  <p className="text-muted-foreground">
+                    <span className="font-medium">Admin:</span> admin@lemonco.com / admin123
+                  </p>
+                  <p className="text-muted-foreground">
+                    <span className="font-medium">Production:</span> production@lemonco.com / prod123
+                  </p>
+                  <p className="text-muted-foreground">
+                    <span className="font-medium">Warehouse:</span> warehouse@lemonco.com / wh123
+                  </p>
+                </div>
+                <SetupDemoButton />
               </CardContent>
             </Card>
           </CardContent>

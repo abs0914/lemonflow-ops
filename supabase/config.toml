@@ -1,1 +1,4 @@
 project_id = "pukezienbcenozlqmunf"
+
+[functions.setup-demo-users]
+verify_jwt = false
