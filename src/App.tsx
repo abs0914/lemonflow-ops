@@ -9,6 +9,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import BomManager from "./pages/BomManager";
 import Production from "./pages/Production";
+import ProductionCreate from "./pages/ProductionCreate";
 import Labels from "./pages/Labels";
 import Warehouse from "./pages/Warehouse";
 import NotFound from "./pages/NotFound";
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/dashboard/bom" element={<BomManager />} />
             <Route path="/dashboard/production" element={<Production />} />
+            <Route path="/dashboard/production/create" element={<ProductionCreate />} />
             <Route path="/dashboard/labels" element={<Labels />} />
             <Route path="/dashboard/warehouse" element={<Warehouse />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
