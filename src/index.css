@@ -53,13 +53,13 @@ All colors MUST be HSL.
     --radius: 0.5rem;
     
     /* Sidebar */
-    --sidebar-background: 26 83% 14%;
-    --sidebar-foreground: 47 96% 53%;
+    --sidebar-background: 196 69% 49%;
+    --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 47 96% 53%;
-    --sidebar-primary-foreground: 26 83% 14%;
-    --sidebar-accent: 26 70% 20%;
-    --sidebar-accent-foreground: 47 96% 53%;
-    --sidebar-border: 26 70% 20%;
+    --sidebar-primary-foreground: 196 69% 49%;
+    --sidebar-accent: 196 69% 40%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 196 69% 35%;
     --sidebar-ring: 47 96% 53%;
     
     /* Animations & Transitions */
@@ -100,13 +100,13 @@ All colors MUST be HSL.
     --input: 26 70% 25%;
     --ring: 47 96% 53%;
     
-    --sidebar-background: 26 90% 10%;
-    --sidebar-foreground: 47 96% 53%;
+    --sidebar-background: 196 69% 49%;
+    --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 47 96% 53%;
-    --sidebar-primary-foreground: 26 90% 10%;
-    --sidebar-accent: 26 70% 20%;
-    --sidebar-accent-foreground: 47 96% 53%;
-    --sidebar-border: 26 70% 20%;
+    --sidebar-primary-foreground: 196 69% 49%;
+    --sidebar-accent: 196 69% 40%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 196 69% 35%;
     --sidebar-ring: 47 96% 53%;
   }
 }
