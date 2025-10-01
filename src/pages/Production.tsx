@@ -3,12 +3,18 @@ import { useNavigate } from "react-router-dom";
 import { Factory, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAssemblyOrders } from "@/hooks/useAssemblyOrders";
+import { format } from "date-fns";
 
 export default function Production() {
   const { profile, loading } = useAuth();
   const navigate = useNavigate();
+  const { data: openOrders = [], isLoading: loadingOpen } = useAssemblyOrders("pending");
+  const { data: completedOrders = [], isLoading: loadingCompleted } = useAssemblyOrders("completed");
 
   useEffect(() => {
     if (!loading && !profile) {
@@ -50,22 +56,100 @@ export default function Production() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-center h-64 text-muted-foreground">
-              <div className="text-center space-y-4">
-                <Factory className="h-12 w-12 mx-auto" />
-                <div>
-                  <p className="font-medium">No open assembly orders</p>
-                  <p className="text-sm">Create your first production order to get started</p>
-                </div>
-                <Button 
-                  onClick={() => navigate("/dashboard/production/create")}
-                  variant="outline"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create First Order
-                </Button>
+            {loadingOpen ? (
+              <div className="flex items-center justify-center h-32">
+                <p className="text-muted-foreground">Loading...</p>
               </div>
-            </div>
+            ) : openOrders.length === 0 ? (
+              <div className="flex items-center justify-center h-64 text-muted-foreground">
+                <div className="text-center space-y-4">
+                  <Factory className="h-12 w-12 mx-auto" />
+                  <div>
+                    <p className="font-medium">No open assembly orders</p>
+                    <p className="text-sm">Create your first production order to get started</p>
+                  </div>
+                  <Button 
+                    onClick={() => navigate("/dashboard/production/create")}
+                    variant="outline"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create First Order
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Product</TableHead>
+                    <TableHead>SKU</TableHead>
+                    <TableHead>Quantity</TableHead>
+                    <TableHead>Created By</TableHead>
+                    <TableHead>Due Date</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {openOrders.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-medium">{order.products?.name}</TableCell>
+                      <TableCell>{order.products?.sku}</TableCell>
+                      <TableCell>{order.quantity}</TableCell>
+                      <TableCell>{order.user_profiles?.full_name}</TableCell>
+                      <TableCell>
+                        {order.due_date ? format(new Date(order.due_date), "MMM dd, yyyy") : "-"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{order.status}</Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-border">
+          <CardHeader>
+            <CardTitle>Completed Assembly Orders</CardTitle>
+            <CardDescription>
+              History of completed production orders
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingCompleted ? (
+              <div className="flex items-center justify-center h-32">
+                <p className="text-muted-foreground">Loading...</p>
+              </div>
+            ) : completedOrders.length === 0 ? (
+              <div className="flex items-center justify-center h-32 text-muted-foreground">
+                <p>No completed assembly orders</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Product</TableHead>
+                    <TableHead>SKU</TableHead>
+                    <TableHead>Quantity</TableHead>
+                    <TableHead>Created By</TableHead>
+                    <TableHead>Completed</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {completedOrders.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-medium">{order.products?.name}</TableCell>
+                      <TableCell>{order.products?.sku}</TableCell>
+                      <TableCell>{order.quantity}</TableCell>
+                      <TableCell>{order.user_profiles?.full_name}</TableCell>
+                      <TableCell>{format(new Date(order.updated_at), "MMM dd, yyyy")}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </div>
