@@ -162,6 +162,7 @@ export type Database = {
           id: string
           name: string
           sku: string
+          stock_quantity: number
           unit: string
           updated_at: string
         }
@@ -172,6 +173,7 @@ export type Database = {
           id?: string
           name: string
           sku: string
+          stock_quantity?: number
           unit?: string
           updated_at?: string
         }
@@ -182,6 +184,7 @@ export type Database = {
           id?: string
           name?: string
           sku?: string
+          stock_quantity?: number
           unit?: string
           updated_at?: string
         }
@@ -227,6 +230,7 @@ export type Database = {
           id: string
           name: string
           sku: string
+          stock_quantity: number
           unit: string
           updated_at: string
         }
@@ -236,6 +240,7 @@ export type Database = {
           id?: string
           name: string
           sku: string
+          stock_quantity?: number
           unit?: string
           updated_at?: string
         }
@@ -245,8 +250,48 @@ export type Database = {
           id?: string
           name?: string
           sku?: string
+          stock_quantity?: number
           unit?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      stock_movements: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          item_type: string
+          movement_type: string
+          notes: string | null
+          performed_by: string
+          quantity: number
+          reference_id: string | null
+          reference_type: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          item_type: string
+          movement_type: string
+          notes?: string | null
+          performed_by: string
+          quantity: number
+          reference_id?: string | null
+          reference_type?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          item_type?: string
+          movement_type?: string
+          notes?: string | null
+          performed_by?: string
+          quantity?: number
+          reference_id?: string | null
+          reference_type?: string | null
         }
         Relationships: []
       }

@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { ProductDialog } from "./ProductDialog";
+import { StockAdjustmentDialog } from "@/components/inventory/StockAdjustmentDialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -15,6 +16,7 @@ interface Product {
   sku: string;
   description: string | null;
   unit: string;
+  stock_quantity: number;
 }
 
 interface ProductListProps {
@@ -26,6 +28,8 @@ export function ProductList({ onSelectProduct, selectedProductId }: ProductListP
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [stockDialogOpen, setStockDialogOpen] = useState(false);
+  const [adjustingProduct, setAdjustingProduct] = useState<Product | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -75,6 +79,11 @@ export function ProductList({ onSelectProduct, selectedProductId }: ProductListP
     setDialogOpen(true);
   };
 
+  const handleAdjustStock = (product: Product) => {
+    setAdjustingProduct(product);
+    setStockDialogOpen(true);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -100,19 +109,20 @@ export function ProductList({ onSelectProduct, selectedProductId }: ProductListP
                 <TableHead>SKU</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Unit</TableHead>
+                <TableHead className="text-right">Stock</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center text-muted-foreground">
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : filteredProducts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center text-muted-foreground">
                     No products found
                   </TableCell>
                 </TableRow>
@@ -129,7 +139,23 @@ export function ProductList({ onSelectProduct, selectedProductId }: ProductListP
                     <TableCell>{product.name}</TableCell>
                     <TableCell>{product.unit}</TableCell>
                     <TableCell className="text-right">
+                      <span className={product.stock_quantity <= 0 ? "text-destructive font-medium" : ""}>
+                        {product.stock_quantity}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAdjustStock(product);
+                          }}
+                          title="Adjust Stock"
+                        >
+                          <Package className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -166,6 +192,17 @@ export function ProductList({ onSelectProduct, selectedProductId }: ProductListP
           onOpenChange={setDialogOpen}
           product={editingProduct}
         />
+
+        {adjustingProduct && (
+          <StockAdjustmentDialog
+            open={stockDialogOpen}
+            onOpenChange={setStockDialogOpen}
+            itemType="product"
+            itemId={adjustingProduct.id}
+            itemName={adjustingProduct.name}
+            currentStock={adjustingProduct.stock_quantity}
+          />
+        )}
       </CardContent>
     </Card>
   );
