@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Citrus, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { SetupDemoButton } from "@/components/SetupDemoButton";
+import logoImage from "@/assets/tlc-logo.png";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -46,8 +45,8 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-accent/10 to-primary/5 p-4">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-3 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary">
-            <Citrus className="h-10 w-10 text-primary-foreground" />
+          <div className="mx-auto flex h-20 w-20 items-center justify-center">
+            <img src={logoImage} alt="The Lemon Co Logo" className="h-full w-full object-contain" />
           </div>
           <CardTitle className="text-3xl font-bold">The Lemon Co</CardTitle>
           <CardDescription className="text-base">
@@ -90,26 +89,6 @@ export default function Login() {
                 autoComplete="current-password"
               />
             </div>
-
-            <Card className="bg-muted border-border">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Demo Credentials</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div className="space-y-1">
-                  <p className="text-muted-foreground">
-                    <span className="font-medium">Admin:</span> admin@lemonco.com / admin123
-                  </p>
-                  <p className="text-muted-foreground">
-                    <span className="font-medium">Production:</span> production@lemonco.com / prod123
-                  </p>
-                  <p className="text-muted-foreground">
-                    <span className="font-medium">Warehouse:</span> warehouse@lemonco.com / wh123
-                  </p>
-                </div>
-                <SetupDemoButton />
-              </CardContent>
-            </Card>
           </CardContent>
           
           <CardFooter>
