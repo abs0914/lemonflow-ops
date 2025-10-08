@@ -12,6 +12,7 @@ import Production from "./pages/Production";
 import ProductionCreate from "./pages/ProductionCreate";
 import Labels from "./pages/Labels";
 import Warehouse from "./pages/Warehouse";
+import Inventory from "./pages/Inventory";
 import NotFound from "./pages/NotFound";
 
 // Create QueryClient instance outside component to prevent recreation
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/dashboard/production/create" element={<ProductionCreate />} />
             <Route path="/dashboard/labels" element={<Labels />} />
             <Route path="/dashboard/warehouse" element={<Warehouse />} />
+            <Route path="/dashboard/inventory" element={<Inventory />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

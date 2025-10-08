@@ -204,37 +204,58 @@ export type Database = {
       }
       components: {
         Row: {
+          autocount_item_code: string | null
           cost_per_unit: number | null
           created_at: string
           description: string | null
+          has_batch_no: boolean | null
           id: string
+          item_group: string | null
+          item_type: string | null
+          last_synced_at: string | null
           name: string
+          price: number | null
           reserved_quantity: number
           sku: string
+          stock_control: boolean | null
           stock_quantity: number
           unit: string
           updated_at: string
         }
         Insert: {
+          autocount_item_code?: string | null
           cost_per_unit?: number | null
           created_at?: string
           description?: string | null
+          has_batch_no?: boolean | null
           id?: string
+          item_group?: string | null
+          item_type?: string | null
+          last_synced_at?: string | null
           name: string
+          price?: number | null
           reserved_quantity?: number
           sku: string
+          stock_control?: boolean | null
           stock_quantity?: number
           unit?: string
           updated_at?: string
         }
         Update: {
+          autocount_item_code?: string | null
           cost_per_unit?: number | null
           created_at?: string
           description?: string | null
+          has_batch_no?: boolean | null
           id?: string
+          item_group?: string | null
+          item_type?: string | null
+          last_synced_at?: string | null
           name?: string
+          price?: number | null
           reserved_quantity?: number
           sku?: string
+          stock_control?: boolean | null
           stock_quantity?: number
           unit?: string
           updated_at?: string

@@ -5,6 +5,7 @@ import {
   Factory, 
   Barcode, 
   Warehouse,
+  Database,
   LogOut
 } from "lucide-react";
 import tlcLogo from "@/assets/tlc-logo.png";
@@ -61,6 +62,12 @@ export function AppSidebar() {
       title: "Warehouse",
       url: "/dashboard/warehouse",
       icon: Warehouse,
+      roles: ["Admin", "Warehouse"],
+    },
+    {
+      title: "Inventory",
+      url: "/dashboard/inventory",
+      icon: Database,
       roles: ["Admin", "Warehouse"],
     },
   ];
