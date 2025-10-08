@@ -44,7 +44,9 @@ export type Database = {
           notes: string | null
           product_id: string
           quantity: number
+          reservation_notes: string | null
           status: string
+          stock_reserved: boolean | null
           updated_at: string
         }
         Insert: {
@@ -55,7 +57,9 @@ export type Database = {
           notes?: string | null
           product_id: string
           quantity: number
+          reservation_notes?: string | null
           status?: string
+          stock_reserved?: boolean | null
           updated_at?: string
         }
         Update: {
@@ -66,7 +70,9 @@ export type Database = {
           notes?: string | null
           product_id?: string
           quantity?: number
+          reservation_notes?: string | null
           status?: string
+          stock_reserved?: boolean | null
           updated_at?: string
         }
         Relationships: [
@@ -106,6 +112,48 @@ export type Database = {
           entity_type?: string
           id?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      autocount_sync_log: {
+        Row: {
+          autocount_doc_no: string | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          reference_id: string
+          reference_type: string
+          retry_count: number | null
+          sync_status: string
+          sync_type: string
+          synced_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          autocount_doc_no?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          reference_id: string
+          reference_type: string
+          retry_count?: number | null
+          sync_status?: string
+          sync_type: string
+          synced_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          autocount_doc_no?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          reference_id?: string
+          reference_type?: string
+          retry_count?: number | null
+          sync_status?: string
+          sync_type?: string
+          synced_at?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -161,6 +209,7 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          reserved_quantity: number
           sku: string
           stock_quantity: number
           unit: string
@@ -172,6 +221,7 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
+          reserved_quantity?: number
           sku: string
           stock_quantity?: number
           unit?: string
@@ -183,6 +233,7 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          reserved_quantity?: number
           sku?: string
           stock_quantity?: number
           unit?: string
@@ -258,6 +309,9 @@ export type Database = {
       }
       stock_movements: {
         Row: {
+          autocount_doc_no: string | null
+          autocount_synced: boolean | null
+          batch_number: string | null
           created_at: string
           id: string
           item_id: string
@@ -266,10 +320,17 @@ export type Database = {
           notes: string | null
           performed_by: string
           quantity: number
+          quantity_in_base_unit: number | null
           reference_id: string | null
           reference_type: string | null
+          supplier_reference: string | null
+          unit_received: string | null
+          warehouse_location: string | null
         }
         Insert: {
+          autocount_doc_no?: string | null
+          autocount_synced?: boolean | null
+          batch_number?: string | null
           created_at?: string
           id?: string
           item_id: string
@@ -278,10 +339,17 @@ export type Database = {
           notes?: string | null
           performed_by: string
           quantity: number
+          quantity_in_base_unit?: number | null
           reference_id?: string | null
           reference_type?: string | null
+          supplier_reference?: string | null
+          unit_received?: string | null
+          warehouse_location?: string | null
         }
         Update: {
+          autocount_doc_no?: string | null
+          autocount_synced?: boolean | null
+          batch_number?: string | null
           created_at?: string
           id?: string
           item_id?: string
@@ -290,8 +358,36 @@ export type Database = {
           notes?: string | null
           performed_by?: string
           quantity?: number
+          quantity_in_base_unit?: number | null
           reference_id?: string | null
           reference_type?: string | null
+          supplier_reference?: string | null
+          unit_received?: string | null
+          warehouse_location?: string | null
+        }
+        Relationships: []
+      }
+      unit_conversions: {
+        Row: {
+          conversion_factor: number
+          created_at: string | null
+          from_unit: string
+          id: string
+          to_unit: string
+        }
+        Insert: {
+          conversion_factor: number
+          created_at?: string | null
+          from_unit: string
+          id?: string
+          to_unit: string
+        }
+        Update: {
+          conversion_factor?: number
+          created_at?: string | null
+          from_unit?: string
+          id?: string
+          to_unit?: string
         }
         Relationships: []
       }
@@ -327,6 +423,22 @@ export type Database = {
       is_admin: {
         Args: { user_id: string }
         Returns: boolean
+      }
+      release_stock_reservation: {
+        Args: {
+          p_assembly_order_id: string
+          p_product_id: string
+          p_quantity: number
+        }
+        Returns: undefined
+      }
+      reserve_stock_for_assembly: {
+        Args: {
+          p_assembly_order_id: string
+          p_product_id: string
+          p_quantity: number
+        }
+        Returns: Json
       }
     }
     Enums: {
