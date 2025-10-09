@@ -6,17 +6,25 @@ import { supabase } from "@/integrations/supabase/client";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { InventoryTable } from "@/components/inventory/InventoryTable";
 import { InventoryFilters } from "@/components/inventory/InventoryFilters";
+import { MobileInventoryCard } from "@/components/inventory/MobileInventoryCard";
+import { StockAdjustmentDialog } from "@/components/inventory/StockAdjustmentDialog";
+import { FloatingActionButton } from "@/components/ui/floating-action-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, AlertCircle, Database } from "lucide-react";
+import { Package, AlertCircle, Database, Plus, RefreshCw } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Component } from "@/types/inventory";
 
 export default function Inventory() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
 
+  const isMobile = useIsMobile();
   const [searchTerm, setSearchTerm] = useState("");
   const [itemGroupFilter, setItemGroupFilter] = useState<string>("all");
   const [itemTypeFilter, setItemTypeFilter] = useState<string>("all");
   const [stockStatusFilter, setStockStatusFilter] = useState<string>("all");
+  const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false);
+  const [selectedComponent, setSelectedComponent] = useState<Component | null>(null);
 
   // Redirect if not authenticated or not authorized
   if (!user) {
@@ -107,6 +115,11 @@ export default function Inventory() {
   const lowStockCount = components?.filter(c => (c.stock_quantity - c.reserved_quantity) > 0 && (c.stock_quantity - c.reserved_quantity) < 10).length || 0;
   const outOfStockCount = components?.filter(c => (c.stock_quantity - c.reserved_quantity) <= 0).length || 0;
 
+  const handleAdjustStock = (component: Component) => {
+    setSelectedComponent(component);
+    setAdjustmentDialogOpen(true);
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -167,13 +180,62 @@ export default function Inventory() {
           itemTypes={itemTypes || []}
         />
 
-        {/* Inventory Table */}
-        <InventoryTable
-          components={components || []}
-          isLoading={isLoading}
-          onRefetch={refetch}
-        />
+        {/* Inventory Table/Cards */}
+        {isMobile ? (
+          <div className="space-y-3">
+            {isLoading ? (
+              <div className="flex items-center justify-center p-8">
+                <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : components && components.length > 0 ? (
+              components.map((component) => (
+                <MobileInventoryCard
+                  key={component.id}
+                  component={component}
+                  onAdjustStock={handleAdjustStock}
+                />
+              ))
+            ) : (
+              <div className="text-center p-8 text-muted-foreground">
+                No inventory items found
+              </div>
+            )}
+          </div>
+        ) : (
+          <InventoryTable
+            components={components || []}
+            isLoading={isLoading}
+            onRefetch={refetch}
+          />
+        )}
       </div>
+
+      {/* Mobile FAB */}
+      {isMobile && (
+        <FloatingActionButton
+          icon={Plus}
+          label="Quick Actions"
+          actions={[
+            {
+              icon: RefreshCw,
+              label: "Refresh",
+              onClick: () => refetch(),
+            },
+          ]}
+        />
+      )}
+
+      {/* Stock Adjustment Dialog */}
+      {selectedComponent && (
+        <StockAdjustmentDialog
+          open={adjustmentDialogOpen}
+          onOpenChange={setAdjustmentDialogOpen}
+          itemType="component"
+          itemId={selectedComponent.id}
+          itemName={selectedComponent.name}
+          currentStock={selectedComponent.stock_quantity}
+        />
+      )}
     </DashboardLayout>
   );
 }

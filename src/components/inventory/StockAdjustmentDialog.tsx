@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ActionSheet } from "@/components/ui/action-sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +11,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface StockAdjustmentFormData {
   movement_type: string;
@@ -37,6 +39,7 @@ export function StockAdjustmentDialog({
   const { toast } = useToast();
   const { profile } = useAuth();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<StockAdjustmentFormData>({
     defaultValues: {
       movement_type: "receipt",
@@ -104,72 +107,88 @@ export function StockAdjustmentDialog({
     mutation.mutate(data);
   };
 
+  const formContent = (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <div className="p-3 bg-muted rounded-md">
+        <p className="text-sm text-muted-foreground">Current Stock</p>
+        <p className="text-2xl font-bold">{currentStock}</p>
+      </div>
+
+      <div>
+        <Label htmlFor="movement_type">Movement Type</Label>
+        <Select
+          value={movementType}
+          onValueChange={(value) => setValue("movement_type", value)}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="receipt">Receipt (Add Stock)</SelectItem>
+            <SelectItem value="issue">Issue (Remove Stock)</SelectItem>
+            <SelectItem value="adjustment">Adjustment (Set Stock)</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label htmlFor="quantity">
+          {movementType === "adjustment" ? "New Stock Level" : "Quantity"}
+        </Label>
+        <Input
+          id="quantity"
+          type="number"
+          step="0.01"
+          {...register("quantity", { 
+            required: "Quantity is required",
+            min: { value: 0, message: "Quantity must be positive" }
+          })}
+          placeholder={movementType === "adjustment" ? "Enter new stock level" : "Enter quantity"}
+        />
+        {errors.quantity && (
+          <span className="text-sm text-destructive">{errors.quantity.message}</span>
+        )}
+      </div>
+
+      <div>
+        <Label htmlFor="notes">Notes</Label>
+        <Textarea
+          id="notes"
+          {...register("notes")}
+          placeholder="Optional notes about this stock movement"
+        />
+      </div>
+
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={mutation.isPending}>
+          {mutation.isPending ? "Updating..." : "Update Stock"}
+        </Button>
+      </div>
+    </form>
+  );
+
+  if (isMobile) {
+    return (
+      <ActionSheet
+        open={open}
+        onOpenChange={onOpenChange}
+        title={`Adjust Stock - ${itemName}`}
+      >
+        {formContent}
+      </ActionSheet>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Adjust Stock - {itemName}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="p-3 bg-muted rounded-md">
-            <p className="text-sm text-muted-foreground">Current Stock</p>
-            <p className="text-2xl font-bold">{currentStock}</p>
-          </div>
-
-          <div>
-            <Label htmlFor="movement_type">Movement Type</Label>
-            <Select
-              value={movementType}
-              onValueChange={(value) => setValue("movement_type", value)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="receipt">Receipt (Add Stock)</SelectItem>
-                <SelectItem value="issue">Issue (Remove Stock)</SelectItem>
-                <SelectItem value="adjustment">Adjustment (Set Stock)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label htmlFor="quantity">
-              {movementType === "adjustment" ? "New Stock Level" : "Quantity"}
-            </Label>
-            <Input
-              id="quantity"
-              type="number"
-              step="0.01"
-              {...register("quantity", { 
-                required: "Quantity is required",
-                min: { value: 0, message: "Quantity must be positive" }
-              })}
-              placeholder={movementType === "adjustment" ? "Enter new stock level" : "Enter quantity"}
-            />
-            {errors.quantity && (
-              <span className="text-sm text-destructive">{errors.quantity.message}</span>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              {...register("notes")}
-              placeholder="Optional notes about this stock movement"
-            />
-          </div>
-
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? "Updating..." : "Update Stock"}
-            </Button>
-          </div>
-        </form>
+        {formContent}
       </DialogContent>
     </Dialog>
   );
