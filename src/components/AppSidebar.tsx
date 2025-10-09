@@ -6,6 +6,9 @@ import {
   Barcode, 
   Warehouse,
   Database,
+  Users,
+  UserCheck,
+  ShoppingCart,
   LogOut
 } from "lucide-react";
 import tlcLogo from "@/assets/tlc-logo.png";
@@ -68,6 +71,24 @@ export function AppSidebar() {
       title: "Inventory",
       url: "/dashboard/inventory",
       icon: Database,
+      roles: ["Admin", "Warehouse"],
+    },
+    {
+      title: "Suppliers",
+      url: "/dashboard/suppliers",
+      icon: Users,
+      roles: ["Admin", "Warehouse"],
+    },
+    {
+      title: "Customers",
+      url: "/dashboard/customers",
+      icon: UserCheck,
+      roles: ["Admin", "Warehouse"],
+    },
+    {
+      title: "Purchasing",
+      url: "/dashboard/purchasing",
+      icon: ShoppingCart,
       roles: ["Admin", "Warehouse"],
     },
   ];
