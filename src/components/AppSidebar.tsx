@@ -31,7 +31,7 @@ import { useAuth } from "@/contexts/AuthContext";
 export function AppSidebar() {
   const { profile, signOut } = useAuth();
   const location = useLocation();
-  const { state } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
 
   const menuItems = [
     {
@@ -77,6 +77,12 @@ export function AppSidebar() {
   );
 
   const isActive = (path: string) => location.pathname === path;
+
+  const handleNavClick = () => {
+    if (isMobile) {
+      setTimeout(() => setOpenMobile(false), 50);
+    }
+  };
 
   return (
     <Sidebar collapsible="icon">
@@ -134,6 +140,7 @@ export function AppSidebar() {
                   >
                     <NavLink 
                       to={item.url}
+                      onClick={handleNavClick}
                       className={({ isActive }) => 
                         isActive 
                           ? "bg-sidebar-accent text-sidebar-primary font-semibold" 
