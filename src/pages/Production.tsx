@@ -76,7 +76,7 @@ export default function Production() {
       navigate("/login");
     }
     if (!loading && profile && !["Admin", "Production"].includes(profile.role)) {
-      navigate("/dashboard");
+      navigate("/login");
     }
   }, [profile, loading, navigate]);
 
@@ -96,7 +96,7 @@ export default function Production() {
           </div>
           {!isMobile && (
             <Button 
-              onClick={() => navigate("/dashboard/production/create")}
+              onClick={() => navigate("/production/create")}
               size="lg"
             >
               <Plus className="mr-2 h-5 w-5" />
@@ -126,7 +126,7 @@ export default function Production() {
                     <p className="text-sm">Create your first production order to get started</p>
                   </div>
                   <Button 
-                    onClick={() => navigate("/dashboard/production/create")}
+                    onClick={() => navigate("/production/create")}
                     variant="outline"
                   >
                     <Plus className="mr-2 h-4 w-4" />
@@ -240,7 +240,7 @@ export default function Production() {
             {
               icon: Plus,
               label: "Create Order",
-              onClick: () => navigate("/dashboard/production/create"),
+              onClick: () => navigate("/production/create"),
             },
             {
               icon: RefreshCw,

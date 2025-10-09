@@ -38,15 +38,15 @@ const App = () => (
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<Login />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/dashboard/bom" element={<BomManager />} />
-            <Route path="/dashboard/production" element={<Production />} />
-            <Route path="/dashboard/production/create" element={<ProductionCreate />} />
-            <Route path="/dashboard/labels" element={<Labels />} />
-            <Route path="/dashboard/warehouse" element={<Warehouse />} />
-            <Route path="/dashboard/inventory" element={<Inventory />} />
-            <Route path="/dashboard/suppliers" element={<Suppliers />} />
-            <Route path="/dashboard/customers" element={<Customers />} />
-            <Route path="/dashboard/purchasing" element={<Purchasing />} />
+            <Route path="/bom" element={<BomManager />} />
+            <Route path="/production" element={<Production />} />
+            <Route path="/production/create" element={<ProductionCreate />} />
+            <Route path="/labels" element={<Labels />} />
+            <Route path="/warehouse" element={<Warehouse />} />
+            <Route path="/inventory" element={<Inventory />} />
+            <Route path="/suppliers" element={<Suppliers />} />
+            <Route path="/customers" element={<Customers />} />
+            <Route path="/purchasing" element={<Purchasing />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

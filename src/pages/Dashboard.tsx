@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Clock, Package, Factory, CheckCircle, AlertCircle } from "lucide-react";
+import { Clock, Package, Factory, CheckCircle, AlertCircle, Plus, Barcode, FileText } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -57,22 +57,25 @@ export default function Dashboard() {
     {
       title: "Create Assembly Order",
       description: "Start a new production order",
-      icon: Factory,
-      path: "/dashboard/production/create",
-      roles: ["Admin", "Production"],
+      icon: Plus,
+      path: "/production/create",
+      bgColor: "from-green-500 to-emerald-500",
+      roles: ["Admin", "Warehouse"],
     },
     {
-      title: "Print Labels",
-      description: "Generate barcode labels",
-      icon: Package,
-      path: "/dashboard/labels",
-      roles: ["Admin", "Production", "Warehouse"],
+      title: "Generate Labels",
+      description: "Generate product labels",
+      icon: Barcode,
+      path: "/labels",
+      bgColor: "from-purple-500 to-pink-500",
+      roles: ["Admin", "Warehouse"],
     },
     {
-      title: "Manage BOMs",
-      description: "Edit bills of materials",
-      icon: CheckCircle,
-      path: "/dashboard/bom",
+      title: "Manage BOM",
+      description: "Manage bills of materials",
+      icon: FileText,
+      path: "/bom",
+      bgColor: "from-blue-500 to-cyan-500",
       roles: ["Admin"],
     },
   ];

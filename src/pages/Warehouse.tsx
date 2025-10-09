@@ -24,7 +24,7 @@ export default function Warehouse() {
       navigate("/login");
     }
     if (!loading && profile && !["Admin", "Warehouse"].includes(profile.role)) {
-      navigate("/dashboard");
+      navigate("/login");
     }
   }, [profile, loading, navigate]);
 

@@ -23,7 +23,7 @@ export default function BomManager() {
     }
     if (!loading && profile && profile.role !== "Admin") {
       console.log("BomManager - Not admin, redirecting to dashboard. Role:", profile.role);
-      navigate("/dashboard");
+      navigate("/login");
     }
   }, [profile, loading, navigate]);
 

@@ -33,7 +33,7 @@ export default function Inventory() {
   }
 
   if (profile?.role !== "Admin" && profile?.role !== "Warehouse") {
-    navigate("/dashboard");
+    navigate("/login");
     return null;
   }
 

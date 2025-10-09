@@ -74,7 +74,7 @@ export default function ProductionCreate() {
       navigate("/login");
     }
     if (!loading && profile && !["Admin", "Production"].includes(profile.role)) {
-      navigate("/dashboard");
+      navigate("/login");
     }
   }, [profile, loading, navigate]);
 
@@ -113,7 +113,7 @@ export default function ProductionCreate() {
         title: "Success",
         description: "Assembly order created successfully",
       });
-      navigate("/dashboard/production");
+      navigate("/production");
     },
     onError: (error: Error) => {
       toast({
@@ -139,7 +139,7 @@ export default function ProductionCreate() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate("/dashboard/production")}
+            onClick={() => navigate("/production")}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -308,7 +308,7 @@ export default function ProductionCreate() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => navigate("/dashboard/production")}
+                    onClick={() => navigate("/production")}
                   >
                     Cancel
                   </Button>

@@ -53,7 +53,7 @@ export default function Purchasing() {
             <p className="text-muted-foreground">Manage purchase orders and procurement</p>
           </div>
           {!isMobile && (
-            <Button onClick={() => navigate("/dashboard/purchasing/create")}>
+            <Button onClick={() => navigate("/purchasing/create")}>
               <Plus className="mr-2 h-4 w-4" />
               New Purchase Order
             </Button>
@@ -95,7 +95,7 @@ export default function Purchasing() {
                   <MobilePOCard
                     key={order.id}
                     order={order}
-                    onClick={() => navigate(`/dashboard/purchasing/${order.id}`)}
+                    onClick={() => navigate(`/purchasing/${order.id}`)}
                   />
                 ))}
                 {filteredOrders?.length === 0 && (
@@ -137,7 +137,7 @@ export default function Purchasing() {
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          onClick={() => navigate(`/dashboard/purchasing/${order.id}`)}
+                          onClick={() => navigate(`/purchasing/${order.id}`)}
                         >
                           View
                         </Button>
@@ -160,7 +160,7 @@ export default function Purchasing() {
 
         {isMobile && (
           <FloatingActionButton 
-            onClick={() => navigate("/dashboard/purchasing/create")} 
+            onClick={() => navigate("/purchasing/create")} 
             icon={Plus} 
           />
         )}
