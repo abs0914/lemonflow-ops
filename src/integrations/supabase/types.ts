@@ -262,6 +262,54 @@ export type Database = {
         }
         Relationships: []
       }
+      customers: {
+        Row: {
+          address: string | null
+          autocount_synced: boolean
+          company_name: string
+          contact_person: string | null
+          created_at: string
+          credit_terms: number | null
+          customer_code: string
+          email: string | null
+          id: string
+          is_active: boolean
+          last_synced_at: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          autocount_synced?: boolean
+          company_name: string
+          contact_person?: string | null
+          created_at?: string
+          credit_terms?: number | null
+          customer_code: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          last_synced_at?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          autocount_synced?: boolean
+          company_name?: string
+          contact_person?: string | null
+          created_at?: string
+          credit_terms?: number | null
+          customer_code?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          last_synced_at?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       label_templates: {
         Row: {
           created_at: string
@@ -328,6 +376,119 @@ export type Database = {
         }
         Relationships: []
       }
+      purchase_order_lines: {
+        Row: {
+          component_id: string
+          created_at: string
+          id: string
+          line_number: number
+          line_remarks: string | null
+          purchase_order_id: string
+          quantity: number
+          unit_price: number
+          uom: string
+          updated_at: string
+        }
+        Insert: {
+          component_id: string
+          created_at?: string
+          id?: string
+          line_number: number
+          line_remarks?: string | null
+          purchase_order_id: string
+          quantity: number
+          unit_price: number
+          uom: string
+          updated_at?: string
+        }
+        Update: {
+          component_id?: string
+          created_at?: string
+          id?: string
+          line_number?: number
+          line_remarks?: string | null
+          purchase_order_id?: string
+          quantity?: number
+          unit_price?: number
+          uom?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_order_lines_component_id_fkey"
+            columns: ["component_id"]
+            isOneToOne: false
+            referencedRelation: "components"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_lines_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_orders: {
+        Row: {
+          autocount_doc_no: string | null
+          autocount_synced: boolean
+          created_at: string
+          created_by: string
+          delivery_date: string | null
+          doc_date: string
+          id: string
+          po_number: string
+          remarks: string | null
+          status: string
+          supplier_id: string
+          sync_error_message: string | null
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          autocount_doc_no?: string | null
+          autocount_synced?: boolean
+          created_at?: string
+          created_by: string
+          delivery_date?: string | null
+          doc_date: string
+          id?: string
+          po_number: string
+          remarks?: string | null
+          status?: string
+          supplier_id: string
+          sync_error_message?: string | null
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          autocount_doc_no?: string | null
+          autocount_synced?: boolean
+          created_at?: string
+          created_by?: string
+          delivery_date?: string | null
+          doc_date?: string
+          id?: string
+          po_number?: string
+          remarks?: string | null
+          status?: string
+          supplier_id?: string
+          sync_error_message?: string | null
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_movements: {
         Row: {
           autocount_doc_no: string | null
@@ -340,6 +501,7 @@ export type Database = {
           movement_type: string
           notes: string | null
           performed_by: string
+          purchase_order_id: string | null
           quantity: number
           quantity_in_base_unit: number | null
           reference_id: string | null
@@ -359,6 +521,7 @@ export type Database = {
           movement_type: string
           notes?: string | null
           performed_by: string
+          purchase_order_id?: string | null
           quantity: number
           quantity_in_base_unit?: number | null
           reference_id?: string | null
@@ -378,6 +541,7 @@ export type Database = {
           movement_type?: string
           notes?: string | null
           performed_by?: string
+          purchase_order_id?: string | null
           quantity?: number
           quantity_in_base_unit?: number | null
           reference_id?: string | null
@@ -385,6 +549,62 @@ export type Database = {
           supplier_reference?: string | null
           unit_received?: string | null
           warehouse_location?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suppliers: {
+        Row: {
+          address: string | null
+          autocount_synced: boolean
+          company_name: string
+          contact_person: string | null
+          created_at: string
+          credit_terms: number | null
+          email: string | null
+          id: string
+          is_active: boolean
+          last_synced_at: string | null
+          phone: string | null
+          supplier_code: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          autocount_synced?: boolean
+          company_name: string
+          contact_person?: string | null
+          created_at?: string
+          credit_terms?: number | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          last_synced_at?: string | null
+          phone?: string | null
+          supplier_code: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          autocount_synced?: boolean
+          company_name?: string
+          contact_person?: string | null
+          created_at?: string
+          credit_terms?: number | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          last_synced_at?: string | null
+          phone?: string | null
+          supplier_code?: string
+          updated_at?: string
         }
         Relationships: []
       }
