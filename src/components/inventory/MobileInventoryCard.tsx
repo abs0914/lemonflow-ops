@@ -71,6 +71,7 @@ export function MobileInventoryCard({ component, onAdjustStock }: MobileInventor
     <MobileDataCard
       actions={actions}
       expandableContent={expandableContent}
+      onClick={() => onAdjustStock(component)}
       className={
         available <= 0 
           ? "bg-red-50 dark:bg-red-950/20" 
