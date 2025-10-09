@@ -80,12 +80,6 @@ export function AppSidebar() {
       roles: ["Admin", "Warehouse"],
     },
     {
-      title: "Customers",
-      url: "/customers",
-      icon: UserCheck,
-      roles: ["Admin", "Warehouse"],
-    },
-    {
       title: "Purchasing",
       url: "/purchasing",
       icon: ShoppingCart,

@@ -1,0 +1,359 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Plus, Trash2, ArrowLeft } from "lucide-react";
+import { DashboardLayout } from "@/components/DashboardLayout";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useSuppliers } from "@/hooks/useSuppliers";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { useIsMobile } from "@/hooks/use-mobile";
+
+const poSchema = z.object({
+  supplier_id: z.string().min(1, "Supplier is required"),
+  doc_date: z.string().min(1, "Date is required"),
+  delivery_date: z.string().optional(),
+  remarks: z.string().optional(),
+});
+
+type POFormData = z.infer<typeof poSchema>;
+
+interface POLine {
+  component_id: string;
+  component_name?: string;
+  quantity: number;
+  unit_price: number;
+  uom: string;
+  line_remarks?: string;
+}
+
+export default function PurchasingCreate() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
+  const [lines, setLines] = useState<POLine[]>([]);
+  const [selectedComponent, setSelectedComponent] = useState<string>("");
+
+  const { data: suppliers } = useSuppliers(true);
+  
+  const { data: components } = useQuery({
+    queryKey: ["components"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("components")
+        .select("*")
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<POFormData>({
+    resolver: zodResolver(poSchema),
+    defaultValues: {
+      doc_date: format(new Date(), "yyyy-MM-dd"),
+    },
+  });
+
+  const createPOMutation = useMutation({
+    mutationFn: async (data: POFormData & { lines: POLine[] }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Generate PO number
+      const { data: lastPO } = await supabase
+        .from("purchase_orders")
+        .select("po_number")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      let nextNumber = 1;
+      if (lastPO?.po_number) {
+        const match = lastPO.po_number.match(/PO(\d+)/);
+        if (match) nextNumber = parseInt(match[1]) + 1;
+      }
+      const po_number = `PO${nextNumber.toString().padStart(5, "0")}`;
+
+      const total_amount = data.lines.reduce((sum, line) => sum + line.quantity * line.unit_price, 0);
+
+      const { data: po, error: poError } = await supabase
+        .from("purchase_orders")
+        .insert({
+          po_number,
+          supplier_id: data.supplier_id,
+          doc_date: data.doc_date,
+          delivery_date: data.delivery_date || null,
+          remarks: data.remarks,
+          total_amount,
+          status: "draft",
+          created_by: user.id,
+        })
+        .select()
+        .single();
+
+      if (poError) throw poError;
+
+      const poLines = data.lines.map((line, index) => ({
+        purchase_order_id: po.id,
+        component_id: line.component_id,
+        quantity: line.quantity,
+        unit_price: line.unit_price,
+        uom: line.uom,
+        line_remarks: line.line_remarks,
+        line_number: index + 1,
+      }));
+
+      const { error: linesError } = await supabase
+        .from("purchase_order_lines")
+        .insert(poLines);
+
+      if (linesError) throw linesError;
+
+      return po;
+    },
+    onSuccess: (po) => {
+      toast.success("Purchase order created successfully");
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      navigate(`/purchasing/${po.id}`);
+    },
+    onError: (error) => {
+      toast.error("Failed to create purchase order");
+      console.error(error);
+    },
+  });
+
+  const onSubmit = (data: POFormData) => {
+    if (lines.length === 0) {
+      toast.error("Please add at least one line item");
+      return;
+    }
+    createPOMutation.mutate({ ...data, lines });
+  };
+
+  const addLine = () => {
+    if (!selectedComponent) {
+      toast.error("Please select a component");
+      return;
+    }
+
+    const component = components?.find((c) => c.id === selectedComponent);
+    if (!component) return;
+
+    setLines([
+      ...lines,
+      {
+        component_id: selectedComponent,
+        component_name: component.name,
+        quantity: 1,
+        unit_price: component.cost_per_unit || 0,
+        uom: component.unit,
+      },
+    ]);
+    setSelectedComponent("");
+  };
+
+  const removeLine = (index: number) => {
+    setLines(lines.filter((_, i) => i !== index));
+  };
+
+  const updateLine = (index: number, field: keyof POLine, value: any) => {
+    const newLines = [...lines];
+    newLines[index] = { ...newLines[index], [field]: value };
+    setLines(newLines);
+  };
+
+  const totalAmount = lines.reduce((sum, line) => sum + line.quantity * line.unit_price, 0);
+
+  return (
+    <DashboardLayout>
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/purchasing")}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Create Purchase Order</h1>
+            <p className="text-muted-foreground">Create a new purchase order for supplier procurement</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Purchase Order Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="supplier_id">Supplier *</Label>
+                  <Select onValueChange={(value) => setValue("supplier_id", value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select supplier" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {suppliers?.map((supplier) => (
+                        <SelectItem key={supplier.id} value={supplier.id}>
+                          {supplier.company_name} ({supplier.supplier_code})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.supplier_id && (
+                    <p className="text-sm text-destructive">{errors.supplier_id.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="doc_date">PO Date *</Label>
+                  <Input
+                    id="doc_date"
+                    type="date"
+                    {...register("doc_date")}
+                  />
+                  {errors.doc_date && (
+                    <p className="text-sm text-destructive">{errors.doc_date.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="delivery_date">Delivery Date</Label>
+                  <Input
+                    id="delivery_date"
+                    type="date"
+                    {...register("delivery_date")}
+                  />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="remarks">Remarks</Label>
+                  <Textarea
+                    id="remarks"
+                    {...register("remarks")}
+                    rows={3}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Line Items</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-2">
+                <Select value={selectedComponent} onValueChange={setSelectedComponent}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Select component to add" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {components?.map((component) => (
+                      <SelectItem key={component.id} value={component.id}>
+                        {component.name} ({component.sku})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button type="button" onClick={addLine}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Line
+                </Button>
+              </div>
+
+              {lines.length > 0 && (
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Component</TableHead>
+                        <TableHead className="w-24">Quantity</TableHead>
+                        <TableHead className="w-32">Unit Price</TableHead>
+                        <TableHead className="w-20">UOM</TableHead>
+                        <TableHead className="w-32">Subtotal</TableHead>
+                        <TableHead className="w-20"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {lines.map((line, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">{line.component_name}</TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={line.quantity}
+                              onChange={(e) => updateLine(index, "quantity", parseFloat(e.target.value) || 0)}
+                              className="w-full"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={line.unit_price}
+                              onChange={(e) => updateLine(index, "unit_price", parseFloat(e.target.value) || 0)}
+                              className="w-full"
+                            />
+                          </TableCell>
+                          <TableCell>{line.uom}</TableCell>
+                          <TableCell className="font-medium">
+                            ${(line.quantity * line.unit_price).toFixed(2)}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeLine(index)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
+              <div className="flex justify-end pt-4 border-t">
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground">Total Amount</p>
+                  <p className="text-2xl font-bold">${totalAmount.toFixed(2)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => navigate("/purchasing")}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={createPOMutation.isPending}>
+              {createPOMutation.isPending ? "Creating..." : "Create Purchase Order"}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </DashboardLayout>
+  );
+}

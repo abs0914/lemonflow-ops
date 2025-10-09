@@ -14,8 +14,9 @@ import Labels from "./pages/Labels";
 import Warehouse from "./pages/Warehouse";
 import Inventory from "./pages/Inventory";
 import Suppliers from "./pages/Suppliers";
-import Customers from "./pages/Customers";
 import Purchasing from "./pages/Purchasing";
+import PurchasingCreate from "./pages/PurchasingCreate";
+import PurchaseOrderDetail from "./pages/PurchaseOrderDetail";
 import NotFound from "./pages/NotFound";
 
 // Create QueryClient instance outside component to prevent recreation
@@ -45,8 +46,9 @@ const App = () => (
             <Route path="/warehouse" element={<Warehouse />} />
             <Route path="/inventory" element={<Inventory />} />
             <Route path="/suppliers" element={<Suppliers />} />
-            <Route path="/customers" element={<Customers />} />
             <Route path="/purchasing" element={<Purchasing />} />
+            <Route path="/purchasing/create" element={<PurchasingCreate />} />
+            <Route path="/purchasing/:id" element={<PurchaseOrderDetail />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
