@@ -1,18 +1,23 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Package, AlertCircle, Clock } from "lucide-react";
+import { Package, AlertCircle, Clock, Plus, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { StockReceiptForm } from "@/components/warehouse/StockReceiptForm";
 import { RecentReceipts } from "@/components/warehouse/RecentReceipts";
+import { FloatingActionButton } from "@/components/ui/floating-action-button";
+import { ActionSheet } from "@/components/ui/action-sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function Warehouse() {
   const { profile, loading } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const [receiptSheetOpen, setReceiptSheetOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !profile) {
@@ -24,7 +29,7 @@ export default function Warehouse() {
   }, [profile, loading, navigate]);
 
   // Fetch warehouse KPIs
-  const { data: kpis } = useQuery({
+  const { data: kpis, refetch: refetchKpis } = useQuery({
     queryKey: ["warehouse-kpis"],
     queryFn: async () => {
       // Total components count
@@ -61,9 +66,9 @@ export default function Warehouse() {
 
   return (
     <DashboardLayout>
-      <div className="p-8 space-y-8">
+      <div className="p-4 md:p-8 space-y-6 md:space-y-8">
         <div>
-          <h1 className="text-4xl font-bold text-foreground">Warehouse Management</h1>
+          <h1 className="text-3xl md:text-4xl font-bold text-foreground">Warehouse Management</h1>
           <p className="text-muted-foreground mt-2">
             Receive stock, track inventory, and manage warehouse operations
           </p>
@@ -113,7 +118,18 @@ export default function Warehouse() {
           </TabsList>
 
           <TabsContent value="receive" className="space-y-4">
-            <StockReceiptForm />
+            {isMobile ? (
+              <ActionSheet
+                open={receiptSheetOpen}
+                onOpenChange={setReceiptSheetOpen}
+                title="Stock Receipt"
+                description="Record incoming stock from suppliers"
+              >
+                <StockReceiptForm />
+              </ActionSheet>
+            ) : (
+              <StockReceiptForm />
+            )}
           </TabsContent>
 
           <TabsContent value="receipts" className="space-y-4">
@@ -121,6 +137,26 @@ export default function Warehouse() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Mobile FAB */}
+      {isMobile && (
+        <FloatingActionButton
+          icon={Plus}
+          label="Quick Actions"
+          actions={[
+            {
+              icon: Plus,
+              label: "Receive Stock",
+              onClick: () => setReceiptSheetOpen(true),
+            },
+            {
+              icon: RefreshCw,
+              label: "Refresh",
+              onClick: () => refetchKpis(),
+            },
+          ]}
+        />
+      )}
     </DashboardLayout>
   );
 }

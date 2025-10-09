@@ -1,20 +1,75 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Factory, Plus } from "lucide-react";
+import { Factory, Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { useAssemblyOrders } from "@/hooks/useAssemblyOrders";
+import { useAssemblyOrders, AssemblyOrder } from "@/hooks/useAssemblyOrders";
+import { MobileAssemblyOrderCard } from "@/components/production/MobileAssemblyOrderCard";
+import { OrderActionSheet } from "@/components/production/OrderActionSheet";
+import { FloatingActionButton } from "@/components/ui/floating-action-button";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Production() {
   const { profile, loading } = useAuth();
   const navigate = useNavigate();
-  const { data: openOrders = [], isLoading: loadingOpen } = useAssemblyOrders("pending");
-  const { data: completedOrders = [], isLoading: loadingCompleted } = useAssemblyOrders("completed");
+  const isMobile = useIsMobile();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  const { data: openOrders = [], isLoading: loadingOpen, refetch: refetchOpen } = useAssemblyOrders("pending");
+  const { data: completedOrders = [], isLoading: loadingCompleted, refetch: refetchCompleted } = useAssemblyOrders("completed");
+  
+  const [actionSheetOpen, setActionSheetOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<AssemblyOrder | null>(null);
+
+  const handleOpenActions = (order: AssemblyOrder) => {
+    setSelectedOrder(order);
+    setActionSheetOpen(true);
+  };
+
+  const completeMutation = useMutation({
+    mutationFn: async (order: AssemblyOrder) => {
+      const { error } = await supabase
+        .from("assembly_orders")
+        .update({ status: "completed" })
+        .eq("id", order.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Order marked as complete" });
+      queryClient.invalidateQueries({ queryKey: ["assembly-orders"] });
+      setActionSheetOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: async (order: AssemblyOrder) => {
+      const { error } = await supabase
+        .from("assembly_orders")
+        .update({ status: "cancelled" })
+        .eq("id", order.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Order cancelled" });
+      queryClient.invalidateQueries({ queryKey: ["assembly-orders"] });
+      setActionSheetOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
 
   useEffect(() => {
     if (!loading && !profile) {
@@ -31,21 +86,23 @@ export default function Production() {
 
   return (
     <DashboardLayout>
-      <div className="p-8 space-y-8">
-        <div className="flex items-center justify-between">
+      <div className="p-4 md:p-8 space-y-6 md:space-y-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-bold text-foreground">Production</h1>
+            <h1 className="text-3xl md:text-4xl font-bold text-foreground">Production</h1>
             <p className="text-muted-foreground mt-2">
               Manage assembly orders and production workflow
             </p>
           </div>
-          <Button 
-            onClick={() => navigate("/dashboard/production/create")}
-            size="lg"
-          >
-            <Plus className="mr-2 h-5 w-5" />
-            Create Assembly Order
-          </Button>
+          {!isMobile && (
+            <Button 
+              onClick={() => navigate("/dashboard/production/create")}
+              size="lg"
+            >
+              <Plus className="mr-2 h-5 w-5" />
+              Create Assembly Order
+            </Button>
+          )}
         </div>
 
         <Card className="border-border">
@@ -58,7 +115,7 @@ export default function Production() {
           <CardContent>
             {loadingOpen ? (
               <div className="flex items-center justify-center h-32">
-                <p className="text-muted-foreground">Loading...</p>
+                <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
             ) : openOrders.length === 0 ? (
               <div className="flex items-center justify-center h-64 text-muted-foreground">
@@ -76,6 +133,16 @@ export default function Production() {
                     Create First Order
                   </Button>
                 </div>
+              </div>
+            ) : isMobile ? (
+              <div className="space-y-3">
+                {openOrders.map((order) => (
+                  <MobileAssemblyOrderCard
+                    key={order.id}
+                    order={order}
+                    onOpenActions={handleOpenActions}
+                  />
+                ))}
               </div>
             ) : (
               <Table>
@@ -120,11 +187,21 @@ export default function Production() {
           <CardContent>
             {loadingCompleted ? (
               <div className="flex items-center justify-center h-32">
-                <p className="text-muted-foreground">Loading...</p>
+                <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
             ) : completedOrders.length === 0 ? (
               <div className="flex items-center justify-center h-32 text-muted-foreground">
                 <p>No completed assembly orders</p>
+              </div>
+            ) : isMobile ? (
+              <div className="space-y-3">
+                {completedOrders.map((order) => (
+                  <MobileAssemblyOrderCard
+                    key={order.id}
+                    order={order}
+                    onOpenActions={handleOpenActions}
+                  />
+                ))}
               </div>
             ) : (
               <Table>
@@ -153,6 +230,38 @@ export default function Production() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Mobile FAB */}
+      {isMobile && (
+        <FloatingActionButton
+          icon={Plus}
+          label="Quick Actions"
+          actions={[
+            {
+              icon: Plus,
+              label: "Create Order",
+              onClick: () => navigate("/dashboard/production/create"),
+            },
+            {
+              icon: RefreshCw,
+              label: "Refresh",
+              onClick: () => {
+                refetchOpen();
+                refetchCompleted();
+              },
+            },
+          ]}
+        />
+      )}
+
+      {/* Order Action Sheet */}
+      <OrderActionSheet
+        order={selectedOrder}
+        open={actionSheetOpen}
+        onOpenChange={setActionSheetOpen}
+        onComplete={(order) => completeMutation.mutate(order)}
+        onCancel={(order) => cancelMutation.mutate(order)}
+      />
     </DashboardLayout>
   );
 }
