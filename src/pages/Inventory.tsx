@@ -245,7 +245,7 @@ export default function Inventory() {
               </div> : components && components.length > 0 ? components.map(component => <MobileInventoryCard key={component.id} component={component} onAdjustStock={handleAdjustStock} onDelete={handleDeleteClick} />) : <div className="text-center p-8 text-muted-foreground">
                 No inventory items found
               </div>}
-          </div> : <InventoryTable components={components || []} isLoading={isLoading} onRefetch={refetch} />}
+          </div> : <InventoryTable components={components || []} isLoading={isLoading} onRefetch={refetch} onAdjustStock={handleAdjustStock} />}
       </div>
 
       {/* Mobile FAB */}

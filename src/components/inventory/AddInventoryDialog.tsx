@@ -261,6 +261,9 @@ export function AddInventoryDialog({ open, onOpenChange }: AddInventoryDialogPro
                 step="0.01"
                 {...register("stock_quantity", { valueAsNumber: true })}
               />
+              <p className="text-xs text-muted-foreground">
+                Set to 0 and use "Adjust Stock" after creation for proper tracking
+              </p>
             </div>
 
             <div className="space-y-2">
