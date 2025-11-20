@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 interface AutoCountStockItem {
-  code: string;
+  itemCode: string;
   description: string;
   itemGroup?: string;
   itemType?: string;
@@ -17,6 +17,7 @@ interface AutoCountStockItem {
   costPerUnit?: number;
   price?: number;
   stockBalance?: number;
+  mainSupplier?: string;
 }
 
 interface PreviewChange {
@@ -124,14 +125,14 @@ Deno.serve(async (req) => {
 
     for (const acItem of autoCountItems) {
       const localComponent = localComponents?.find(
-        c => c.autocount_item_code === acItem.code || c.sku === acItem.code
+        c => c.autocount_item_code === acItem.itemCode || c.sku === acItem.itemCode
       );
 
       if (!localComponent) {
         // New item
         preview.push({
           action: 'create',
-          itemCode: acItem.code,
+          itemCode: acItem.itemCode,
           description: acItem.description,
           autoCountData: acItem,
         });
@@ -167,7 +168,7 @@ Deno.serve(async (req) => {
         if (Object.keys(changes).length > 0) {
           preview.push({
             action: 'update',
-            itemCode: acItem.code,
+            itemCode: acItem.itemCode,
             description: acItem.description,
             changes,
             localData: localComponent,
@@ -176,7 +177,7 @@ Deno.serve(async (req) => {
         } else {
           preview.push({
             action: 'none',
-            itemCode: acItem.code,
+            itemCode: acItem.itemCode,
             description: acItem.description,
             autoCountData: acItem,
           });
