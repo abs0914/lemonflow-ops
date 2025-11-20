@@ -345,6 +345,7 @@ export type Database = {
       }
       products: {
         Row: {
+          component_id: string | null
           created_at: string
           description: string | null
           id: string
@@ -355,6 +356,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          component_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -365,6 +367,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          component_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -374,7 +377,15 @@ export type Database = {
           unit?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_component_id_fkey"
+            columns: ["component_id"]
+            isOneToOne: true
+            referencedRelation: "components"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       purchase_order_lines: {
         Row: {
