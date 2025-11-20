@@ -15,6 +15,12 @@ verify_jwt = true
 [functions.sync-stock-adjustment]
 verify_jwt = true
 
+[functions.sync-po-create]
+verify_jwt = true
+
+[functions.sync-po-cancel]
+verify_jwt = true
+
 [functions.sync-suppliers-preview]
 verify_jwt = false
 

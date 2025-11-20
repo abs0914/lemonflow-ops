@@ -16,6 +16,7 @@ import Inventory from "./pages/Inventory";
 import Suppliers from "./pages/Suppliers";
 import Purchasing from "./pages/Purchasing";
 import PurchasingCreate from "./pages/PurchasingCreate";
+import PurchasingEdit from "./pages/PurchasingEdit";
 import PurchaseOrderDetail from "./pages/PurchaseOrderDetail";
 import NotFound from "./pages/NotFound";
 
@@ -46,9 +47,10 @@ const App = () => (
             <Route path="/warehouse" element={<Warehouse />} />
             <Route path="/inventory" element={<Inventory />} />
             <Route path="/suppliers" element={<Suppliers />} />
-            <Route path="/purchasing" element={<Purchasing />} />
-            <Route path="/purchasing/create" element={<PurchasingCreate />} />
-            <Route path="/purchasing/:id" element={<PurchaseOrderDetail />} />
+          <Route path="/purchasing" element={<Purchasing />} />
+          <Route path="/purchasing/create" element={<PurchasingCreate />} />
+          <Route path="/purchasing/:id" element={<PurchaseOrderDetail />} />
+          <Route path="/purchasing/:id/edit" element={<PurchasingEdit />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

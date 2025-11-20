@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Edit, Trash2, FileText, CheckCircle } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, FileText, CheckCircle, X, Upload } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,9 +20,62 @@ export default function PurchaseOrderDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const { data: purchaseOrder, isLoading: loadingPO } = usePurchaseOrder(id);
   const { data: lines, isLoading: loadingLines } = usePurchaseOrderLines(id);
+
+  const syncToAutocountMutation = useMutation({
+    mutationFn: async () => {
+      if (!purchaseOrder || !lines) throw new Error("PO data not loaded");
+      
+      setIsSyncing(true);
+      
+      const { data, error } = await supabase.functions.invoke("sync-po-create", {
+        body: {
+          poNumber: purchaseOrder.po_number,
+          supplierId: purchaseOrder.supplier_id,
+          docDate: purchaseOrder.doc_date,
+          deliveryDate: purchaseOrder.delivery_date,
+          remarks: purchaseOrder.remarks,
+          lines: lines.map((line) => ({
+            itemCode: line.components?.autocount_item_code || line.components?.sku || "",
+            description: line.components?.name || "",
+            quantity: line.quantity,
+            unitPrice: line.unit_price,
+            uom: line.uom,
+            lineRemarks: line.line_remarks,
+          })),
+        },
+      });
+
+      if (error) throw error;
+      
+      // Update PO with AutoCount doc number
+      const { error: updateError } = await supabase
+        .from("purchase_orders")
+        .update({
+          autocount_synced: true,
+          autocount_doc_no: data.docNo,
+        })
+        .eq("id", id);
+
+      if (updateError) throw updateError;
+
+      setIsSyncing(false);
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("Successfully synced to AutoCount");
+      queryClient.invalidateQueries({ queryKey: ["purchase-order", id] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+    },
+    onError: (error) => {
+      setIsSyncing(false);
+      toast.error(`Failed to sync to AutoCount: ${error.message}`);
+    },
+  });
 
   const updateStatusMutation = useMutation({
     mutationFn: async (status: string) => {
@@ -39,6 +92,46 @@ export default function PurchaseOrderDetail() {
     },
     onError: () => {
       toast.error("Failed to update status");
+    },
+  });
+
+  const cancelPOMutation = useMutation({
+    mutationFn: async () => {
+      // Update local status
+      const { error: statusError } = await supabase
+        .from("purchase_orders")
+        .update({ status: "cancelled" })
+        .eq("id", id);
+
+      if (statusError) throw statusError;
+
+      // Sync to AutoCount if it was synced
+      if (purchaseOrder?.autocount_synced) {
+        setIsSyncing(true);
+        
+        const { error: syncError } = await supabase.functions.invoke("sync-po-cancel", {
+          body: {
+            poNumber: purchaseOrder.po_number,
+            autocountDocNo: purchaseOrder.autocount_doc_no,
+          },
+        });
+
+        setIsSyncing(false);
+
+        if (syncError) {
+          console.error("AutoCount cancel error:", syncError);
+          toast.error("PO cancelled locally but failed to sync to AutoCount");
+        }
+      }
+    },
+    onSuccess: () => {
+      toast.success("Purchase order cancelled");
+      queryClient.invalidateQueries({ queryKey: ["purchase-order", id] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      setShowCancelDialog(false);
+    },
+    onError: (error) => {
+      toast.error(`Failed to cancel: ${error.message}`);
     },
   });
 
@@ -122,9 +215,16 @@ export default function PurchaseOrderDetail() {
               </p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {purchaseOrder.status === "draft" && (
               <>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(`/purchasing/${id}/edit`)}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
                 <Button
                   variant="outline"
                   onClick={() => updateStatusMutation.mutate("submitted")}
@@ -133,6 +233,16 @@ export default function PurchaseOrderDetail() {
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Submit
                 </Button>
+                {!purchaseOrder.autocount_synced && (
+                  <Button
+                    variant="outline"
+                    onClick={() => syncToAutocountMutation.mutate()}
+                    disabled={isSyncing || syncToAutocountMutation.isPending}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {isSyncing ? "Syncing..." : "Sync to AutoCount"}
+                  </Button>
+                )}
                 <Button
                   variant="destructive"
                   onClick={() => setShowDeleteDialog(true)}
@@ -143,13 +253,53 @@ export default function PurchaseOrderDetail() {
               </>
             )}
             {purchaseOrder.status === "submitted" && (
-              <Button
-                onClick={() => updateStatusMutation.mutate("approved")}
-                disabled={updateStatusMutation.isPending}
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Approve
-              </Button>
+              <>
+                <Button
+                  onClick={() => updateStatusMutation.mutate("approved")}
+                  disabled={updateStatusMutation.isPending}
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Approve
+                </Button>
+                {!purchaseOrder.autocount_synced && (
+                  <Button
+                    variant="outline"
+                    onClick={() => syncToAutocountMutation.mutate()}
+                    disabled={isSyncing || syncToAutocountMutation.isPending}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {isSyncing ? "Syncing..." : "Sync to AutoCount"}
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={() => setShowCancelDialog(true)}
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Cancel PO
+                </Button>
+              </>
+            )}
+            {purchaseOrder.status === "approved" && (
+              <>
+                {!purchaseOrder.autocount_synced && (
+                  <Button
+                    variant="outline"
+                    onClick={() => syncToAutocountMutation.mutate()}
+                    disabled={isSyncing || syncToAutocountMutation.isPending}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {isSyncing ? "Syncing..." : "Sync to AutoCount"}
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={() => setShowCancelDialog(true)}
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Cancel PO
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -284,6 +434,28 @@ export default function PurchaseOrderDetail() {
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cancel Purchase Order</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to cancel this purchase order? 
+                {purchaseOrder.autocount_synced && " This will also cancel it in AutoCount."}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => cancelPOMutation.mutate()}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={cancelPOMutation.isPending || isSyncing}
+              >
+                {cancelPOMutation.isPending || isSyncing ? "Cancelling..." : "Yes, Cancel PO"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
