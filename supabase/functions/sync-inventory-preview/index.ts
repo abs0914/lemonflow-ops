@@ -60,7 +60,8 @@ Deno.serve(async (req) => {
 
     // Get AutoCount stock items
     console.log('[sync-inventory-preview] Fetching AutoCount stock items');
-    const acResponse = await fetch(`${apiUrl}/autocount/items`, {
+    console.log('[sync-inventory-preview] Trying endpoint: /autocount/stockitems');
+    const acResponse = await fetch(`${apiUrl}/autocount/stockitems`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${authData.token}`,
@@ -69,7 +70,9 @@ Deno.serve(async (req) => {
     });
 
     if (!acResponse.ok) {
-      throw new Error(`Failed to fetch AutoCount stock items: ${acResponse.status}`);
+      const errorText = await acResponse.text();
+      console.error('[sync-inventory-preview] API Error:', errorText);
+      throw new Error(`Failed to fetch AutoCount stock items: ${acResponse.status} - ${errorText}`);
     }
 
     const autoCountItems: AutoCountStockItem[] = await acResponse.json();
