@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,17 +9,20 @@ import { InventoryFilters } from "@/components/inventory/InventoryFilters";
 import { MobileInventoryCard } from "@/components/inventory/MobileInventoryCard";
 import { StockAdjustmentDialog } from "@/components/inventory/StockAdjustmentDialog";
 import { SyncInventoryDialog } from "@/components/inventory/SyncInventoryDialog";
+import { DeleteInventoryDialog } from "@/components/inventory/DeleteInventoryDialog";
 import { FloatingActionButton } from "@/components/ui/floating-action-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, AlertCircle, Database, Plus, RefreshCw } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useToast } from "@/hooks/use-toast";
 import { Component } from "@/types/inventory";
 
 export default function Inventory() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const isMobile = useIsMobile();
   const [searchTerm, setSearchTerm] = useState("");
@@ -28,6 +31,8 @@ export default function Inventory() {
   const [stockStatusFilter, setStockStatusFilter] = useState<string>("all");
   const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false);
   const [syncDialogOpen, setSyncDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [selectedComponent, setSelectedComponent] = useState<Component | null>(null);
 
   // Redirect if not authenticated or not authorized
@@ -128,6 +133,54 @@ export default function Inventory() {
     queryClient.invalidateQueries({ queryKey: ["inventory"] });
   };
 
+  const deleteMutation = useMutation({
+    mutationFn: async (componentId: string) => {
+      // Delete associated stock movements first
+      const { error: movementError } = await supabase
+        .from("stock_movements")
+        .delete()
+        .eq("item_id", componentId)
+        .eq("item_type", "component");
+
+      if (movementError) throw movementError;
+
+      // Delete component
+      const { error: componentError } = await supabase
+        .from("components")
+        .delete()
+        .eq("id", componentId);
+
+      if (componentError) throw componentError;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Item Deleted",
+        description: "Successfully deleted the inventory item",
+      });
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Delete Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteClick = (id: string) => {
+    setItemToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (itemToDelete) {
+      deleteMutation.mutate(itemToDelete);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -209,6 +262,7 @@ export default function Inventory() {
                   key={component.id}
                   component={component}
                   onAdjustStock={handleAdjustStock}
+                  onDelete={handleDeleteClick}
                 />
               ))
             ) : (
@@ -257,6 +311,14 @@ export default function Inventory() {
         open={syncDialogOpen}
         onOpenChange={setSyncDialogOpen}
         onSyncComplete={handleSyncComplete}
+      />
+
+      <DeleteInventoryDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleConfirmDelete}
+        itemCount={1}
+        isDeleting={deleteMutation.isPending}
       />
     </DashboardLayout>
   );

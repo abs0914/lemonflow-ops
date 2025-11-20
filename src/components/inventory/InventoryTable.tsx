@@ -14,7 +14,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, Check, X, RefreshCw } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { DeleteInventoryDialog } from "./DeleteInventoryDialog";
+import { Pencil, Check, X, RefreshCw, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Component } from "@/types/inventory";
 
@@ -28,6 +30,9 @@ export function InventoryTable({ components, isLoading, onRefetch }: InventoryTa
   const { user } = useAuth();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   const updateStockMutation = useMutation({
     mutationFn: async ({ componentId, newQuantity, oldQuantity }: { 
@@ -76,6 +81,44 @@ export function InventoryTable({ components, isLoading, onRefetch }: InventoryTa
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (componentIds: string[]) => {
+      // Delete associated stock movements first
+      const { error: movementError } = await supabase
+        .from("stock_movements")
+        .delete()
+        .in("item_id", componentIds)
+        .eq("item_type", "component");
+
+      if (movementError) throw movementError;
+
+      // Delete components
+      const { error: componentError } = await supabase
+        .from("components")
+        .delete()
+        .in("id", componentIds);
+
+      if (componentError) throw componentError;
+    },
+    onSuccess: (_, componentIds) => {
+      toast({
+        title: "Items Deleted",
+        description: `Successfully deleted ${componentIds.length} ${componentIds.length === 1 ? 'item' : 'items'}`,
+      });
+      setSelectedIds(new Set());
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
+      onRefetch();
+    },
+    onError: (error) => {
+      toast({
+        title: "Delete Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleEdit = (component: Component) => {
     setEditingId(component.id);
     setEditValue(component.stock_quantity.toString());
@@ -104,6 +147,42 @@ export function InventoryTable({ components, isLoading, onRefetch }: InventoryTa
     setEditValue("");
   };
 
+  const toggleSelectAll = () => {
+    if (selectedIds.size === components.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(components.map(c => c.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const handleDeleteClick = (id: string) => {
+    setItemToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleBulkDeleteClick = () => {
+    setItemToDelete(null);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (itemToDelete) {
+      deleteMutation.mutate([itemToDelete]);
+    } else if (selectedIds.size > 0) {
+      deleteMutation.mutate(Array.from(selectedIds));
+    }
+  };
+
   const getStockStatusBadge = (available: number) => {
     if (available <= 0) {
       return <Badge variant="destructive">Out of Stock</Badge>;
@@ -130,35 +209,66 @@ export function InventoryTable({ components, isLoading, onRefetch }: InventoryTa
   }
 
   return (
-    <div className="border rounded-lg">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Item Code</TableHead>
-            <TableHead>Description</TableHead>
-            <TableHead>Group</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead className="text-right">Stock Qty</TableHead>
-            <TableHead className="text-right">Reserved</TableHead>
-            <TableHead className="text-right">Available</TableHead>
-            <TableHead>UOM</TableHead>
-            <TableHead className="text-right">Price</TableHead>
-            <TableHead className="text-right">Cost</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Last Synced</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {components.map((component) => {
-            const available = component.stock_quantity - component.reserved_quantity;
-            const isEditing = editingId === component.id;
+    <>
+      {selectedIds.size > 0 && (
+        <div className="mb-4 flex items-center justify-between bg-muted p-3 rounded-lg">
+          <span className="text-sm font-medium">
+            {selectedIds.size} {selectedIds.size === 1 ? 'item' : 'items'} selected
+          </span>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleBulkDeleteClick}
+            disabled={deleteMutation.isPending}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete Selected
+          </Button>
+        </div>
+      )}
 
-            return (
-              <TableRow 
-                key={component.id}
-                className={available <= 0 ? "bg-red-50 dark:bg-red-950/20" : available < 10 ? "bg-yellow-50 dark:bg-yellow-950/20" : ""}
-              >
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12">
+                <Checkbox
+                  checked={selectedIds.size === components.length && components.length > 0}
+                  onCheckedChange={toggleSelectAll}
+                />
+              </TableHead>
+              <TableHead>Item Code</TableHead>
+              <TableHead>Description</TableHead>
+              <TableHead>Group</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead className="text-right">Stock Qty</TableHead>
+              <TableHead className="text-right">Reserved</TableHead>
+              <TableHead className="text-right">Available</TableHead>
+              <TableHead>UOM</TableHead>
+              <TableHead className="text-right">Price</TableHead>
+              <TableHead className="text-right">Cost</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Last Synced</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {components.map((component) => {
+              const available = component.stock_quantity - component.reserved_quantity;
+              const isEditing = editingId === component.id;
+              const isSelected = selectedIds.has(component.id);
+
+              return (
+                <TableRow 
+                  key={component.id}
+                  className={available <= 0 ? "bg-red-50 dark:bg-red-950/20" : available < 10 ? "bg-yellow-50 dark:bg-yellow-950/20" : ""}
+                >
+                  <TableCell>
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleSelect(component.id)}
+                    />
+                  </TableCell>
                 <TableCell className="font-medium">{component.autocount_item_code || component.sku}</TableCell>
                 <TableCell>
                   <div>
@@ -218,34 +328,46 @@ export function InventoryTable({ components, isLoading, onRefetch }: InventoryTa
                   )}
                 </TableCell>
                 <TableCell className="text-right">
-                  {isEditing ? (
-                    <div className="flex gap-1 justify-end">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleSave(component)}
-                        disabled={updateStockMutation.isPending}
-                      >
-                        <Check className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={handleCancel}
-                        disabled={updateStockMutation.isPending}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleEdit(component)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  )}
+                  <div className="flex gap-1 justify-end">
+                    {isEditing ? (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleSave(component)}
+                          disabled={updateStockMutation.isPending}
+                        >
+                          <Check className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={handleCancel}
+                          disabled={updateStockMutation.isPending}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleEdit(component)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDeleteClick(component.id)}
+                          disabled={deleteMutation.isPending}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             );
@@ -253,5 +375,14 @@ export function InventoryTable({ components, isLoading, onRefetch }: InventoryTa
         </TableBody>
       </Table>
     </div>
+
+    <DeleteInventoryDialog
+      open={deleteDialogOpen}
+      onOpenChange={setDeleteDialogOpen}
+      onConfirm={handleConfirmDelete}
+      itemCount={itemToDelete ? 1 : selectedIds.size}
+      isDeleting={deleteMutation.isPending}
+    />
+  </>
   );
 }
