@@ -94,6 +94,16 @@ Deno.serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error("AutoCount API error:", errorText);
+      
+      // Provide specific error message for 404 (item not found)
+      if (response.status === 404) {
+        throw new Error(
+          `Item "${requestData.itemCode}" does not exist in AutoCount. ` +
+          `Please create the item in AutoCount first, or use the "Sync to AutoCount" ` +
+          `option when creating/editing the item in the app.`
+        );
+      }
+      
       throw new Error(`AutoCount API error: ${response.status} - ${errorText}`);
     }
 
