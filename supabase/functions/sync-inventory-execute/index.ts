@@ -50,11 +50,13 @@ Deno.serve(async (req) => {
     const authData = await authResponse.json();
 
     // Get AutoCount stock items
-    console.log('[sync-inventory-execute] Fetching AutoCount stock items from /items');
+    // Try with limit parameter in case API uses pagination
+    const itemsUrl = `${apiUrl}/items?limit=1000`;
+    console.log('[sync-inventory-execute] Fetching AutoCount stock items');
     console.log('[sync-inventory-execute] API URL:', apiUrl);
-    console.log('[sync-inventory-execute] Full URL:', `${apiUrl}/items`);
+    console.log('[sync-inventory-execute] Full URL:', itemsUrl);
     
-    const acResponse = await fetch(`${apiUrl}/items`, {
+    const acResponse = await fetch(itemsUrl, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${authData.token}`,
