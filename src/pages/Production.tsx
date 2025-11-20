@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAssemblyOrders, AssemblyOrder } from "@/hooks/useAssemblyOrders";
 import { MobileAssemblyOrderCard } from "@/components/production/MobileAssemblyOrderCard";
 import { OrderActionSheet } from "@/components/production/OrderActionSheet";
+import { DeleteAssemblyOrderDialog } from "@/components/production/DeleteAssemblyOrderDialog";
 import { FloatingActionButton } from "@/components/ui/floating-action-button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
@@ -29,6 +30,8 @@ export default function Production() {
   
   const [actionSheetOpen, setActionSheetOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<AssemblyOrder | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
 
   const handleOpenActions = (order: AssemblyOrder) => {
     setSelectedOrder(order);
@@ -70,6 +73,44 @@ export default function Production() {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (orderId: string) => {
+      const { error } = await supabase
+        .from("assembly_orders")
+        .delete()
+        .eq("id", orderId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Order Deleted",
+        description: "Successfully deleted the assembly order",
+      });
+      setDeleteDialogOpen(false);
+      setOrderToDelete(null);
+      queryClient.invalidateQueries({ queryKey: ["assembly-orders"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Delete Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteClick = (order: AssemblyOrder) => {
+    setOrderToDelete(order.id);
+    setDeleteDialogOpen(true);
+    setActionSheetOpen(false);
+  };
+
+  const handleConfirmDelete = () => {
+    if (orderToDelete) {
+      deleteMutation.mutate(orderToDelete);
+    }
+  };
 
   useEffect(() => {
     if (!loading && !profile) {
@@ -261,6 +302,15 @@ export default function Production() {
         onOpenChange={setActionSheetOpen}
         onComplete={(order) => completeMutation.mutate(order)}
         onCancel={(order) => cancelMutation.mutate(order)}
+        onDelete={handleDeleteClick}
+      />
+
+      <DeleteAssemblyOrderDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleConfirmDelete}
+        orderCount={1}
+        isDeleting={deleteMutation.isPending}
       />
     </DashboardLayout>
   );
