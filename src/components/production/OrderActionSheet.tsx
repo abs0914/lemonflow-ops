@@ -1,6 +1,6 @@
 import { AssemblyOrder } from "@/hooks/useAssemblyOrders";
 import { ActionSheet, ActionSheetAction } from "@/components/ui/action-sheet";
-import { CheckCircle2, XCircle, Eye, Edit } from "lucide-react";
+import { CheckCircle2, XCircle, Eye, Trash2 } from "lucide-react";
 
 interface OrderActionSheetProps {
   order: AssemblyOrder | null;
@@ -8,6 +8,7 @@ interface OrderActionSheetProps {
   onOpenChange: (open: boolean) => void;
   onComplete: (order: AssemblyOrder) => void;
   onCancel: (order: AssemblyOrder) => void;
+  onDelete: (order: AssemblyOrder) => void;
 }
 
 export function OrderActionSheet({
@@ -16,6 +17,7 @@ export function OrderActionSheet({
   onOpenChange,
   onComplete,
   onCancel,
+  onDelete,
 }: OrderActionSheetProps) {
   if (!order) return null;
 
@@ -50,6 +52,12 @@ export function OrderActionSheet({
           onClick={() => {/* View details logic */}}
           icon={<Eye className="h-5 w-5" />}
           variant="outline"
+        />
+        <ActionSheetAction
+          label="Delete Order"
+          onClick={() => onDelete(order)}
+          icon={<Trash2 className="h-5 w-5" />}
+          variant="destructive"
         />
       </div>
     </ActionSheet>
