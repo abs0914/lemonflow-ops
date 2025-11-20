@@ -63,9 +63,20 @@ Deno.serve(async (req) => {
       throw new Error("AutoCount configuration is incomplete. Please check LEMONCO_API_URL, LEMONCO_USERNAME, and LEMONCO_PASSWORD secrets.");
     }
 
-    // Create Basic Auth header
-    const credentials = btoa(`${username}:${password}`);
-    const basicAuth = `Basic ${credentials}`;
+    // Authenticate to get Bearer token
+    console.log("Authenticating with AutoCount API");
+    const authResponse = await fetch(`${apiUrl}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+
+    if (!authResponse.ok) {
+      const errorText = await authResponse.text();
+      throw new Error(`Authentication failed: ${authResponse.status} - ${errorText}`);
+    }
+
+    const authData = await authResponse.json();
 
     // Create stock adjustment in AutoCount
     const adjustmentPayload = {
@@ -86,7 +97,7 @@ Deno.serve(async (req) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: basicAuth,
+        Authorization: `Bearer ${authData.token}`,
       },
       body: JSON.stringify(adjustmentPayload),
     });
