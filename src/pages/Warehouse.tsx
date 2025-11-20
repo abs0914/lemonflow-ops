@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { StockReceiptForm } from "@/components/warehouse/StockReceiptForm";
+import { GoodsReceivedForm } from "@/components/warehouse/GoodsReceivedForm";
+import { GoodsReturnForm } from "@/components/warehouse/GoodsReturnForm";
 import { RecentReceipts } from "@/components/warehouse/RecentReceipts";
 import { FloatingActionButton } from "@/components/ui/floating-action-button";
 import { ActionSheet } from "@/components/ui/action-sheet";
@@ -18,6 +20,8 @@ export default function Warehouse() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [receiptSheetOpen, setReceiptSheetOpen] = useState(false);
+  const [grnSheetOpen, setGrnSheetOpen] = useState(false);
+  const [returnSheetOpen, setReturnSheetOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !profile) {
@@ -111,11 +115,43 @@ export default function Warehouse() {
         </div>
 
         {/* Main Content Tabs */}
-        <Tabs defaultValue="receive" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="receive">Receive Stock</TabsTrigger>
-            <TabsTrigger value="receipts">Recent Receipts</TabsTrigger>
+        <Tabs defaultValue="grn" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="grn">Goods Received</TabsTrigger>
+            <TabsTrigger value="return">Goods Return</TabsTrigger>
+            <TabsTrigger value="receive">Direct Receipt</TabsTrigger>
+            <TabsTrigger value="receipts">Recent</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="grn" className="space-y-4">
+            {isMobile ? (
+              <ActionSheet
+                open={grnSheetOpen}
+                onOpenChange={setGrnSheetOpen}
+                title="Goods Received Note"
+                description="Receive items from purchase orders"
+              >
+                <GoodsReceivedForm />
+              </ActionSheet>
+            ) : (
+              <GoodsReceivedForm />
+            )}
+          </TabsContent>
+
+          <TabsContent value="return" className="space-y-4">
+            {isMobile ? (
+              <ActionSheet
+                open={returnSheetOpen}
+                onOpenChange={setReturnSheetOpen}
+                title="Goods Return"
+                description="Return items to suppliers"
+              >
+                <GoodsReturnForm />
+              </ActionSheet>
+            ) : (
+              <GoodsReturnForm />
+            )}
+          </TabsContent>
 
           <TabsContent value="receive" className="space-y-4">
             {isMobile ? (
@@ -145,8 +181,13 @@ export default function Warehouse() {
           label="Quick Actions"
           actions={[
             {
+              icon: Package,
+              label: "Goods Received",
+              onClick: () => setGrnSheetOpen(true),
+            },
+            {
               icon: Plus,
-              label: "Receive Stock",
+              label: "Direct Receipt",
               onClick: () => setReceiptSheetOpen(true),
             },
             {
