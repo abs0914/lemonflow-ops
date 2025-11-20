@@ -39,7 +39,6 @@ interface InventoryFormData {
   item_group: string;
   item_type: string;
   unit: string;
-  stock_quantity: number;
   cost_per_unit: number;
   price: number;
   stock_control: boolean;
@@ -66,7 +65,6 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
       sync_to_autocount: true,
       unit: "unit",
       item_type: "CONSUMABLE",
-      stock_quantity: 0,
       cost_per_unit: 0,
       price: 0,
     },
@@ -84,7 +82,6 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
         item_group: component.item_group || "",
         item_type: component.item_type || "CONSUMABLE",
         unit: component.unit,
-        stock_quantity: component.stock_quantity,
         cost_per_unit: component.cost_per_unit || 0,
         price: component.price || 0,
         stock_control: component.stock_control ?? true,
@@ -108,7 +105,6 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
           item_group: data.item_group || null,
           item_type: data.item_type,
           unit: data.unit,
-          stock_quantity: data.stock_quantity,
           cost_per_unit: data.cost_per_unit,
           price: data.price,
           stock_control: data.stock_control,
@@ -264,23 +260,13 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="unit">Unit *</Label>
               <Input
                 id="unit"
                 {...register("unit", { required: "Unit is required" })}
                 placeholder="e.g., pcs, kg"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="stock_quantity">Stock Quantity</Label>
-              <Input
-                id="stock_quantity"
-                type="number"
-                step="0.01"
-                {...register("stock_quantity", { valueAsNumber: true })}
               />
             </div>
 
@@ -293,6 +279,12 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
                 {...register("cost_per_unit", { valueAsNumber: true })}
               />
             </div>
+          </div>
+
+          <div className="bg-muted p-3 rounded-lg text-sm">
+            <p className="text-muted-foreground">
+              <strong>Note:</strong> Stock quantities cannot be changed here. Use the "Adjust Stock" feature to properly record stock movements.
+            </p>
           </div>
 
           <div className="space-y-2">

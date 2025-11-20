@@ -16,7 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DeleteInventoryDialog } from "./DeleteInventoryDialog";
 import { EditInventoryDialog } from "./EditInventoryDialog";
-import { Pencil, RefreshCw, Trash2 } from "lucide-react";
+import { StockAdjustmentDialog } from "./StockAdjustmentDialog";
+import { Pencil, RefreshCw, Trash2, Package } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Component } from "@/types/inventory";
 
@@ -24,15 +25,18 @@ interface InventoryTableProps {
   components: Component[];
   isLoading: boolean;
   onRefetch: () => void;
+  onAdjustStock?: (component: Component) => void;
 }
 
-export function InventoryTable({ components, isLoading, onRefetch }: InventoryTableProps) {
+export function InventoryTable({ components, isLoading, onRefetch, onAdjustStock }: InventoryTableProps) {
   const { user } = useAuth();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [adjustStockDialogOpen, setAdjustStockDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [itemToEdit, setItemToEdit] = useState<Component | null>(null);
+  const [itemToAdjust, setItemToAdjust] = useState<Component | null>(null);
 
 
   const deleteMutation = useMutation({
@@ -76,6 +80,14 @@ export function InventoryTable({ components, isLoading, onRefetch }: InventoryTa
   const handleEdit = (component: Component) => {
     setItemToEdit(component);
     setEditDialogOpen(true);
+  };
+
+  const handleAdjustStock = (component: Component) => {
+    setItemToAdjust(component);
+    setAdjustStockDialogOpen(true);
+    if (onAdjustStock) {
+      onAdjustStock(component);
+    }
   };
 
   const toggleSelectAll = () => {
@@ -251,7 +263,16 @@ export function InventoryTable({ components, isLoading, onRefetch }: InventoryTa
                     <Button
                       size="sm"
                       variant="ghost"
+                      onClick={() => handleAdjustStock(component)}
+                      title="Adjust Stock"
+                    >
+                      <Package className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
                       onClick={() => handleEdit(component)}
+                      title="Edit Item Details"
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -260,6 +281,7 @@ export function InventoryTable({ components, isLoading, onRefetch }: InventoryTa
                       variant="ghost"
                       onClick={() => handleDeleteClick(component.id)}
                       disabled={deleteMutation.isPending}
+                      title="Delete Item"
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
@@ -284,6 +306,18 @@ export function InventoryTable({ components, isLoading, onRefetch }: InventoryTa
       open={editDialogOpen}
       onOpenChange={setEditDialogOpen}
       component={itemToEdit}
+    />
+
+    <StockAdjustmentDialog
+      open={adjustStockDialogOpen}
+      onOpenChange={setAdjustStockDialogOpen}
+      itemType="component"
+      itemId={itemToAdjust?.id || ""}
+      itemName={itemToAdjust?.name || ""}
+      itemSku={itemToAdjust?.autocount_item_code || itemToAdjust?.sku || ""}
+      currentStock={itemToAdjust?.stock_quantity || 0}
+      itemUnit={itemToAdjust?.unit || "unit"}
+      hasBatchNo={itemToAdjust?.has_batch_no || false}
     />
   </>
   );
