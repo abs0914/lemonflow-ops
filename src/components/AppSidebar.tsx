@@ -62,7 +62,7 @@ export function AppSidebar() {
       roles: ["Admin", "Production", "Warehouse"],
     },
     {
-      title: "Warehouse",
+      title: "Commissary",
       url: "/warehouse",
       icon: Warehouse,
       roles: ["Admin", "Warehouse"],
