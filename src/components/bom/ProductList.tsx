@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { Package } from "lucide-react";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { SelectComponentDialog } from "./SelectComponentDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -22,6 +24,7 @@ interface ProductListProps {
 
 export function ProductList({ onSelectProduct, selectedProductId }: ProductListProps) {
   const [search, setSearch] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["products"],
@@ -44,7 +47,13 @@ export function ProductList({ onSelectProduct, selectedProductId }: ProductListP
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Products</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>Products</CardTitle>
+          <Button onClick={() => setDialogOpen(true)} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Add from Inventory
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <Input
@@ -101,6 +110,11 @@ export function ProductList({ onSelectProduct, selectedProductId }: ProductListP
         </div>
 
       </CardContent>
+
+      <SelectComponentDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+      />
     </Card>
   );
 }
