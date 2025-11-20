@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { RefreshCw, AlertCircle, CheckCircle, Plus, FileEdit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,6 +35,19 @@ export function SyncSuppliersDialog({ open, onOpenChange, onSyncComplete }: Sync
   const [summary, setSummary] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    console.log('[SyncSuppliersDialog] useEffect triggered, open:', open);
+    if (open) {
+      console.log('[SyncSuppliersDialog] Dialog is open, calling loadPreview');
+      loadPreview();
+    } else {
+      console.log('[SyncSuppliersDialog] Dialog is closed, clearing state');
+      setPreview(null);
+      setSummary(null);
+      setError(null);
+    }
+  }, [open]);
 
   const loadPreview = async () => {
     console.log('[SyncSuppliersDialog] loadPreview called');
@@ -94,20 +107,11 @@ export function SyncSuppliersDialog({ open, onOpenChange, onSyncComplete }: Sync
 
   const handleOpenChange = (newOpen: boolean) => {
     console.log('[SyncSuppliersDialog] handleOpenChange called with:', newOpen);
-    if (newOpen) {
-      console.log('[SyncSuppliersDialog] Dialog opening, calling loadPreview');
-      loadPreview();
-    } else {
-      console.log('[SyncSuppliersDialog] Dialog closing, clearing state');
-      setPreview(null);
-      setSummary(null);
-      setError(null);
-    }
     onOpenChange(newOpen);
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[80vh]">
         <DialogHeader>
           <DialogTitle>Sync Suppliers from AutoCount</DialogTitle>
