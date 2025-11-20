@@ -10,14 +10,16 @@ interface AutoCountStockItem {
   description: string;
   itemGroup?: string;
   itemType?: string;
-  baseUOM?: string;
-  stockControl: boolean;
-  hasBatchNo: boolean;
-  isActive: boolean;
-  costPerUnit?: number;
+  baseUom?: string;
+  stockControl?: boolean;
+  hasBatchNo?: boolean;
+  isActive?: boolean;
+  standardCost?: number;
   price?: number;
   stockBalance?: number;
   mainSupplier?: string;
+  barcode?: string;
+  hasBom?: boolean;
 }
 
 interface PreviewChange {
@@ -149,8 +151,8 @@ Deno.serve(async (req) => {
         if (localComponent.item_type !== acItem.itemType) {
           changes.item_type = { old: localComponent.item_type, new: acItem.itemType };
         }
-        if (localComponent.unit !== acItem.baseUOM) {
-          changes.unit = { old: localComponent.unit, new: acItem.baseUOM };
+        if (localComponent.unit !== acItem.baseUom) {
+          changes.unit = { old: localComponent.unit, new: acItem.baseUom };
         }
         if (localComponent.stock_control !== acItem.stockControl) {
           changes.stock_control = { old: localComponent.stock_control, new: acItem.stockControl };
@@ -158,8 +160,8 @@ Deno.serve(async (req) => {
         if (localComponent.has_batch_no !== acItem.hasBatchNo) {
           changes.has_batch_no = { old: localComponent.has_batch_no, new: acItem.hasBatchNo };
         }
-        if (localComponent.cost_per_unit !== acItem.costPerUnit) {
-          changes.cost_per_unit = { old: localComponent.cost_per_unit, new: acItem.costPerUnit };
+        if (localComponent.cost_per_unit !== acItem.standardCost) {
+          changes.cost_per_unit = { old: localComponent.cost_per_unit, new: acItem.standardCost };
         }
         if (localComponent.price !== acItem.price) {
           changes.price = { old: localComponent.price, new: acItem.price };
