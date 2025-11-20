@@ -6,8 +6,17 @@ verify_jwt = false
 [functions.test-autocount-connection]
 verify_jwt = false
 
+[functions.test-inventory-endpoints]
+verify_jwt = false
+
 [functions.sync-suppliers-preview]
 verify_jwt = false
 
 [functions.sync-suppliers-execute]
+verify_jwt = false
+
+[functions.sync-inventory-preview]
+verify_jwt = false
+
+[functions.sync-inventory-execute]
 verify_jwt = false
