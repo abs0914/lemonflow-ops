@@ -1,14 +1,16 @@
 import { useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 interface BomEditorProps {
   productId?: string;
@@ -40,6 +42,7 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
   const [selectedComponentId, setSelectedComponentId] = useState("");
   const [quantity, setQuantity] = useState("");
   const [notes, setNotes] = useState("");
+  const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -144,18 +147,55 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
           <div className="grid gap-4">
             <div>
               <Label>Component</Label>
-              <Select value={selectedComponentId} onValueChange={setSelectedComponentId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select component" />
-                </SelectTrigger>
-                <SelectContent>
-                  {components.map((comp) => (
-                    <SelectItem key={comp.id} value={comp.id}>
-                      {comp.sku} - {comp.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={open} onOpenChange={setOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className="w-full justify-between"
+                  >
+                    {selectedComponentId
+                      ? components.find((comp) => comp.id === selectedComponentId)?.sku + " - " + 
+                        components.find((comp) => comp.id === selectedComponentId)?.name
+                      : "Select component..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[400px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search by SKU or name..." />
+                    <CommandList>
+                      <CommandEmpty>No component found.</CommandEmpty>
+                      <CommandGroup>
+                        {components.map((comp) => (
+                          <CommandItem
+                            key={comp.id}
+                            value={`${comp.sku} ${comp.name} ${comp.id}`}
+                            onSelect={() => {
+                              setSelectedComponentId(comp.id);
+                              setOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedComponentId === comp.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <div className="flex flex-col">
+                              <span className="font-medium">{comp.sku} - {comp.name}</span>
+                              <span className="text-xs text-muted-foreground">
+                                Unit: {comp.unit} {comp.cost_per_unit && `• Cost: RM ${comp.cost_per_unit}`}
+                              </span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div>
