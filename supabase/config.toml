@@ -41,3 +41,6 @@ verify_jwt = true
 
 [functions.sync-goods-return]
 verify_jwt = true
+
+[functions.sync-cash-purchase]
+verify_jwt = true

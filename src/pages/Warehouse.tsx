@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { StockReceiptForm } from "@/components/warehouse/StockReceiptForm";
 import { GoodsReceivedForm } from "@/components/warehouse/GoodsReceivedForm";
 import { GoodsReturnForm } from "@/components/warehouse/GoodsReturnForm";
+import { CashPurchaseForm } from "@/components/warehouse/CashPurchaseForm";
 import { RecentReceipts } from "@/components/warehouse/RecentReceipts";
 import { FloatingActionButton } from "@/components/ui/floating-action-button";
 import { ActionSheet } from "@/components/ui/action-sheet";
@@ -22,6 +23,7 @@ export default function Warehouse() {
   const [receiptSheetOpen, setReceiptSheetOpen] = useState(false);
   const [grnSheetOpen, setGrnSheetOpen] = useState(false);
   const [returnSheetOpen, setReturnSheetOpen] = useState(false);
+  const [cashPurchaseSheetOpen, setCashPurchaseSheetOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !profile) {
@@ -116,8 +118,9 @@ export default function Warehouse() {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="grn" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="grn">Goods Received</TabsTrigger>
+            <TabsTrigger value="cash">Cash Purchase</TabsTrigger>
             <TabsTrigger value="return">Goods Return</TabsTrigger>
             <TabsTrigger value="receive">Direct Receipt</TabsTrigger>
             <TabsTrigger value="receipts">Recent</TabsTrigger>
@@ -135,6 +138,21 @@ export default function Warehouse() {
               </ActionSheet>
             ) : (
               <GoodsReceivedForm />
+            )}
+          </TabsContent>
+
+          <TabsContent value="cash" className="space-y-4">
+            {isMobile ? (
+              <ActionSheet
+                open={cashPurchaseSheetOpen}
+                onOpenChange={setCashPurchaseSheetOpen}
+                title="Cash Purchase"
+                description="Record direct purchases without PO"
+              >
+                <CashPurchaseForm />
+              </ActionSheet>
+            ) : (
+              <CashPurchaseForm />
             )}
           </TabsContent>
 
@@ -184,6 +202,11 @@ export default function Warehouse() {
               icon: Package,
               label: "Goods Received",
               onClick: () => setGrnSheetOpen(true),
+            },
+            {
+              icon: Plus,
+              label: "Cash Purchase",
+              onClick: () => setCashPurchaseSheetOpen(true),
             },
             {
               icon: Plus,
