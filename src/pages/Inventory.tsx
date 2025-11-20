@@ -260,7 +260,7 @@ export default function Inventory() {
     }]} />}
 
       {/* Stock Adjustment Dialog */}
-      {selectedComponent && <StockAdjustmentDialog open={adjustmentDialogOpen} onOpenChange={setAdjustmentDialogOpen} itemType="component" itemId={selectedComponent.id} itemName={selectedComponent.name} currentStock={selectedComponent.stock_quantity} />}
+      {selectedComponent && <StockAdjustmentDialog open={adjustmentDialogOpen} onOpenChange={setAdjustmentDialogOpen} itemType="component" itemId={selectedComponent.id} itemName={selectedComponent.name} itemSku={selectedComponent.autocount_item_code || selectedComponent.sku} currentStock={selectedComponent.stock_quantity} itemUnit={selectedComponent.unit} hasBatchNo={selectedComponent.has_batch_no} />}
 
       <SyncInventoryDialog open={syncDialogOpen} onOpenChange={setSyncDialogOpen} onSyncComplete={handleSyncComplete} />
 
