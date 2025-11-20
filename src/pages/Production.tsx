@@ -1,10 +1,16 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Factory, Plus, RefreshCw } from "lucide-react";
+import { Factory, Plus, RefreshCw, CheckCircle2, Edit, Trash2, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAssemblyOrders, AssemblyOrder } from "@/hooks/useAssemblyOrders";
@@ -195,6 +201,7 @@ export default function Production() {
                     <TableHead>Created By</TableHead>
                     <TableHead>Due Date</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -209,6 +216,32 @@ export default function Production() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary">{order.status}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => completeMutation.mutate(order)}>
+                              <CheckCircle2 className="mr-2 h-4 w-4" />
+                              Mark Complete
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => navigate(`/production/edit/${order.id}`)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit Order
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleDeleteClick(order)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete Order
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -253,6 +286,7 @@ export default function Production() {
                     <TableHead>Quantity</TableHead>
                     <TableHead>Created By</TableHead>
                     <TableHead>Completed</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -263,6 +297,28 @@ export default function Production() {
                       <TableCell>{order.quantity}</TableCell>
                       <TableCell>{order.user_profiles?.full_name}</TableCell>
                       <TableCell>{format(new Date(order.updated_at), "MMM dd, yyyy")}</TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => navigate(`/production/edit/${order.id}`)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit Order
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleDeleteClick(order)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete Order
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
