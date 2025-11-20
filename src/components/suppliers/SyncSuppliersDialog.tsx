@@ -36,10 +36,14 @@ export function SyncSuppliersDialog({ open, onOpenChange, onSyncComplete }: Sync
   const { toast } = useToast();
 
   const loadPreview = async () => {
+    console.log('[SyncSuppliersDialog] loadPreview called');
     setIsLoadingPreview(true);
     setError(null);
     try {
+      console.log('[SyncSuppliersDialog] Invoking sync-suppliers-preview function');
       const { data, error } = await supabase.functions.invoke('sync-suppliers-preview');
+      
+      console.log('[SyncSuppliersDialog] Response:', { data, error });
       
       if (error) throw error;
       if (!data.success) throw new Error(data.error);
@@ -47,6 +51,7 @@ export function SyncSuppliersDialog({ open, onOpenChange, onSyncComplete }: Sync
       setPreview(data.preview);
       setSummary(data.summary);
     } catch (error: any) {
+      console.error('[SyncSuppliersDialog] Error:', error);
       const errorMessage = error.message || 'Failed to load suppliers from AutoCount';
       setError(errorMessage);
       setPreview([]);
