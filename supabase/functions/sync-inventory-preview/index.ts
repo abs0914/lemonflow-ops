@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
 
     // Get AutoCount stock items
     console.log('[sync-inventory-preview] Fetching AutoCount stock items');
-    const acResponse = await fetch(`${apiUrl}/autocount/stock-items`, {
+    const acResponse = await fetch(`${apiUrl}/autocount/items`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${authData.token}`,
