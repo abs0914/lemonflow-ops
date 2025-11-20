@@ -107,6 +107,8 @@ Deno.serve(async (req) => {
 
     for (const acItem of autoCountItems) {
       try {
+        console.log(`[sync-inventory-execute] Processing item ${acItem.itemCode}, stockBalance:`, acItem.stockBalance);
+        
         const existingComponent = existingComponents?.find(
           c => c.autocount_item_code === acItem.itemCode || c.sku === acItem.itemCode
         );
@@ -123,9 +125,11 @@ Deno.serve(async (req) => {
           has_batch_no: acItem.hasBatchNo ?? false,
           cost_per_unit: acItem.standardCost || null,
           price: acItem.price || null,
-          stock_quantity: acItem.stockBalance || 0,
+          stock_quantity: acItem.stockBalance !== undefined ? acItem.stockBalance : existingComponent?.stock_quantity || 0,
           last_synced_at: new Date().toISOString(),
         };
+
+        console.log(`[sync-inventory-execute] Component data for ${acItem.itemCode}:`, componentData);
 
         if (existingComponent) {
           // Update existing
