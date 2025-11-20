@@ -11,12 +11,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DeleteInventoryDialog } from "./DeleteInventoryDialog";
-import { Pencil, Check, X, RefreshCw, Trash2 } from "lucide-react";
+import { EditInventoryDialog } from "./EditInventoryDialog";
+import { Pencil, RefreshCw, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Component } from "@/types/inventory";
 
@@ -28,58 +28,12 @@ interface InventoryTableProps {
 
 export function InventoryTable({ components, isLoading, onRefetch }: InventoryTableProps) {
   const { user } = useAuth();
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState<string>("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [itemToEdit, setItemToEdit] = useState<Component | null>(null);
 
-  const updateStockMutation = useMutation({
-    mutationFn: async ({ componentId, newQuantity, oldQuantity }: { 
-      componentId: string; 
-      newQuantity: number; 
-      oldQuantity: number;
-    }) => {
-      const quantityDiff = newQuantity - oldQuantity;
-
-      // Update component stock quantity
-      const { error: updateError } = await supabase
-        .from("components")
-        .update({ stock_quantity: newQuantity })
-        .eq("id", componentId);
-
-      if (updateError) throw updateError;
-
-      // Create stock movement record
-      const { error: movementError } = await supabase
-        .from("stock_movements")
-        .insert({
-          item_id: componentId,
-          item_type: "component",
-          movement_type: "adjustment",
-          quantity: quantityDiff,
-          performed_by: user?.id,
-          notes: "Manual stock adjustment from inventory page",
-        });
-
-      if (movementError) throw movementError;
-    },
-    onSuccess: () => {
-      toast({
-        title: "Stock Updated",
-        description: "Stock quantity has been updated successfully",
-      });
-      setEditingId(null);
-      onRefetch();
-    },
-    onError: (error) => {
-      toast({
-        title: "Update Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
 
   const deleteMutation = useMutation({
     mutationFn: async (componentIds: string[]) => {
@@ -120,31 +74,8 @@ export function InventoryTable({ components, isLoading, onRefetch }: InventoryTa
   });
 
   const handleEdit = (component: Component) => {
-    setEditingId(component.id);
-    setEditValue(component.stock_quantity.toString());
-  };
-
-  const handleSave = (component: Component) => {
-    const newQuantity = parseFloat(editValue);
-    if (isNaN(newQuantity) || newQuantity < 0) {
-      toast({
-        title: "Invalid Quantity",
-        description: "Please enter a valid non-negative number",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    updateStockMutation.mutate({
-      componentId: component.id,
-      newQuantity,
-      oldQuantity: component.stock_quantity,
-    });
-  };
-
-  const handleCancel = () => {
-    setEditingId(null);
-    setEditValue("");
+    setItemToEdit(component);
+    setEditDialogOpen(true);
   };
 
   const toggleSelectAll = () => {
@@ -255,7 +186,6 @@ export function InventoryTable({ components, isLoading, onRefetch }: InventoryTa
           <TableBody>
             {components.map((component) => {
               const available = component.stock_quantity - component.reserved_quantity;
-              const isEditing = editingId === component.id;
               const isSelected = selectedIds.has(component.id);
 
               return (
@@ -281,18 +211,7 @@ export function InventoryTable({ components, isLoading, onRefetch }: InventoryTa
                 <TableCell>{component.item_group || "-"}</TableCell>
                 <TableCell>{component.item_type || "-"}</TableCell>
                 <TableCell className="text-right">
-                  {isEditing ? (
-                    <Input
-                      type="number"
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      className="w-24 text-right"
-                      min="0"
-                      step="0.01"
-                    />
-                  ) : (
-                    component.stock_quantity
-                  )}
+                  {component.stock_quantity}
                 </TableCell>
                 <TableCell className="text-right text-muted-foreground">
                   {component.reserved_quantity}
@@ -329,44 +248,21 @@ export function InventoryTable({ components, isLoading, onRefetch }: InventoryTa
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex gap-1 justify-end">
-                    {isEditing ? (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleSave(component)}
-                          disabled={updateStockMutation.isPending}
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={handleCancel}
-                          disabled={updateStockMutation.isPending}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleEdit(component)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleDeleteClick(component.id)}
-                          disabled={deleteMutation.isPending}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </>
-                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleEdit(component)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleDeleteClick(component.id)}
+                      disabled={deleteMutation.isPending}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>
@@ -382,6 +278,12 @@ export function InventoryTable({ components, isLoading, onRefetch }: InventoryTa
       onConfirm={handleConfirmDelete}
       itemCount={itemToDelete ? 1 : selectedIds.size}
       isDeleting={deleteMutation.isPending}
+    />
+
+    <EditInventoryDialog
+      open={editDialogOpen}
+      onOpenChange={setEditDialogOpen}
+      component={itemToEdit}
     />
   </>
   );
