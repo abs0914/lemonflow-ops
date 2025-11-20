@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +8,9 @@ import { InventoryTable } from "@/components/inventory/InventoryTable";
 import { InventoryFilters } from "@/components/inventory/InventoryFilters";
 import { MobileInventoryCard } from "@/components/inventory/MobileInventoryCard";
 import { StockAdjustmentDialog } from "@/components/inventory/StockAdjustmentDialog";
+import { SyncInventoryDialog } from "@/components/inventory/SyncInventoryDialog";
 import { FloatingActionButton } from "@/components/ui/floating-action-button";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, AlertCircle, Database, Plus, RefreshCw } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -17,6 +19,7 @@ import { Component } from "@/types/inventory";
 export default function Inventory() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const isMobile = useIsMobile();
   const [searchTerm, setSearchTerm] = useState("");
@@ -24,6 +27,7 @@ export default function Inventory() {
   const [itemTypeFilter, setItemTypeFilter] = useState<string>("all");
   const [stockStatusFilter, setStockStatusFilter] = useState<string>("all");
   const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false);
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
   const [selectedComponent, setSelectedComponent] = useState<Component | null>(null);
 
   // Redirect if not authenticated or not authorized
@@ -120,14 +124,26 @@ export default function Inventory() {
     setAdjustmentDialogOpen(true);
   };
 
+  const handleSyncComplete = () => {
+    queryClient.invalidateQueries({ queryKey: ["inventory"] });
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Inventory Management</h1>
-          <p className="text-muted-foreground mt-2">
-            Manage your inventory, update stock quantities, and sync with AutoCount
-          </p>
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Inventory Management</h1>
+            <p className="text-muted-foreground mt-2">
+              Manage your inventory, update stock quantities, and sync with AutoCount
+            </p>
+          </div>
+          {!isMobile && (
+            <Button variant="outline" onClick={() => setSyncDialogOpen(true)}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Sync from AutoCount
+            </Button>
+          )}
         </div>
 
         {/* KPI Cards */}
@@ -236,6 +252,12 @@ export default function Inventory() {
           currentStock={selectedComponent.stock_quantity}
         />
       )}
+
+      <SyncInventoryDialog
+        open={syncDialogOpen}
+        onOpenChange={setSyncDialogOpen}
+        onSyncComplete={handleSyncComplete}
+      />
     </DashboardLayout>
   );
 }
