@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
 
     console.log("Calling AutoCount API for stock adjustment:", adjustmentPayload);
 
-    const response = await fetch(`${apiUrl}/api/StockAdjustment`, {
+    const response = await fetch(`${apiUrl}/stock-adjustments`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
