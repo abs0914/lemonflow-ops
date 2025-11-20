@@ -54,27 +54,13 @@ Deno.serve(async (req) => {
 
     console.log("Syncing stock adjustment to AutoCount:", requestData);
 
-    // Get AutoCount credentials from config
-    const { data: config, error: configError } = await supabaseClient
-      .from("app_configs")
-      .select("key, value")
-      .in("key", ["lemonco_api_url", "lemonco_username", "lemonco_password"]);
-
-    if (configError || !config) {
-      throw new Error("Failed to fetch AutoCount configuration");
-    }
-
-    const configMap = config.reduce((acc, { key, value }) => {
-      acc[key] = value;
-      return acc;
-    }, {} as Record<string, string>);
-
-    const apiUrl = configMap.lemonco_api_url;
-    const username = configMap.lemonco_username;
-    const password = configMap.lemonco_password;
+    // Get AutoCount credentials from environment variables (Supabase secrets)
+    const apiUrl = Deno.env.get("LEMONCO_API_URL");
+    const username = Deno.env.get("LEMONCO_USERNAME");
+    const password = Deno.env.get("LEMONCO_PASSWORD");
 
     if (!apiUrl || !username || !password) {
-      throw new Error("AutoCount configuration is incomplete");
+      throw new Error("AutoCount configuration is incomplete. Please check LEMONCO_API_URL, LEMONCO_USERNAME, and LEMONCO_PASSWORD secrets.");
     }
 
     // Create Basic Auth header
