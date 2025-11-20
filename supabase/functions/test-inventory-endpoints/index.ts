@@ -37,13 +37,13 @@ Deno.serve(async (req) => {
 
     // Test multiple endpoint variations
     const endpointsToTest = [
+      '/autocount/StockItem',
+      '/autocount/stockitem',
+      '/autocount/stock-item',
       '/autocount/items',
-      '/autocount/stockitems',
-      '/autocount/stock-items',
-      '/autocount/stock_items',
       '/autocount/inventory',
-      '/autocount/components',
-      '/autocount/products',
+      '/autocount/Item',
+      '/api/public/v1/StockItem',
     ];
 
     const results = [];
