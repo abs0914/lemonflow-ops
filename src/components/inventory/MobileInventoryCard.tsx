@@ -2,15 +2,16 @@ import { Component } from "@/types/inventory";
 import { MobileDataCard, MobileDataRow } from "@/components/ui/mobile-data-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Package } from "lucide-react";
+import { Edit, Package, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface MobileInventoryCardProps {
   component: Component;
   onAdjustStock: (component: Component) => void;
+  onDelete: (id: string) => void;
 }
 
-export function MobileInventoryCard({ component, onAdjustStock }: MobileInventoryCardProps) {
+export function MobileInventoryCard({ component, onAdjustStock, onDelete }: MobileInventoryCardProps) {
   const available = component.stock_quantity - component.reserved_quantity;
 
   const getStockStatusBadge = (available: number) => {
@@ -23,14 +24,30 @@ export function MobileInventoryCard({ component, onAdjustStock }: MobileInventor
   };
 
   const actions = (
-    <Button
-      size="sm"
-      variant="outline"
-      onClick={() => onAdjustStock(component)}
-    >
-      <Edit className="h-4 w-4 mr-2" />
-      Adjust
-    </Button>
+    <div className="flex gap-2">
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={(e) => {
+          e.stopPropagation();
+          onAdjustStock(component);
+        }}
+      >
+        <Edit className="h-4 w-4 mr-2" />
+        Adjust
+      </Button>
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(component.id);
+        }}
+        className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
   );
 
   const expandableContent = (
@@ -71,7 +88,6 @@ export function MobileInventoryCard({ component, onAdjustStock }: MobileInventor
     <MobileDataCard
       actions={actions}
       expandableContent={expandableContent}
-      onClick={() => onAdjustStock(component)}
       className={
         available <= 0 
           ? "bg-red-50 dark:bg-red-950/20" 
