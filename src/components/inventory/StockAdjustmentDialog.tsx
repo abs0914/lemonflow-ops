@@ -142,11 +142,22 @@ export function StockAdjustmentDialog({
 
         if (syncError) {
           console.error("AutoCount sync error:", syncError);
-          toast({
-            title: "Stock adjusted but sync failed",
-            description: "Stock was updated locally but could not be synced to AutoCount",
-            variant: "destructive",
-          });
+          
+          // Check if it's a 404 error (item doesn't exist in AutoCount)
+          const errorMessage = syncError.message || '';
+          if (errorMessage.includes('does not exist in AutoCount')) {
+            toast({
+              title: "Item not found in AutoCount",
+              description: errorMessage,
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "Stock adjusted but sync failed",
+              description: "Stock was updated locally but could not be synced to AutoCount",
+              variant: "destructive",
+            });
+          }
         }
         
         setIsSyncing(false);
