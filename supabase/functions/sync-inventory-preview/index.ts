@@ -86,7 +86,19 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to fetch AutoCount stock items: ${acResponse.status} - ${errorText}`);
     }
 
-    const autoCountItems: AutoCountStockItem[] = await acResponse.json();
+    const responseData = await acResponse.json();
+    console.log('[sync-inventory-preview] Raw API response:', JSON.stringify(responseData));
+    
+    // Handle different response structures
+    let autoCountItems: AutoCountStockItem[] = [];
+    if (Array.isArray(responseData)) {
+      autoCountItems = responseData;
+    } else if (responseData.items && Array.isArray(responseData.items)) {
+      autoCountItems = responseData.items;
+    } else if (responseData.data && Array.isArray(responseData.data)) {
+      autoCountItems = responseData.data;
+    }
+    
     console.log(`[sync-inventory-preview] Found ${autoCountItems.length} AutoCount items`);
 
     // Get local components
