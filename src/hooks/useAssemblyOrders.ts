@@ -11,6 +11,8 @@ export interface AssemblyOrder {
   due_date: string | null;
   notes: string | null;
   updated_at: string;
+  stock_reserved: boolean | null;
+  reservation_notes: string | null;
   products?: {
     name: string;
     sku: string;
