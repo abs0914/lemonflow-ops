@@ -32,10 +32,12 @@ export function SyncSuppliersDialog({ open, onOpenChange, onSyncComplete }: Sync
   const [isSyncing, setIsSyncing] = useState(false);
   const [preview, setPreview] = useState<PreviewChange[] | null>(null);
   const [summary, setSummary] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const loadPreview = async () => {
     setIsLoadingPreview(true);
+    setError(null);
     try {
       const { data, error } = await supabase.functions.invoke('sync-suppliers-preview');
       
@@ -45,9 +47,12 @@ export function SyncSuppliersDialog({ open, onOpenChange, onSyncComplete }: Sync
       setPreview(data.preview);
       setSummary(data.summary);
     } catch (error: any) {
+      const errorMessage = error.message || 'Failed to load suppliers from AutoCount';
+      setError(errorMessage);
+      setPreview([]);
       toast({
         title: "Preview Failed",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -87,6 +92,7 @@ export function SyncSuppliersDialog({ open, onOpenChange, onSyncComplete }: Sync
     } else {
       setPreview(null);
       setSummary(null);
+      setError(null);
     }
     onOpenChange(newOpen);
   };
@@ -106,6 +112,14 @@ export function SyncSuppliersDialog({ open, onOpenChange, onSyncComplete }: Sync
             <RefreshCw className="h-8 w-8 animate-spin text-primary" />
             <span className="ml-3 text-muted-foreground">Loading preview...</span>
           </div>
+        ) : error ? (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <div className="font-semibold">Sync Preview Failed</div>
+              <div className="text-sm mt-1">{error}</div>
+            </AlertDescription>
+          </Alert>
         ) : preview ? (
           <div className="space-y-4">
             {summary && (
