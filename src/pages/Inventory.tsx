@@ -18,13 +18,16 @@ import { Package, AlertCircle, Database, Plus, RefreshCw } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { Component } from "@/types/inventory";
-
 export default function Inventory() {
-  const { user, profile } = useAuth();
+  const {
+    user,
+    profile
+  } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   const isMobile = useIsMobile();
   const [searchTerm, setSearchTerm] = useState("");
   const [itemGroupFilter, setItemGroupFilter] = useState<string>("all");
@@ -42,20 +45,20 @@ export default function Inventory() {
     navigate("/login");
     return null;
   }
-
   if (profile?.role !== "Admin" && profile?.role !== "Warehouse") {
     navigate("/login");
     return null;
   }
 
   // Fetch inventory data
-  const { data: components, isLoading, refetch } = useQuery({
+  const {
+    data: components,
+    isLoading,
+    refetch
+  } = useQuery({
     queryKey: ["inventory", searchTerm, itemGroupFilter, itemTypeFilter, stockStatusFilter],
     queryFn: async () => {
-      let query = supabase
-        .from("components")
-        .select("*")
-        .order("name");
+      let query = supabase.from("components").select("*").order("name");
 
       // Apply search filter
       if (searchTerm) {
@@ -71,130 +74,120 @@ export default function Inventory() {
       if (itemTypeFilter !== "all") {
         query = query.eq("item_type", itemTypeFilter);
       }
-
-      const { data, error } = await query;
-
+      const {
+        data,
+        error
+      } = await query;
       if (error) throw error;
 
       // Apply stock status filter (client-side since it involves calculations)
       let filteredData = data || [];
       if (stockStatusFilter === "in-stock") {
-        filteredData = filteredData.filter(c => (c.stock_quantity - c.reserved_quantity) > 0);
+        filteredData = filteredData.filter(c => c.stock_quantity - c.reserved_quantity > 0);
       } else if (stockStatusFilter === "low-stock") {
-        filteredData = filteredData.filter(c => (c.stock_quantity - c.reserved_quantity) > 0 && (c.stock_quantity - c.reserved_quantity) < 10);
+        filteredData = filteredData.filter(c => c.stock_quantity - c.reserved_quantity > 0 && c.stock_quantity - c.reserved_quantity < 10);
       } else if (stockStatusFilter === "out-of-stock") {
-        filteredData = filteredData.filter(c => (c.stock_quantity - c.reserved_quantity) <= 0);
+        filteredData = filteredData.filter(c => c.stock_quantity - c.reserved_quantity <= 0);
       }
-
       return filteredData;
-    },
+    }
   });
 
   // Fetch unique item groups and types for filters
-  const { data: itemGroups } = useQuery({
+  const {
+    data: itemGroups
+  } = useQuery({
     queryKey: ["item-groups"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("components")
-        .select("item_group")
-        .not("item_group", "is", null);
-
+      const {
+        data,
+        error
+      } = await supabase.from("components").select("item_group").not("item_group", "is", null);
       if (error) throw error;
-      
       const unique = Array.from(new Set(data.map(d => d.item_group)));
       return unique.filter(Boolean) as string[];
-    },
+    }
   });
-
-  const { data: itemTypes } = useQuery({
+  const {
+    data: itemTypes
+  } = useQuery({
     queryKey: ["item-types"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("components")
-        .select("item_type")
-        .not("item_type", "is", null);
-
+      const {
+        data,
+        error
+      } = await supabase.from("components").select("item_type").not("item_type", "is", null);
       if (error) throw error;
-      
       const unique = Array.from(new Set(data.map(d => d.item_type)));
       return unique.filter(Boolean) as string[];
-    },
+    }
   });
 
   // Calculate KPIs
   const totalItems = components?.length || 0;
-  const lowStockCount = components?.filter(c => (c.stock_quantity - c.reserved_quantity) > 0 && (c.stock_quantity - c.reserved_quantity) < 10).length || 0;
-  const outOfStockCount = components?.filter(c => (c.stock_quantity - c.reserved_quantity) <= 0).length || 0;
-
+  const lowStockCount = components?.filter(c => c.stock_quantity - c.reserved_quantity > 0 && c.stock_quantity - c.reserved_quantity < 10).length || 0;
+  const outOfStockCount = components?.filter(c => c.stock_quantity - c.reserved_quantity <= 0).length || 0;
   const handleAdjustStock = (component: Component) => {
     setSelectedComponent(component);
     setAdjustmentDialogOpen(true);
   };
-
   const handleSyncComplete = () => {
-    queryClient.invalidateQueries({ queryKey: ["inventory"] });
+    queryClient.invalidateQueries({
+      queryKey: ["inventory"]
+    });
   };
-
   const deleteMutation = useMutation({
     mutationFn: async (componentId: string) => {
       // Delete associated stock movements first
-      const { error: movementError } = await supabase
-        .from("stock_movements")
-        .delete()
-        .eq("item_id", componentId)
-        .eq("item_type", "component");
-
+      const {
+        error: movementError
+      } = await supabase.from("stock_movements").delete().eq("item_id", componentId).eq("item_type", "component");
       if (movementError) throw movementError;
 
       // Delete component
-      const { error: componentError } = await supabase
-        .from("components")
-        .delete()
-        .eq("id", componentId);
-
+      const {
+        error: componentError
+      } = await supabase.from("components").delete().eq("id", componentId);
       if (componentError) throw componentError;
     },
     onSuccess: () => {
       toast({
         title: "Item Deleted",
-        description: "Successfully deleted the inventory item",
+        description: "Successfully deleted the inventory item"
       });
       setDeleteDialogOpen(false);
       setItemToDelete(null);
-      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({
+        queryKey: ["inventory"]
+      });
     },
     onError: (error: Error) => {
       toast({
         title: "Delete Failed",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
-    },
+    }
   });
-
   const handleDeleteClick = (id: string) => {
     setItemToDelete(id);
     setDeleteDialogOpen(true);
   };
-
   const handleConfirmDelete = () => {
     if (itemToDelete) {
       deleteMutation.mutate(itemToDelete);
     }
   };
-
-  return (
-    <DashboardLayout>
+  return <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between px-[30px] py-[21px]">
           <div>
             <h1 className="text-3xl font-bold">Inventory Management</h1>
             <p className="text-muted-foreground mt-2">
               Manage your inventory, update stock quantities, and sync with AutoCount
             </p>
           </div>
-          {!isMobile && (
-            <div className="flex gap-2">
+          {!isMobile && <div className="flex gap-2">
               <Button onClick={() => setAddDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add Item
@@ -203,8 +196,7 @@ export default function Inventory() {
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Sync from AutoCount
               </Button>
-            </div>
-          )}
+            </div>}
         </div>
 
         {/* KPI Cards */}
@@ -244,100 +236,36 @@ export default function Inventory() {
         </div>
 
         {/* Filters */}
-        <InventoryFilters
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          itemGroupFilter={itemGroupFilter}
-          onItemGroupChange={setItemGroupFilter}
-          itemTypeFilter={itemTypeFilter}
-          onItemTypeChange={setItemTypeFilter}
-          stockStatusFilter={stockStatusFilter}
-          onStockStatusChange={setStockStatusFilter}
-          itemGroups={itemGroups || []}
-          itemTypes={itemTypes || []}
-        />
+        <InventoryFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} itemGroupFilter={itemGroupFilter} onItemGroupChange={setItemGroupFilter} itemTypeFilter={itemTypeFilter} onItemTypeChange={setItemTypeFilter} stockStatusFilter={stockStatusFilter} onStockStatusChange={setStockStatusFilter} itemGroups={itemGroups || []} itemTypes={itemTypes || []} />
 
         {/* Inventory Table/Cards */}
-        {isMobile ? (
-          <div className="space-y-3">
-            {isLoading ? (
-              <div className="flex items-center justify-center p-8">
+        {isMobile ? <div className="space-y-3">
+            {isLoading ? <div className="flex items-center justify-center p-8">
                 <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : components && components.length > 0 ? (
-              components.map((component) => (
-                <MobileInventoryCard
-                  key={component.id}
-                  component={component}
-                  onAdjustStock={handleAdjustStock}
-                  onDelete={handleDeleteClick}
-                />
-              ))
-            ) : (
-              <div className="text-center p-8 text-muted-foreground">
+              </div> : components && components.length > 0 ? components.map(component => <MobileInventoryCard key={component.id} component={component} onAdjustStock={handleAdjustStock} onDelete={handleDeleteClick} />) : <div className="text-center p-8 text-muted-foreground">
                 No inventory items found
-              </div>
-            )}
-          </div>
-        ) : (
-          <InventoryTable
-            components={components || []}
-            isLoading={isLoading}
-            onRefetch={refetch}
-          />
-        )}
+              </div>}
+          </div> : <InventoryTable components={components || []} isLoading={isLoading} onRefetch={refetch} className="mx-[4px] px-0 my-0" />}
       </div>
 
       {/* Mobile FAB */}
-      {isMobile && (
-        <FloatingActionButton
-          icon={Plus}
-          label="Quick Actions"
-          actions={[
-            {
-              icon: Plus,
-              label: "Add Item",
-              onClick: () => setAddDialogOpen(true),
-            },
-            {
-              icon: RefreshCw,
-              label: "Sync from AutoCount",
-              onClick: () => setSyncDialogOpen(true),
-            },
-          ]}
-        />
-      )}
+      {isMobile && <FloatingActionButton icon={Plus} label="Quick Actions" actions={[{
+      icon: Plus,
+      label: "Add Item",
+      onClick: () => setAddDialogOpen(true)
+    }, {
+      icon: RefreshCw,
+      label: "Sync from AutoCount",
+      onClick: () => setSyncDialogOpen(true)
+    }]} />}
 
       {/* Stock Adjustment Dialog */}
-      {selectedComponent && (
-        <StockAdjustmentDialog
-          open={adjustmentDialogOpen}
-          onOpenChange={setAdjustmentDialogOpen}
-          itemType="component"
-          itemId={selectedComponent.id}
-          itemName={selectedComponent.name}
-          currentStock={selectedComponent.stock_quantity}
-        />
-      )}
+      {selectedComponent && <StockAdjustmentDialog open={adjustmentDialogOpen} onOpenChange={setAdjustmentDialogOpen} itemType="component" itemId={selectedComponent.id} itemName={selectedComponent.name} currentStock={selectedComponent.stock_quantity} />}
 
-      <SyncInventoryDialog
-        open={syncDialogOpen}
-        onOpenChange={setSyncDialogOpen}
-        onSyncComplete={handleSyncComplete}
-      />
+      <SyncInventoryDialog open={syncDialogOpen} onOpenChange={setSyncDialogOpen} onSyncComplete={handleSyncComplete} />
 
-      <DeleteInventoryDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        onConfirm={handleConfirmDelete}
-        itemCount={1}
-        isDeleting={deleteMutation.isPending}
-      />
+      <DeleteInventoryDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} onConfirm={handleConfirmDelete} itemCount={1} isDeleting={deleteMutation.isPending} />
 
-      <AddInventoryDialog
-        open={addDialogOpen}
-        onOpenChange={setAddDialogOpen}
-      />
-    </DashboardLayout>
-  );
+      <AddInventoryDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />
+    </DashboardLayout>;
 }
