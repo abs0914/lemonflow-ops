@@ -10,14 +10,16 @@ interface AutoCountStockItem {
   description: string;
   itemGroup?: string;
   itemType?: string;
-  baseUOM?: string;
-  stockControl: boolean;
-  hasBatchNo: boolean;
-  isActive: boolean;
-  costPerUnit?: number;
+  baseUom?: string;
+  stockControl?: boolean;
+  hasBatchNo?: boolean;
+  isActive?: boolean;
+  standardCost?: number;
   price?: number;
   stockBalance?: number;
   mainSupplier?: string;
+  barcode?: string;
+  hasBom?: boolean;
 }
 
 Deno.serve(async (req) => {
@@ -116,10 +118,10 @@ Deno.serve(async (req) => {
           autocount_item_code: acItem.itemCode,
           item_group: acItem.itemGroup || null,
           item_type: acItem.itemType || 'CONSUMABLE',
-          unit: acItem.baseUOM || 'unit',
-          stock_control: acItem.stockControl,
-          has_batch_no: acItem.hasBatchNo,
-          cost_per_unit: acItem.costPerUnit || null,
+          unit: acItem.baseUom || 'unit',
+          stock_control: acItem.stockControl ?? true,
+          has_batch_no: acItem.hasBatchNo ?? false,
+          cost_per_unit: acItem.standardCost || null,
           price: acItem.price || null,
           stock_quantity: acItem.stockBalance || 0,
           last_synced_at: new Date().toISOString(),
