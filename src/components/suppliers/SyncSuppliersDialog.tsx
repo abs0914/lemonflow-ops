@@ -28,6 +28,7 @@ interface SyncSuppliersDialogProps {
 }
 
 export function SyncSuppliersDialog({ open, onOpenChange, onSyncComplete }: SyncSuppliersDialogProps) {
+  console.log('[SyncSuppliersDialog] Component rendering, open:', open);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [preview, setPreview] = useState<PreviewChange[] | null>(null);
@@ -92,9 +93,12 @@ export function SyncSuppliersDialog({ open, onOpenChange, onSyncComplete }: Sync
   };
 
   const handleOpenChange = (newOpen: boolean) => {
+    console.log('[SyncSuppliersDialog] handleOpenChange called with:', newOpen);
     if (newOpen) {
+      console.log('[SyncSuppliersDialog] Dialog opening, calling loadPreview');
       loadPreview();
     } else {
+      console.log('[SyncSuppliersDialog] Dialog closing, clearing state');
       setPreview(null);
       setSummary(null);
       setError(null);
