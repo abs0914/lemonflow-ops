@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 interface AutoCountStockItem {
-  code: string;
+  itemCode: string;
   description: string;
   itemGroup?: string;
   itemType?: string;
@@ -17,6 +17,7 @@ interface AutoCountStockItem {
   costPerUnit?: number;
   price?: number;
   stockBalance?: number;
+  mainSupplier?: string;
 }
 
 Deno.serve(async (req) => {
@@ -105,14 +106,14 @@ Deno.serve(async (req) => {
     for (const acItem of autoCountItems) {
       try {
         const existingComponent = existingComponents?.find(
-          c => c.autocount_item_code === acItem.code || c.sku === acItem.code
+          c => c.autocount_item_code === acItem.itemCode || c.sku === acItem.itemCode
         );
 
         const componentData = {
-          sku: acItem.code,
+          sku: acItem.itemCode,
           name: acItem.description,
           description: acItem.description,
-          autocount_item_code: acItem.code,
+          autocount_item_code: acItem.itemCode,
           item_group: acItem.itemGroup || null,
           item_type: acItem.itemType || 'CONSUMABLE',
           unit: acItem.baseUOM || 'unit',
@@ -143,8 +144,8 @@ Deno.serve(async (req) => {
           created++;
         }
       } catch (error: any) {
-        console.error(`Error syncing item ${acItem.code}:`, error);
-        errors.push(`${acItem.code}: ${error.message}`);
+        console.error(`Error syncing item ${acItem.itemCode}:`, error);
+        errors.push(`${acItem.itemCode}: ${error.message}`);
       }
     }
 
