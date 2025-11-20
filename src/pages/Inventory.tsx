@@ -10,6 +10,7 @@ import { MobileInventoryCard } from "@/components/inventory/MobileInventoryCard"
 import { StockAdjustmentDialog } from "@/components/inventory/StockAdjustmentDialog";
 import { SyncInventoryDialog } from "@/components/inventory/SyncInventoryDialog";
 import { DeleteInventoryDialog } from "@/components/inventory/DeleteInventoryDialog";
+import { AddInventoryDialog } from "@/components/inventory/AddInventoryDialog";
 import { FloatingActionButton } from "@/components/ui/floating-action-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +33,7 @@ export default function Inventory() {
   const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false);
   const [syncDialogOpen, setSyncDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [selectedComponent, setSelectedComponent] = useState<Component | null>(null);
 
@@ -192,10 +194,16 @@ export default function Inventory() {
             </p>
           </div>
           {!isMobile && (
-            <Button variant="outline" onClick={() => setSyncDialogOpen(true)}>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Sync from AutoCount
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={() => setAddDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Item
+              </Button>
+              <Button variant="outline" onClick={() => setSyncDialogOpen(true)}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Sync from AutoCount
+              </Button>
+            </div>
           )}
         </div>
 
@@ -287,9 +295,14 @@ export default function Inventory() {
           label="Quick Actions"
           actions={[
             {
+              icon: Plus,
+              label: "Add Item",
+              onClick: () => setAddDialogOpen(true),
+            },
+            {
               icon: RefreshCw,
-              label: "Refresh",
-              onClick: () => refetch(),
+              label: "Sync from AutoCount",
+              onClick: () => setSyncDialogOpen(true),
             },
           ]}
         />
@@ -319,6 +332,11 @@ export default function Inventory() {
         onConfirm={handleConfirmDelete}
         itemCount={1}
         isDeleting={deleteMutation.isPending}
+      />
+
+      <AddInventoryDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
       />
     </DashboardLayout>
   );

@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.sync-inventory-execute]
 verify_jwt = false
+
+[functions.create-autocount-item]
+verify_jwt = false
