@@ -2,3 +2,12 @@ project_id = "pukezienbcenozlqmunf"
 
 [functions.setup-demo-users]
 verify_jwt = false
+
+[functions.test-autocount-connection]
+verify_jwt = false
+
+[functions.sync-suppliers-preview]
+verify_jwt = false
+
+[functions.sync-suppliers-execute]
+verify_jwt = false

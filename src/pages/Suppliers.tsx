@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, RefreshCw } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,12 +12,16 @@ import { SupplierDialog } from "@/components/suppliers/SupplierDialog";
 import { MobileSupplierCard } from "@/components/suppliers/MobileSupplierCard";
 import { FloatingActionButton } from "@/components/ui/floating-action-button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SyncSuppliersDialog } from "@/components/suppliers/SyncSuppliersDialog";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function Suppliers() {
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<string | undefined>();
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
   const isMobile = useIsMobile();
+  const queryClient = useQueryClient();
 
   const { data: suppliers, isLoading } = useSuppliers();
 
@@ -37,6 +41,10 @@ export default function Suppliers() {
     setDialogOpen(true);
   };
 
+  const handleSyncComplete = () => {
+    queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -46,10 +54,16 @@ export default function Suppliers() {
             <p className="text-muted-foreground">Manage your suppliers and creditors</p>
           </div>
           {!isMobile && (
-            <Button onClick={handleCreate}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Supplier
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setSyncDialogOpen(true)}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Sync from AutoCount
+              </Button>
+              <Button onClick={handleCreate}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Supplier
+              </Button>
+            </div>
           )}
         </div>
 
@@ -143,6 +157,12 @@ export default function Suppliers() {
           open={dialogOpen}
           onOpenChange={setDialogOpen}
           supplierId={selectedSupplier}
+        />
+
+        <SyncSuppliersDialog
+          open={syncDialogOpen}
+          onOpenChange={setSyncDialogOpen}
+          onSyncComplete={handleSyncComplete}
         />
       </div>
     </DashboardLayout>
