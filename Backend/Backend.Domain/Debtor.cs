@@ -86,7 +86,7 @@ namespace Backend.Domain
         /// <summary>
         /// Indicates if the debtor is active.
         /// </summary>
-        public bool IsActive { get; set; } = true;
+        public bool IsActive { get; set; }
 
         /// <summary>
         /// Remarks or notes.

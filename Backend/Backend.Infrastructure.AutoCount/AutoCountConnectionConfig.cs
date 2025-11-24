@@ -56,7 +56,7 @@ namespace Backend.Infrastructure.AutoCount
         /// <summary>
         /// Optional: Connection timeout in seconds.
         /// </summary>
-        public int ConnectionTimeoutSeconds { get; set; } = 30;
+        public int ConnectionTimeoutSeconds { get; set; }
 
         /// <summary>
         /// Loads configuration from web.config or app.config appSettings.
@@ -81,8 +81,9 @@ namespace Backend.Infrastructure.AutoCount
                 if (string.IsNullOrEmpty(dbServerTypeStr))
                     throw new ConfigurationErrorsException("AutoCount:DBServerType not configured");
 
-                if (!Enum.TryParse<DBServerType>(dbServerTypeStr, out var dbServerType))
-                    throw new ConfigurationErrorsException($"Invalid DBServerType: {dbServerTypeStr}");
+                DBServerType dbServerType;
+                if (!Enum.TryParse<DBServerType>(dbServerTypeStr, out dbServerType))
+                    throw new ConfigurationErrorsException("Invalid DBServerType: " + dbServerTypeStr);
 
                 config.DBServerType = dbServerType;
                 config.ServerName = GetRequiredSetting("AutoCount:ServerName");
@@ -93,7 +94,8 @@ namespace Backend.Infrastructure.AutoCount
                 config.AutoCountPassword = GetRequiredSetting("AutoCount:AutoCountPassword");
 
                 var timeoutStr = ConfigurationManager.AppSettings["AutoCount:ConnectionTimeoutSeconds"];
-                if (!string.IsNullOrEmpty(timeoutStr) && int.TryParse(timeoutStr, out var timeout))
+                int timeout;
+                if (!string.IsNullOrEmpty(timeoutStr) && int.TryParse(timeoutStr, out timeout))
                 {
                     config.ConnectionTimeoutSeconds = timeout;
                 }
@@ -110,7 +112,7 @@ namespace Backend.Infrastructure.AutoCount
         {
             var value = ConfigurationManager.AppSettings[key];
             if (string.IsNullOrEmpty(value))
-                throw new ConfigurationErrorsException($"Required setting '{key}' not found in configuration");
+                throw new ConfigurationErrorsException("Required setting '" + key + "' not found in configuration");
             return value;
         }
 

@@ -23,7 +23,9 @@ namespace Backend.Infrastructure.AutoCount
 
         public AutoCountDebtorService(IAutoCountSessionProvider sessionProvider)
         {
-            _sessionProvider = sessionProvider ?? throw new ArgumentNullException(nameof(sessionProvider));
+            if (sessionProvider == null)
+                throw new ArgumentNullException("sessionProvider");
+            _sessionProvider = sessionProvider;
         }
 
         public List<Debtor> GetAllDebtors()
@@ -57,7 +59,7 @@ namespace Backend.Infrastructure.AutoCount
         public Debtor GetDebtorByCode(string debtorCode)
         {
             if (string.IsNullOrWhiteSpace(debtorCode))
-                throw new ArgumentException("Debtor code cannot be empty.", nameof(debtorCode));
+                throw new ArgumentException("Debtor code cannot be empty.", "debtorCode");
 
             lock (_lockObject)
             {
@@ -75,7 +77,7 @@ namespace Backend.Infrastructure.AutoCount
                 }
                 catch (Exception ex)
                 {
-                    throw new InvalidOperationException($"Failed to retrieve debtor '{debtorCode}' from AutoCount.", ex);
+                    throw new InvalidOperationException("Failed to retrieve debtor '" + debtorCode + "' from AutoCount.", ex);
                 }
             }
         }
@@ -83,9 +85,9 @@ namespace Backend.Infrastructure.AutoCount
         public Debtor CreateDebtor(Debtor debtor)
         {
             if (debtor == null)
-                throw new ArgumentNullException(nameof(debtor));
+                throw new ArgumentNullException("debtor");
             if (string.IsNullOrWhiteSpace(debtor.Code))
-                throw new ArgumentException("Debtor code is required.", nameof(debtor));
+                throw new ArgumentException("Debtor code is required.", "debtor");
 
             lock (_lockObject)
             {
@@ -114,9 +116,9 @@ namespace Backend.Infrastructure.AutoCount
         public Debtor UpdateDebtor(Debtor debtor)
         {
             if (debtor == null)
-                throw new ArgumentNullException(nameof(debtor));
+                throw new ArgumentNullException("debtor");
             if (string.IsNullOrWhiteSpace(debtor.Code))
-                throw new ArgumentException("Debtor code is required.", nameof(debtor));
+                throw new ArgumentException("Debtor code is required.", "debtor");
 
             lock (_lockObject)
             {
@@ -131,7 +133,7 @@ namespace Backend.Infrastructure.AutoCount
                 }
                 catch (Exception ex)
                 {
-                    throw new InvalidOperationException($"Failed to update debtor '{debtor.Code}' in AutoCount.", ex);
+                    throw new InvalidOperationException("Failed to update debtor '" + debtor.Code + "' in AutoCount.", ex);
                 }
             }
         }
@@ -139,7 +141,7 @@ namespace Backend.Infrastructure.AutoCount
         public void DeleteDebtor(string debtorCode)
         {
             if (string.IsNullOrWhiteSpace(debtorCode))
-                throw new ArgumentException("Debtor code cannot be empty.", nameof(debtorCode));
+                throw new ArgumentException("Debtor code cannot be empty.", "debtorCode");
 
             lock (_lockObject)
             {
@@ -152,7 +154,7 @@ namespace Backend.Infrastructure.AutoCount
                 }
                 catch (Exception ex)
                 {
-                    throw new InvalidOperationException($"Failed to delete debtor '{debtorCode}' from AutoCount.", ex);
+                    throw new InvalidOperationException("Failed to delete debtor '" + debtorCode + "' from AutoCount.", ex);
                 }
             }
         }
@@ -160,7 +162,7 @@ namespace Backend.Infrastructure.AutoCount
         public bool DebtorExists(string debtorCode)
         {
             if (string.IsNullOrWhiteSpace(debtorCode))
-                throw new ArgumentException("Debtor code cannot be empty.", nameof(debtorCode));
+                throw new ArgumentException("Debtor code cannot be empty.", "debtorCode");
 
             lock (_lockObject)
             {

@@ -25,7 +25,9 @@ namespace Backend.Api.Controllers
 
         public SalesInvoicesController(IAutoCountSalesInvoiceService invoiceService)
         {
-            _invoiceService = invoiceService ?? throw new ArgumentNullException(nameof(invoiceService));
+            if (invoiceService == null)
+                throw new ArgumentNullException("invoiceService");
+            _invoiceService = invoiceService;
         }
 
         /// <summary>
@@ -75,7 +77,7 @@ namespace Backend.Api.Controllers
                     return BadRequest("Invoice must have at least one line item");
 
                 var createdInvoice = _invoiceService.CreateSalesInvoice(invoice);
-                return Created($"api/sales-invoices/{createdInvoice.DocumentNo}", createdInvoice);
+                return Created("api/sales-invoices/" + createdInvoice.DocumentNo, createdInvoice);
             }
             catch (Exception ex)
             {
@@ -131,7 +133,7 @@ namespace Backend.Api.Controllers
                     return NotFound();
 
                 _invoiceService.PostSalesInvoice(documentNo);
-                return Ok(new { message = $"Sales invoice '{documentNo}' posted successfully" });
+                return Ok(new { message = "Sales invoice '" + documentNo + "' posted successfully" });
             }
             catch (Exception ex)
             {

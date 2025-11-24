@@ -33,18 +33,46 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Configuration" />
+    <Reference Include="System.IdentityModel" />
+    <Reference Include="System.Xml" />
+    <Reference Include="AutoCount2.MainEntry">
+      <HintPath>..\lib\AutoCount2.MainEntry.dll</HintPath>
+    </Reference>
+    <Reference Include="AutoCount">
+      <HintPath>..\lib\AutoCount.dll</HintPath>
+    </Reference>
+    <Reference Include="AutoCount.MainEntry">
+      <HintPath>..\lib\AutoCount.MainEntry.dll</HintPath>
+    </Reference>
+    <Reference Include="AutoCount.Accounting">
+      <HintPath>..\lib\AutoCount.Accounting.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="AutoCount2.MainEntry" Version="2.1.0" />
+    <Reference Include="Microsoft.IdentityModel.Tokens">
+      <HintPath>..\packages\Microsoft.IdentityModel.Tokens.6.8.0\lib\net45\Microsoft.IdentityModel.Tokens.dll</HintPath>
+    </Reference>
+    <Reference Include="System.IdentityModel.Tokens.Jwt">
+      <HintPath>..\packages\System.IdentityModel.Tokens.Jwt.6.8.0\lib\net45\System.IdentityModel.Tokens.Jwt.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Backend.Domain\Backend.Domain.csproj">
-      <Project>{D4E5F6G7-H8I9-40J0-K1L2-M3N4O5P6Q7R8}</Project>
+      <Project>{44444444-4444-4444-4444-444444444444}</Project>
       <Name>Backend.Domain</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="AutoCountConnectionConfig.cs" />
+    <Compile Include="AutoCountDebtorService.cs" />
+    <Compile Include="AutoCountSalesInvoiceService.cs" />
+    <Compile Include="AutoCountSessionProvider.cs" />
+    <Compile Include="IAutoCountDebtorService.cs" />
+    <Compile Include="IAutoCountSalesInvoiceService.cs" />
+    <Compile Include="JwtAuthenticationHelper.cs" />
+    <Compile Include="JwtConfig.cs" />
+    <Compile Include="SupabaseConfig.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

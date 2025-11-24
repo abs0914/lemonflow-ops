@@ -22,7 +22,9 @@ namespace Backend.Api.Controllers
 
         public DebtorsController(IAutoCountDebtorService debtorService)
         {
-            _debtorService = debtorService ?? throw new ArgumentNullException(nameof(debtorService));
+            if (debtorService == null)
+                throw new ArgumentNullException("debtorService");
+            _debtorService = debtorService;
         }
 
         /// <summary>
@@ -91,7 +93,7 @@ namespace Backend.Api.Controllers
                     return BadRequest("Debtor name is required");
 
                 var createdDebtor = _debtorService.CreateDebtor(debtor);
-                return Created($"api/debtors/{createdDebtor.Code}", createdDebtor);
+                return Created("api/debtors/" + createdDebtor.Code, createdDebtor);
             }
             catch (Exception ex)
             {

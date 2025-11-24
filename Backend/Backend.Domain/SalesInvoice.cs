@@ -37,12 +37,12 @@ namespace Backend.Domain
         /// <summary>
         /// Exchange rate (if foreign currency).
         /// </summary>
-        public decimal ExchangeRate { get; set; } = 1.0m;
+        public decimal ExchangeRate { get; set; }
 
         /// <summary>
         /// Invoice line items.
         /// </summary>
-        public List<SalesInvoiceLine> Lines { get; set; } = new List<SalesInvoiceLine>();
+        public List<SalesInvoiceLine> Lines { get; set; }
 
         /// <summary>
         /// Subtotal (before tax).
@@ -68,7 +68,7 @@ namespace Backend.Domain
         /// <summary>
         /// Invoice status (e.g., "Draft", "Posted", "Cancelled").
         /// </summary>
-        public string Status { get; set; } = "Draft";
+        public string Status { get; set; }
 
         /// <summary>
         /// Date created.

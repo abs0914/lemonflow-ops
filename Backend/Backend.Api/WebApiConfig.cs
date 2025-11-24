@@ -10,7 +10,8 @@ namespace Backend.Api
         public static void Register(HttpConfiguration config)
         {
             // Web API configuration and services
-            config.EnableCors();
+            // TODO: Enable CORS when System.Web.Http.Cors package is available
+            // config.EnableCors();
 
             // Web API routes
             config.MapHttpAttributeRoutes();
@@ -21,10 +22,10 @@ namespace Backend.Api
                 defaults: new { id = RouteParameter.Optional }
             );
 
-            // Configure JSON serialization
-            var jsonFormatter = config.Formatters.JsonFormatter;
-            jsonFormatter.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
-            jsonFormatter.SerializerSettings.Formatting = Newtonsoft.Json.Formatting.Indented;
+            // TODO: Configure JSON serialization when System.Net.Http.Formatting package is available
+            // var jsonFormatter = config.Formatters.JsonFormatter;
+            // jsonFormatter.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
+            // jsonFormatter.SerializerSettings.Formatting = Newtonsoft.Json.Formatting.Indented;
         }
     }
 }

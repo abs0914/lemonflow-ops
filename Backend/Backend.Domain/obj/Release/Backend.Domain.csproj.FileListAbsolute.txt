@@ -1,0 +1,5 @@
+C:\Users\USER\lemonflow-ops\Backend\Backend.Domain\obj\Release\Backend.Domain.csprojResolveAssemblyReference.cache
+C:\Users\USER\lemonflow-ops\Backend\Backend.Domain\bin\Release\Backend.Domain.dll
+C:\Users\USER\lemonflow-ops\Backend\Backend.Domain\bin\Release\Backend.Domain.pdb
+C:\Users\USER\lemonflow-ops\Backend\Backend.Domain\obj\Release\Backend.Domain.dll
+C:\Users\USER\lemonflow-ops\Backend\Backend.Domain\obj\Release\Backend.Domain.pdb

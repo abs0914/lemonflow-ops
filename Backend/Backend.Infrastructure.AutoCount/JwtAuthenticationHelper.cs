@@ -1,5 +1,6 @@
 using System;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
@@ -20,7 +21,9 @@ namespace Backend.Infrastructure.AutoCount
         /// <param name="jwtConfig">JWT configuration settings</param>
         public JwtAuthenticationHelper(JwtConfig jwtConfig)
         {
-            _jwtConfig = jwtConfig ?? throw new ArgumentNullException(nameof(jwtConfig));
+            if (jwtConfig == null)
+                throw new ArgumentNullException("jwtConfig");
+            _jwtConfig = jwtConfig;
         }
 
         /// <summary>
@@ -33,9 +36,9 @@ namespace Backend.Infrastructure.AutoCount
         public string GenerateToken(string userId, string email, params Claim[] additionalClaims)
         {
             if (string.IsNullOrWhiteSpace(userId))
-                throw new ArgumentException("User ID cannot be null or empty", nameof(userId));
+                throw new ArgumentException("User ID cannot be null or empty", "userId");
             if (string.IsNullOrWhiteSpace(email))
-                throw new ArgumentException("Email cannot be null or empty", nameof(email));
+                throw new ArgumentException("Email cannot be null or empty", "email");
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtConfig.Secret));
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -89,13 +92,14 @@ namespace Backend.Infrastructure.AutoCount
                     ClockSkew = TimeSpan.Zero
                 };
 
-                claimsPrincipal = tokenHandler.ValidateToken(token, validationParameters, out SecurityToken validatedToken);
+                SecurityToken validatedToken;
+                claimsPrincipal = tokenHandler.ValidateToken(token, validationParameters, out validatedToken);
                 return true;
             }
             catch (Exception ex)
             {
                 // Log the exception if needed
-                System.Diagnostics.Debug.WriteLine($"Token validation failed: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine("Token validation failed: " + ex.Message);
                 return false;
             }
         }
@@ -115,7 +119,10 @@ namespace Backend.Infrastructure.AutoCount
                 var tokenHandler = new JwtSecurityTokenHandler();
                 var jwtToken = tokenHandler.ReadToken(token) as JwtSecurityToken;
 
-                return jwtToken?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+                if (jwtToken == null)
+                    return null;
+                var claim = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
+                return claim != null ? claim.Value : null;
             }
             catch
             {
@@ -138,7 +145,10 @@ namespace Backend.Infrastructure.AutoCount
                 var tokenHandler = new JwtSecurityTokenHandler();
                 var jwtToken = tokenHandler.ReadToken(token) as JwtSecurityToken;
 
-                return jwtToken?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
+                if (jwtToken == null)
+                    return null;
+                var claim = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email);
+                return claim != null ? claim.Value : null;
             }
             catch
             {

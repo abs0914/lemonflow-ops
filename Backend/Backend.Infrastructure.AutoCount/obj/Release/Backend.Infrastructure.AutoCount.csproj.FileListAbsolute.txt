@@ -1,0 +1,14 @@
+C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\Backend.Infrastructure.AutoCount.dll
+C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\Backend.Infrastructure.AutoCount.pdb
+C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\Backend.Domain.dll
+C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\Backend.Domain.pdb
+C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\obj\Release\Backend.Infrastructure.AutoCount.csprojResolveAssemblyReference.cache
+C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\obj\Release\Backend.Infrastructure.AutoCount.dll
+C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\obj\Release\Backend.Infrastructure.AutoCount.pdb
+C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\AutoCount.Accounting.dll
+C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\AutoCount.dll
+C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\AutoCount.MainEntry.dll
+C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\Microsoft.IdentityModel.Tokens.dll
+C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\System.IdentityModel.Tokens.Jwt.dll
+C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\Microsoft.IdentityModel.Tokens.xml
+C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\System.IdentityModel.Tokens.Jwt.xml

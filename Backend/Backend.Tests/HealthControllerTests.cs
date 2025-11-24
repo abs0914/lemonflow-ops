@@ -55,7 +55,8 @@ namespace Backend.Tests
         {
             // Arrange
             _mockSessionProvider.Setup(x => x.IsInitialized).Returns(true);
-            _mockSessionProvider.Setup(x => x.GetUserSession()).Returns(new object()); // Mock UserSession
+            // Note: GetUserSession() returns AutoCount.Authentication.UserSession which cannot be easily mocked
+            // In a real scenario, you would need to mock the actual UserSession type
 
             // Act
             var result = _controller.GetAutoCountHealth();

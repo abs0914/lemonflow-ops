@@ -146,7 +146,8 @@ namespace Backend.Api.Controllers
 
             try
             {
-                if (_jwtHelper.ValidateToken(token, out var claimsPrincipal))
+                System.Security.Claims.ClaimsPrincipal claimsPrincipal;
+                if (_jwtHelper.ValidateToken(token, out claimsPrincipal))
                 {
                     var userId = _jwtHelper.GetUserIdFromToken(token);
                     var email = _jwtHelper.GetEmailFromToken(token);

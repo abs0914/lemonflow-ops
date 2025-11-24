@@ -45,7 +45,8 @@ namespace Backend.Infrastructure.AutoCount
 
             // Parse expiry minutes
             string expiryMinutesStr = ConfigurationManager.AppSettings["Jwt:ExpiryMinutes"];
-            if (!int.TryParse(expiryMinutesStr, out int expiryMinutes) || expiryMinutes <= 0)
+            int expiryMinutes;
+            if (!int.TryParse(expiryMinutesStr, out expiryMinutes) || expiryMinutes <= 0)
             {
                 expiryMinutes = 480; // Default to 8 hours
             }

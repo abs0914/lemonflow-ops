@@ -44,7 +44,7 @@ namespace Backend.Api
             Exception ex = Server.GetLastError();
             if (ex != null)
             {
-                System.Diagnostics.Debug.WriteLine($"Application error: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine("Application error: " + ex.Message);
             }
         }
 
@@ -63,7 +63,7 @@ namespace Backend.Api
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Failed to initialize JWT configuration: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine("Failed to initialize JWT configuration: " + ex.Message);
                 throw;
             }
         }
@@ -83,7 +83,7 @@ namespace Backend.Api
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Failed to initialize Supabase configuration: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine("Failed to initialize Supabase configuration: " + ex.Message);
                 throw;
             }
         }
@@ -117,7 +117,7 @@ namespace Backend.Api
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Failed to initialize AutoCount session: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine("Failed to initialize AutoCount session: " + ex.Message);
                 // In production, you may want to log this to a file or monitoring system
                 // and potentially prevent the application from starting if AutoCount is critical
                 throw;

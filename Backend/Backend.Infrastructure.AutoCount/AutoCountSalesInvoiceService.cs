@@ -24,13 +24,15 @@ namespace Backend.Infrastructure.AutoCount
 
         public AutoCountSalesInvoiceService(IAutoCountSessionProvider sessionProvider)
         {
-            _sessionProvider = sessionProvider ?? throw new ArgumentNullException(nameof(sessionProvider));
+            if (sessionProvider == null)
+                throw new ArgumentNullException("sessionProvider");
+            _sessionProvider = sessionProvider;
         }
 
         public SalesInvoice GetSalesInvoiceByDocumentNo(string documentNo)
         {
             if (string.IsNullOrWhiteSpace(documentNo))
-                throw new ArgumentException("Document number cannot be empty.", nameof(documentNo));
+                throw new ArgumentException("Document number cannot be empty.", "documentNo");
 
             lock (_lockObject)
             {
@@ -50,7 +52,7 @@ namespace Backend.Infrastructure.AutoCount
                 }
                 catch (Exception ex)
                 {
-                    throw new InvalidOperationException($"Failed to retrieve sales invoice '{documentNo}' from AutoCount.", ex);
+                    throw new InvalidOperationException("Failed to retrieve sales invoice '" + documentNo + "' from AutoCount.", ex);
                 }
             }
         }
@@ -58,11 +60,11 @@ namespace Backend.Infrastructure.AutoCount
         public SalesInvoice CreateSalesInvoice(SalesInvoice invoice)
         {
             if (invoice == null)
-                throw new ArgumentNullException(nameof(invoice));
+                throw new ArgumentNullException("invoice");
             if (string.IsNullOrWhiteSpace(invoice.DebtorCode))
-                throw new ArgumentException("Debtor code is required.", nameof(invoice));
+                throw new ArgumentException("Debtor code is required.", "invoice");
             if (invoice.Lines == null || invoice.Lines.Count == 0)
-                throw new ArgumentException("Invoice must have at least one line item.", nameof(invoice));
+                throw new ArgumentException("Invoice must have at least one line item.", "invoice");
 
             lock (_lockObject)
             {
@@ -104,9 +106,9 @@ namespace Backend.Infrastructure.AutoCount
         public SalesInvoice UpdateSalesInvoice(SalesInvoice invoice)
         {
             if (invoice == null)
-                throw new ArgumentNullException(nameof(invoice));
+                throw new ArgumentNullException("invoice");
             if (string.IsNullOrWhiteSpace(invoice.DocumentNo))
-                throw new ArgumentException("Document number is required for update.", nameof(invoice));
+                throw new ArgumentException("Document number is required for update.", "invoice");
 
             lock (_lockObject)
             {
@@ -121,7 +123,7 @@ namespace Backend.Infrastructure.AutoCount
                 }
                 catch (Exception ex)
                 {
-                    throw new InvalidOperationException($"Failed to update sales invoice '{invoice.DocumentNo}' in AutoCount.", ex);
+                    throw new InvalidOperationException("Failed to update sales invoice '" + invoice.DocumentNo + "' in AutoCount.", ex);
                 }
             }
         }
@@ -129,7 +131,7 @@ namespace Backend.Infrastructure.AutoCount
         public void PostSalesInvoice(string documentNo)
         {
             if (string.IsNullOrWhiteSpace(documentNo))
-                throw new ArgumentException("Document number cannot be empty.", nameof(documentNo));
+                throw new ArgumentException("Document number cannot be empty.", "documentNo");
 
             lock (_lockObject)
             {
@@ -142,7 +144,7 @@ namespace Backend.Infrastructure.AutoCount
                 }
                 catch (Exception ex)
                 {
-                    throw new InvalidOperationException($"Failed to post sales invoice '{documentNo}' in AutoCount.", ex);
+                    throw new InvalidOperationException("Failed to post sales invoice '" + documentNo + "' in AutoCount.", ex);
                 }
             }
         }
@@ -150,7 +152,7 @@ namespace Backend.Infrastructure.AutoCount
         public bool SalesInvoiceExists(string documentNo)
         {
             if (string.IsNullOrWhiteSpace(documentNo))
-                throw new ArgumentException("Document number cannot be empty.", nameof(documentNo));
+                throw new ArgumentException("Document number cannot be empty.", "documentNo");
 
             lock (_lockObject)
             {
@@ -192,7 +194,7 @@ namespace Backend.Infrastructure.AutoCount
         public decimal GetTaxRate(string taxCode)
         {
             if (string.IsNullOrWhiteSpace(taxCode))
-                throw new ArgumentException("Tax code cannot be empty.", nameof(taxCode));
+                throw new ArgumentException("Tax code cannot be empty.", "taxCode");
 
             lock (_lockObject)
             {
@@ -210,7 +212,7 @@ namespace Backend.Infrastructure.AutoCount
                 }
                 catch (Exception ex)
                 {
-                    throw new InvalidOperationException($"Failed to retrieve tax rate for code '{taxCode}' from AutoCount.", ex);
+                    throw new InvalidOperationException("Failed to retrieve tax rate for code '" + taxCode + "' from AutoCount.", ex);
                 }
             }
         }

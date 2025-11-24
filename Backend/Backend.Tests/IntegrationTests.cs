@@ -49,7 +49,11 @@ namespace Backend.Tests
                 _sessionProvider = AutoCountSessionProvider.Instance as AutoCountSessionProvider;
                 if (_sessionProvider != null)
                 {
-                    (_sessionProvider as AutoCountSessionProvider)?.Initialize(config);
+                    var provider = _sessionProvider as AutoCountSessionProvider;
+                    if (provider != null)
+                    {
+                        provider.Initialize(config);
+                    }
                 }
 
                 _debtorService = new AutoCountDebtorService(_sessionProvider);
@@ -57,7 +61,7 @@ namespace Backend.Tests
             }
             catch (Exception ex)
             {
-                Assert.Fail($"Failed to initialize AutoCount session for integration tests: {ex.Message}");
+                Assert.Fail("Failed to initialize AutoCount session for integration tests: " + ex.Message);
             }
         }
 
@@ -71,7 +75,7 @@ namespace Backend.Tests
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Warning: Failed to cleanup test data: {ex.Message}");
+                Console.WriteLine("Warning: Failed to cleanup test data: " + ex.Message);
             }
         }
 

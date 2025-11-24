@@ -21,7 +21,9 @@ namespace Backend.Api.Controllers
 
         public HealthController(IAutoCountSessionProvider sessionProvider)
         {
-            _sessionProvider = sessionProvider ?? throw new ArgumentNullException(nameof(sessionProvider));
+            if (sessionProvider == null)
+                throw new ArgumentNullException("sessionProvider");
+            _sessionProvider = sessionProvider;
         }
 
         /// <summary>
@@ -62,18 +64,13 @@ namespace Backend.Api.Controllers
             {
                 if (!_sessionProvider.IsInitialized)
                 {
-                    return BadRequest($"AutoCount session not initialized: {_sessionProvider.InitializationError}");
-                }
-
-                // Attempt to access the UserSession to verify connectivity
-                var userSession = _sessionProvider.GetUserSession();
-                if (userSession == null)
-                {
-                    return BadRequest("AutoCount UserSession is null");
+                    return BadRequest("AutoCount session not initialized: " + _sessionProvider.InitializationError);
                 }
 
                 // TODO: Perform a minimal query to AutoCount to verify connectivity
+                // This requires calling methods on the UserSession obtained from _sessionProvider.GetUserSession()
                 // Example (pseudo-code):
+                // var userSession = _sessionProvider.GetUserSession();
                 // var companyProfile = userSession.GetCompanyProfile();
                 // if (companyProfile == null)
                 //     return BadRequest("Failed to retrieve company profile from AutoCount");
@@ -89,7 +86,7 @@ namespace Backend.Api.Controllers
             catch (Exception ex)
             {
                 return InternalServerError(new InvalidOperationException(
-                    $"AutoCount health check failed: {ex.Message}", ex));
+                    "AutoCount health check failed: " + ex.Message, ex));
             }
         }
     }
