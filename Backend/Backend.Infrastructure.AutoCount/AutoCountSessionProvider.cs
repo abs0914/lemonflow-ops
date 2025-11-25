@@ -75,6 +75,9 @@ namespace Backend.Infrastructure.AutoCount
         /// </summary>
         public void Initialize(AutoCountConnectionConfig config)
         {
+            if (config == null)
+                throw new ArgumentNullException("config");
+
             lock (_lockObject)
             {
                 if (_isInitialized)
@@ -84,19 +87,44 @@ namespace Backend.Infrastructure.AutoCount
 
                 try
                 {
-                    // TODO: Implement AutoCount session initialization
-                    // This requires proper AutoCount API integration
-                    // The AutoCount API constructors require parameters, so we need to investigate
-                    // the correct way to initialize DBSetting and UserSession
+                    // Ensure configuration is complete and valid before attempting to connect.
+                    config.Validate();
 
-                    // For now, we'll mark as initialized to allow the application to start
-                    // Actual AutoCount operations will fail until this is properly implemented
+                    // Step 1: Create and configure DBSetting
+                    // Per docs: https://wiki.autocountsoft.com/wiki/Initiate_UserSession_and_DBSetting
+                    var dbSetting = new DBSetting
+                    {
+                        DBServerType = config.DBServerType,
+                        ServerName = config.ServerName,
+                        DatabaseName = config.DatabaseName,
+                        UserName = config.SqlUsername,
+                        Password = config.SqlPassword
+                    };
 
+                    // Step 2: Create UserSession
+                    var userSession = new UserSession();
+
+                    // Step 3: Login to AutoCount
+                    var loginSuccess = userSession.Login(dbSetting, config.AutoCountUsername, config.AutoCountPassword);
+                    if (!loginSuccess)
+                    {
+                        throw new InvalidOperationException("Failed to login to AutoCount Accounting with the provided credentials.");
+                    }
+
+                    // Step 4: SubProjectStartup (required for non-UI integration)
+                    var startup = new Startup();
+                    startup.SubProjectStartup(userSession, StartupPlugInOption.LoadStandardPlugIn);
+
+                    _dbSetting = dbSetting;
+                    _userSession = userSession;
+                    _initializationError = null;
                     _isInitialized = true;
                 }
                 catch (Exception ex)
                 {
                     _initializationError = ex.Message;
+                    _userSession = null;
+                    _dbSetting = null;
                     _isInitialized = false;
                     throw;
                 }

@@ -19,10 +19,17 @@ namespace Backend.Api.Controllers
     {
         private readonly IAutoCountSessionProvider _sessionProvider;
 
-        public HealthController()
-        {
-            _sessionProvider = AutoCountSessionProvider.Instance;
-        }
+	        public HealthController()
+	            : this(AutoCountSessionProvider.Instance)
+	        {
+	        }
+
+	        public HealthController(IAutoCountSessionProvider sessionProvider)
+	        {
+	            if (sessionProvider == null)
+	                throw new ArgumentNullException("sessionProvider");
+	            _sessionProvider = sessionProvider;
+	        }
 
         /// <summary>
         /// Basic health check endpoint.
@@ -65,21 +72,31 @@ namespace Backend.Api.Controllers
                     return BadRequest("AutoCount session not initialized: " + _sessionProvider.InitializationError);
                 }
 
-                // TODO: Perform a minimal query to AutoCount to verify connectivity
-                // This requires calling methods on the UserSession obtained from _sessionProvider.GetUserSession()
-                // Example (pseudo-code):
-                // var userSession = _sessionProvider.GetUserSession();
-                // var companyProfile = userSession.GetCompanyProfile();
-                // if (companyProfile == null)
-                //     return BadRequest("Failed to retrieve company profile from AutoCount");
+	                // Perform a very lightweight AutoCount query to verify connectivity.
+	                // Per docs, DBRegistry.LocalCurrencyCode is safe and does not modify data.
+	                var dbSetting = _sessionProvider.GetDBSetting();
+	                if (dbSetting == null)
+	                {
+	                    return Ok(new
+	                    {
+	                        status = "degraded",
+	                        autocount_connected = false,
+	                        timestamp = DateTime.UtcNow,
+	                        message = "AutoCount session reports initialized but DBSetting is null."
+	                    });
+	                }
 
-                return Ok(new
-                {
-                    status = "healthy",
-                    autocount_connected = true,
-                    timestamp = DateTime.UtcNow,
-                    message = "Backend is connected to AutoCount Accounting 2.1"
-                });
+	                string localCurrency = AutoCount.Data.DBRegistry.Create(dbSetting)
+	                    .GetString(new AutoCount.RegistryID.LocalCurrencyCode());
+	                bool connected = !string.IsNullOrEmpty(localCurrency);
+
+	                return Ok(new
+	                {
+	                    status = connected ? "healthy" : "degraded",
+	                    autocount_connected = connected,
+	                    local_currency = localCurrency,
+	                    timestamp = DateTime.UtcNow
+	                });
             }
             catch (Exception ex)
             {

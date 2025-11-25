@@ -24,3 +24,5 @@ C:\Users\USER\lemonflow-ops\Backend\Backend.Tests\bin\Release\Microsoft.Identity
 C:\Users\USER\lemonflow-ops\Backend\Backend.Tests\bin\Release\System.IdentityModel.Tokens.Jwt.xml
 C:\Users\USER\lemonflow-ops\Backend\Backend.Tests\obj\Release\Backend.Tests.dll
 C:\Users\USER\lemonflow-ops\Backend\Backend.Tests\obj\Release\Backend.Tests.pdb
+C:\Users\USER\lemonflow-ops\Backend\Backend.Tests\obj\Release\Backend.Tests.csproj.AssemblyReference.cache
+C:\Users\USER\lemonflow-ops\Backend\Backend.Tests\obj\Release\Backend.Tests.csproj.CoreCompileInputs.cache

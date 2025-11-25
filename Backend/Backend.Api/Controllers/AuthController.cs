@@ -13,6 +13,7 @@ namespace Backend.Api.Controllers
     {
         private readonly JwtAuthenticationHelper _jwtHelper;
         private readonly JwtConfig _jwtConfig;
+	        private readonly BasicAuthConfig _basicAuthConfig;
 
         /// <summary>
         /// Initializes a new instance of the AuthController class.
@@ -23,6 +24,7 @@ namespace Backend.Api.Controllers
             {
                 _jwtConfig = JwtConfig.LoadFromConfig();
                 _jwtHelper = new JwtAuthenticationHelper(_jwtConfig);
+	                _basicAuthConfig = BasicAuthConfig.LoadFromConfig();
             }
             catch (Exception ex)
             {
@@ -45,6 +47,16 @@ namespace Backend.Api.Controllers
             /// </summary>
             public string Password { get; set; }
         }
+
+	        /// <summary>
+	        /// Login request model for Supabase Edge functions.
+	        /// Matches the payload sent by sync-* functions: { "username", "password" }.
+	        /// </summary>
+	        public class SupabaseLoginRequest
+	        {
+	            public string Username { get; set; }
+	            public string Password { get; set; }
+	        }
 
         /// <summary>
         /// Login response model
@@ -213,6 +225,57 @@ namespace Backend.Api.Controllers
                 return InternalServerError(new InvalidOperationException("Failed to refresh token", ex));
             }
         }
+
+        /// <summary>
+        /// Supabase-compatible login endpoint.
+        ///
+        /// Route: POST /auth/login
+        /// Request: { "username": "...", "password": "..." }
+        /// Response: { "token": "&lt;jwt&gt;" }
+        ///
+        /// This endpoint is used exclusively by Supabase Edge Functions. It
+        /// only issues a token when the supplied username/password match the
+        /// Lemon-co API credentials configured in web.config.
+        /// </summary>
+        [HttpPost]
+        [Route("~/auth/login")]
+        public IHttpActionResult SupabaseLogin([FromBody] SupabaseLoginRequest request)
+        {
+            if (request == null)
+                return BadRequest("Request body is required");
+
+            if (string.IsNullOrWhiteSpace(request.Username))
+                return BadRequest("Username is required");
+
+            if (string.IsNullOrWhiteSpace(request.Password))
+                return BadRequest("Password is required");
+
+            try
+            {
+                // Enforce that Supabase can only obtain a JWT when it presents
+                // the configured Lemon-co API credentials. This aligns with
+                // the Basic Auth credentials expected by other endpoints.
+                if (_basicAuthConfig == null)
+                {
+                    return InternalServerError(new InvalidOperationException("Basic authentication configuration is not available."));
+                }
+
+                if (!string.Equals(request.Username, _basicAuthConfig.Username, StringComparison.Ordinal) ||
+                    !string.Equals(request.Password, _basicAuthConfig.Password, StringComparison.Ordinal))
+                {
+                    return Unauthorized();
+                }
+
+                string userId = Guid.NewGuid().ToString();
+                string token = _jwtHelper.GenerateToken(userId, request.Username);
+
+                // Shape response exactly as expected by Supabase Edge functions.
+                return Ok(new { token = token });
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(new InvalidOperationException("Failed to generate authentication token", ex));
+            }
+        }
     }
 }
-

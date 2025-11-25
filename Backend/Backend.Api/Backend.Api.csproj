@@ -70,10 +70,14 @@
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
     <Compile Include="WebApiConfig.cs" />
-    <Compile Include="Controllers\AuthController.cs" />
-    <Compile Include="Controllers\DebtorsController.cs" />
-    <Compile Include="Controllers\HealthController.cs" />
-    <Compile Include="Controllers\SalesInvoicesController.cs" />
+		    <Compile Include="Controllers\AuthController.cs" />
+		    <Compile Include="Controllers\SuppliersController.cs" />
+		    <Compile Include="Controllers\DebtorsController.cs" />
+		    <Compile Include="Controllers\HealthController.cs" />
+		    <Compile Include="Controllers\SalesInvoicesController.cs" />
+		    <Compile Include="Controllers\ItemsController.cs" />
+		    <Compile Include="Controllers\StockAdjustmentsController.cs" />
+		    <Compile Include="Controllers\PurchaseOrdersController.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Global.asax" />
