@@ -19,11 +19,9 @@ namespace Backend.Api.Controllers
     {
         private readonly IAutoCountSessionProvider _sessionProvider;
 
-        public HealthController(IAutoCountSessionProvider sessionProvider)
+        public HealthController()
         {
-            if (sessionProvider == null)
-                throw new ArgumentNullException("sessionProvider");
-            _sessionProvider = sessionProvider;
+            _sessionProvider = AutoCountSessionProvider.Instance;
         }
 
         /// <summary>

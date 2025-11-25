@@ -130,7 +130,8 @@ Edit `C:\inetpub\wwwroot\AutoCountBackend\Web.config`:
 
 ```xml
 <!-- AutoCount Configuration -->
-<add key="AutoCount:DBServerType" value="SQL2012" />
+<!-- NOTE: For AutoCount 2.1 with SQL Server (including SQL Server 2012+), DBServerType must be SQL2000. -->
+<add key="AutoCount:DBServerType" value="SQL2000" />
 <add key="AutoCount:ServerName" value="tcp:LemonCoSrv\A2006" />
 <add key="AutoCount:DatabaseName" value="AED_Terraganics" />
 <add key="AutoCount:SqlUsername" value="sa" />
