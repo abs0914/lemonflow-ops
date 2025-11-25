@@ -20,6 +20,12 @@ namespace Backend.Api.Controllers
     {
         private readonly IAutoCountDebtorService _debtorService;
 
+        // Parameterless constructor for Web API default activator
+        public DebtorsController()
+            : this(new AutoCountDebtorService(AutoCountSessionProvider.Instance))
+        {
+        }
+
         public DebtorsController(IAutoCountDebtorService debtorService)
         {
             if (debtorService == null)

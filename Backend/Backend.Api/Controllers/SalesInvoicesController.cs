@@ -23,6 +23,12 @@ namespace Backend.Api.Controllers
     {
         private readonly IAutoCountSalesInvoiceService _invoiceService;
 
+        // Parameterless constructor for Web API default activator
+        public SalesInvoicesController()
+            : this(new AutoCountSalesInvoiceService(AutoCountSessionProvider.Instance))
+        {
+        }
+
         public SalesInvoicesController(IAutoCountSalesInvoiceService invoiceService)
         {
             if (invoiceService == null)
