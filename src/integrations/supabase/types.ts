@@ -763,6 +763,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_next_item_code: { Args: never; Returns: string }
       get_next_supplier_code: { Args: never; Returns: string }
       is_admin: { Args: { user_id: string }; Returns: boolean }
       release_stock_reservation: {

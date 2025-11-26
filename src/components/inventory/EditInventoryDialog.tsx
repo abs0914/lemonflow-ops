@@ -201,8 +201,13 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
               <Input
                 id="sku"
                 {...register("sku", { required: "SKU is required" })}
-                placeholder="e.g., ITM-001"
+                placeholder="TLC00001"
+                readOnly
+                className="bg-muted cursor-not-allowed font-mono"
               />
+              <p className="text-xs text-muted-foreground">
+                Item code cannot be changed after creation
+              </p>
               {errors.sku && (
                 <p className="text-sm text-destructive">{errors.sku.message}</p>
               )}
