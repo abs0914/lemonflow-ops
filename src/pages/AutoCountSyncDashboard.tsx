@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { RefreshCw, CheckCircle2, XCircle, Clock, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 
+// AutoCount Sync Dashboard - Monitor and manage synchronization operations
 export default function AutoCountSyncDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
