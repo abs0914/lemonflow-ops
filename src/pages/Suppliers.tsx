@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Plus, Search, RefreshCw } from "lucide-react";
+import { Plus, Search, RefreshCw, Upload } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +41,49 @@ export default function Suppliers() {
       queryKey: ["suppliers"]
     });
   };
+
+  const handleSyncToAutoCount = async () => {
+    const unsyncedSuppliers = filteredSuppliers?.filter(s => !s.autocount_synced) || [];
+    
+    if (unsyncedSuppliers.length === 0) {
+      toast.info("All suppliers are already synced to AutoCount");
+      return;
+    }
+
+    toast.info(`Syncing ${unsyncedSuppliers.length} supplier(s) to AutoCount...`);
+    
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const supplier of unsyncedSuppliers) {
+      try {
+        const { data, error } = await supabase.functions.invoke(
+          'create-autocount-supplier',
+          { body: { supplierId: supplier.id } }
+        );
+
+        if (error || !data?.success) {
+          failCount++;
+          console.error(`Failed to sync supplier ${supplier.supplier_code}:`, error || data?.error);
+        } else {
+          successCount++;
+        }
+      } catch (error) {
+        failCount++;
+        console.error(`Exception syncing supplier ${supplier.supplier_code}:`, error);
+      }
+    }
+
+    queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+
+    if (successCount > 0 && failCount === 0) {
+      toast.success(`Successfully synced ${successCount} supplier(s) to AutoCount`);
+    } else if (successCount > 0 && failCount > 0) {
+      toast.warning(`Synced ${successCount} supplier(s), ${failCount} failed. Check sync logs for details.`);
+    } else {
+      toast.error(`Failed to sync all suppliers. Check sync logs for details.`);
+    }
+  };
   return <DashboardLayout>
       <div className="space-y-6">
         <div className="flex flex-col gap-4 md:items-center md:justify-between py-[24px] px-[28px] md:flex md:flex-row">
@@ -50,6 +95,10 @@ export default function Suppliers() {
               <Button variant="outline" onClick={() => setSyncDialogOpen(true)}>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Sync from AutoCount
+              </Button>
+              <Button variant="outline" onClick={handleSyncToAutoCount}>
+                <Upload className="mr-2 h-4 w-4" />
+                Sync to AutoCount
               </Button>
               <Button onClick={handleCreate}>
                 <Plus className="mr-2 h-4 w-4" />
