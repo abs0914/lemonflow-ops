@@ -113,10 +113,40 @@ export function SupplierDialog({ open, onOpenChange, supplierId }: SupplierDialo
         if (error) throw error;
         toast.success("Supplier updated successfully");
       } else {
-        const { error } = await supabase.from("suppliers").insert([data]);
+        // Create supplier locally first and get the ID
+        const { data: newSupplier, error } = await supabase
+          .from("suppliers")
+          .insert([data])
+          .select()
+          .single();
 
         if (error) throw error;
         toast.success("Supplier created successfully");
+
+        // Auto-sync to AutoCount in the background
+        if (newSupplier) {
+          try {
+            console.log('[SupplierDialog] Auto-syncing supplier to AutoCount:', newSupplier.id);
+            const { data: syncResult, error: syncError } = await supabase.functions.invoke(
+              'create-autocount-supplier',
+              { body: { supplierId: newSupplier.id } }
+            );
+
+            if (syncError) {
+              console.error('[SupplierDialog] Auto-sync failed:', syncError);
+              toast.error("Supplier created locally but failed to sync to AutoCount. Check sync logs for details.");
+            } else if (syncResult?.success) {
+              console.log('[SupplierDialog] Auto-sync successful');
+              toast.success("Supplier synced to AutoCount successfully");
+            } else {
+              console.error('[SupplierDialog] Auto-sync returned error:', syncResult?.error);
+              toast.error(`Failed to sync to AutoCount: ${syncResult?.error || 'Unknown error'}`);
+            }
+          } catch (syncError) {
+            console.error('[SupplierDialog] Auto-sync exception:', syncError);
+            toast.error("Failed to sync to AutoCount. Check sync logs for details.");
+          }
+        }
       }
 
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
