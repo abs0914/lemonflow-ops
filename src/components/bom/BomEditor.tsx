@@ -11,6 +11,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/currency";
 
 interface BomEditorProps {
   productId?: string;
@@ -260,12 +261,12 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
                         <TableCell>{item.components.unit}</TableCell>
                         <TableCell>
                           {item.components.cost_per_unit 
-                            ? `$${item.components.cost_per_unit.toFixed(2)}`
+                            ? formatCurrency(item.components.cost_per_unit)
                             : "-"}
                         </TableCell>
                         <TableCell>
                           {item.components.cost_per_unit 
-                            ? `$${itemCost.toFixed(2)}`
+                            ? formatCurrency(itemCost)
                             : "-"}
                         </TableCell>
                         <TableCell className="text-right">
@@ -286,7 +287,7 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
                   })}
                   <TableRow className="font-bold">
                     <TableCell colSpan={5} className="text-right">Total Cost:</TableCell>
-                    <TableCell>${totalCost.toFixed(2)}</TableCell>
+                    <TableCell>{formatCurrency(totalCost)}</TableCell>
                     <TableCell></TableCell>
                   </TableRow>
                 </>

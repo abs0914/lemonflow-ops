@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,6 +49,7 @@ export function AddInventoryDialog({ open, onOpenChange }: AddInventoryDialogPro
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isLoadingCode, setIsLoadingCode] = useState(false);
   
   const {
     register,
@@ -72,13 +73,46 @@ export function AddInventoryDialog({ open, onOpenChange }: AddInventoryDialogPro
 
   const syncToAutocount = watch("sync_to_autocount");
 
+  // Auto-generate item code when dialog opens
+  useEffect(() => {
+    const generateItemCode = async () => {
+      if (open) {
+        setIsLoadingCode(true);
+        try {
+          const { data, error } = await supabase.rpc('get_next_item_code');
+          
+          if (error) {
+            console.error('Error generating item code:', error);
+            toast({
+              title: "Error",
+              description: "Failed to generate item code",
+              variant: "destructive",
+            });
+            return;
+          }
+          
+          if (data) {
+            setValue('sku', data);
+          }
+        } catch (error) {
+          console.error('Error generating item code:', error);
+        } finally {
+          setIsLoadingCode(false);
+        }
+      }
+    };
+
+    generateItemCode();
+  }, [open, setValue, toast]);
+
   const createItemMutation = useMutation({
     mutationFn: async (data: InventoryFormData) => {
-      // Create item in Supabase
+      // Create item in Supabase with autocount_item_code set to SKU
       const { data: newItem, error: insertError } = await supabase
         .from("components")
         .insert({
           sku: data.sku,
+          autocount_item_code: data.sku, // Set AutoCount item code to same as SKU
           name: data.name,
           description: data.description || null,
           item_group: data.item_group || null,
@@ -103,7 +137,7 @@ export function AddInventoryDialog({ open, onOpenChange }: AddInventoryDialogPro
           "create-autocount-item",
           {
             body: {
-              itemCode: data.sku,
+              itemCode: data.sku, // Use the generated TLCXXXXX code
               description: data.name,
               itemGroup: data.item_group,
               itemType: data.item_type,
@@ -124,11 +158,10 @@ export function AddInventoryDialog({ open, onOpenChange }: AddInventoryDialogPro
             variant: "destructive",
           });
         } else {
-          // Update the component with AutoCount item code
+          // Update last_synced_at timestamp
           await supabase
             .from("components")
             .update({
-              autocount_item_code: data.sku,
               last_synced_at: new Date().toISOString(),
             })
             .eq("id", newItem.id);
@@ -184,8 +217,14 @@ export function AddInventoryDialog({ open, onOpenChange }: AddInventoryDialogPro
               <Input
                 id="sku"
                 {...register("sku", { required: "SKU is required" })}
-                placeholder="e.g., ITM-001"
+                placeholder="TLC00001"
+                readOnly
+                className="bg-muted cursor-not-allowed font-mono"
+                disabled={isLoadingCode}
               />
+              <p className="text-xs text-muted-foreground">
+                Auto-generated in format TLCXXXXX
+              </p>
               {errors.sku && (
                 <p className="text-sm text-destructive">{errors.sku.message}</p>
               )}

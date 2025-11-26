@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Edit, Trash2, FileText, CheckCircle, X, Upload } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, FileText, CheckCircle, X, Upload, PackageCheck } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,11 +9,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { usePurchaseOrder, usePurchaseOrderLines } from "@/hooks/usePurchaseOrders";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { dateFormatters } from "@/lib/datetime";
+import { formatCurrency } from "@/lib/currency";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ReceiveFromCashPO } from "@/components/warehouse/ReceiveFromCashPO";
 
 export default function PurchaseOrderDetail() {
   const { id } = useParams<{ id: string }>();
@@ -21,10 +23,39 @@ export default function PurchaseOrderDetail() {
   const queryClient = useQueryClient();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showReceiveDialog, setShowReceiveDialog] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
   const { data: purchaseOrder, isLoading: loadingPO } = usePurchaseOrder(id);
   const { data: lines, isLoading: loadingLines } = usePurchaseOrderLines(id);
+
+  const { data: cashGivenByUser } = useQuery({
+    queryKey: ["user-profile", purchaseOrder?.cash_given_by],
+    queryFn: async () => {
+      if (!purchaseOrder?.cash_given_by) return null;
+      const { data } = await supabase
+        .from("user_profiles")
+        .select("full_name")
+        .eq("id", purchaseOrder.cash_given_by)
+        .single();
+      return data;
+    },
+    enabled: !!purchaseOrder?.cash_given_by,
+  });
+
+  const { data: cashReturnedToUser } = useQuery({
+    queryKey: ["user-profile", purchaseOrder?.cash_returned_to],
+    queryFn: async () => {
+      if (!purchaseOrder?.cash_returned_to) return null;
+      const { data } = await supabase
+        .from("user_profiles")
+        .select("full_name")
+        .eq("id", purchaseOrder.cash_returned_to)
+        .single();
+      return data;
+    },
+    enabled: !!purchaseOrder?.cash_returned_to,
+  });
 
   const syncToAutocountMutation = useMutation({
     mutationFn: async () => {
@@ -211,7 +242,7 @@ export default function PurchaseOrderDetail() {
               <h1 className="text-3xl font-bold">Purchase Order {purchaseOrder.po_number}</h1>
               <p className="text-muted-foreground">
                 Created by {purchaseOrder.user_profiles?.full_name} on{" "}
-                {format(new Date(purchaseOrder.created_at), "dd/MM/yyyy")}
+                {dateFormatters.short(purchaseOrder.created_at)}
               </p>
             </div>
           </div>
@@ -321,13 +352,13 @@ export default function PurchaseOrderDetail() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">PO Date</p>
-                  <p className="font-medium">{format(new Date(purchaseOrder.doc_date), "dd/MM/yyyy")}</p>
+                  <p className="font-medium">{dateFormatters.short(purchaseOrder.doc_date)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Delivery Date</p>
                   <p className="font-medium">
                     {purchaseOrder.delivery_date
-                      ? format(new Date(purchaseOrder.delivery_date), "dd/MM/yyyy")
+                      ? dateFormatters.short(purchaseOrder.delivery_date)
                       : "—"}
                   </p>
                 </div>
@@ -376,6 +407,65 @@ export default function PurchaseOrderDetail() {
           </Card>
         </div>
 
+        {purchaseOrder.is_cash_purchase && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Cash Flow Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Cash Advance</p>
+                  <p className="text-2xl font-bold">{formatCurrency(purchaseOrder.cash_advance || 0)}</p>
+                  {cashGivenByUser && (
+                    <p className="text-xs text-muted-foreground mt-1">Given by: {cashGivenByUser.full_name}</p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Spent</p>
+                  <p className="text-2xl font-bold">{formatCurrency(purchaseOrder.total_amount)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Cash Returned</p>
+                  <p className="text-2xl font-bold">{formatCurrency(purchaseOrder.cash_returned || 0)}</p>
+                  {cashReturnedToUser && (
+                    <p className="text-xs text-muted-foreground mt-1">To: {cashReturnedToUser.full_name}</p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Balance</p>
+                  <p className={`text-2xl font-bold ${
+                    Math.abs((purchaseOrder.cash_advance || 0) - purchaseOrder.total_amount - (purchaseOrder.cash_returned || 0)) < 0.01
+                      ? "text-green-600"
+                      : "text-destructive"
+                  }`}>
+                    {Math.abs((purchaseOrder.cash_advance || 0) - purchaseOrder.total_amount - (purchaseOrder.cash_returned || 0)) < 0.01
+                      ? "✓ Settled"
+                      : `⚠ ${formatCurrency(Math.abs((purchaseOrder.cash_advance || 0) - purchaseOrder.total_amount - (purchaseOrder.cash_returned || 0)))}`}
+                  </p>
+                </div>
+              </div>
+              
+              {purchaseOrder.is_cash_purchase && !purchaseOrder.goods_received && purchaseOrder.status === "approved" && (
+                <div className="mt-4 pt-4 border-t">
+                  <Button onClick={() => setShowReceiveDialog(true)}>
+                    <PackageCheck className="h-4 w-4 mr-2" />
+                    Receive Goods
+                  </Button>
+                </div>
+              )}
+
+              {purchaseOrder.goods_received && (
+                <div className="mt-4 pt-4 border-t">
+                  <Badge variant="default">
+                    Goods Received on {purchaseOrder.received_at ? dateFormatters.short(purchaseOrder.received_at) : ""}
+                  </Badge>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle>Line Items</CardTitle>
@@ -400,10 +490,10 @@ export default function PurchaseOrderDetail() {
                     <TableCell>{line.components?.name}</TableCell>
                     <TableCell className="font-mono text-sm">{line.components?.sku}</TableCell>
                     <TableCell className="text-right">{line.quantity}</TableCell>
-                    <TableCell className="text-right">${line.unit_price.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(line.unit_price)}</TableCell>
                     <TableCell>{line.uom}</TableCell>
                     <TableCell className="text-right font-medium">
-                      ${(line.quantity * line.unit_price).toFixed(2)}
+                      {formatCurrency(line.quantity * line.unit_price)}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -413,7 +503,7 @@ export default function PurchaseOrderDetail() {
             <div className="flex justify-end">
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Total Amount</p>
-                <p className="text-3xl font-bold">${purchaseOrder.total_amount.toFixed(2)}</p>
+                <p className="text-3xl font-bold">{formatCurrency(purchaseOrder.total_amount)}</p>
               </div>
             </div>
           </CardContent>
@@ -438,6 +528,16 @@ export default function PurchaseOrderDetail() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {purchaseOrder.is_cash_purchase && lines && (
+          <ReceiveFromCashPO
+            open={showReceiveDialog}
+            onOpenChange={setShowReceiveDialog}
+            purchaseOrderId={purchaseOrder.id}
+            poNumber={purchaseOrder.po_number}
+            lines={lines}
+          />
+        )}
 
         <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
           <AlertDialogContent>

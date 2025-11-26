@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSuppliers } from "@/hooks/useSuppliers";
@@ -18,13 +19,16 @@ import { usePurchaseOrder, usePurchaseOrderLines } from "@/hooks/usePurchaseOrde
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { dateFormatters } from "@/lib/datetime";
+import { formatCurrency } from "@/lib/currency";
 
 const poSchema = z.object({
   supplier_id: z.string().min(1, "Supplier is required"),
   doc_date: z.string().min(1, "Date is required"),
   delivery_date: z.string().optional(),
   remarks: z.string().optional(),
+  cash_returned: z.number().optional(),
+  cash_returned_to: z.string().optional(),
 });
 
 type POFormData = z.infer<typeof poSchema>;
@@ -62,6 +66,18 @@ export default function PurchasingEdit() {
     },
   });
 
+  const { data: users } = useQuery({
+    queryKey: ["user-profiles"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .select("id, full_name")
+        .order("full_name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const {
     register,
     handleSubmit,
@@ -76,9 +92,9 @@ export default function PurchasingEdit() {
   useState(() => {
     if (purchaseOrder && !loadingPO) {
       setValue("supplier_id", purchaseOrder.supplier_id);
-      setValue("doc_date", format(new Date(purchaseOrder.doc_date), "yyyy-MM-dd"));
+      setValue("doc_date", dateFormatters.input(purchaseOrder.doc_date));
       if (purchaseOrder.delivery_date) {
-        setValue("delivery_date", format(new Date(purchaseOrder.delivery_date), "yyyy-MM-dd"));
+        setValue("delivery_date", dateFormatters.input(purchaseOrder.delivery_date));
       }
       setValue("remarks", purchaseOrder.remarks || "");
     }
@@ -116,6 +132,8 @@ export default function PurchasingEdit() {
           delivery_date: data.delivery_date || null,
           remarks: data.remarks,
           total_amount,
+          cash_returned: data.cash_returned || 0,
+          cash_returned_to: data.cash_returned_to || null,
         })
         .eq("id", id);
 
@@ -243,6 +261,65 @@ export default function PurchasingEdit() {
               <CardTitle>Purchase Order Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {purchaseOrder.is_cash_purchase && (
+                <div className="p-4 bg-primary/5 rounded-lg border border-primary/20 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">Cash Purchase Mode</p>
+                      <p className="text-xs text-muted-foreground">This PO was created as a cash purchase</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Cash Advance</p>
+                      <p className="font-mono font-bold">{formatCurrency(purchaseOrder.cash_advance || 0)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Spent</p>
+                      <p className="font-mono font-bold">{formatCurrency(totalAmount)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Cash to Return</p>
+                      <p className={`font-mono font-bold ${(purchaseOrder.cash_advance || 0) - totalAmount < 0 ? "text-destructive" : "text-green-600"}`}>
+                        {formatCurrency((purchaseOrder.cash_advance || 0) - totalAmount)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="cash_returned">Cash Returned Amount</Label>
+                      <Input
+                        id="cash_returned"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        {...register("cash_returned", { valueAsNumber: true })}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="cash_returned_to">Returned To</Label>
+                      <Select onValueChange={(value) => setValue("cash_returned_to", value)} defaultValue={purchaseOrder.cash_returned_to || ""}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select user" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {users?.map((user) => (
+                            <SelectItem key={user.id} value={user.id}>
+                              {user.full_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="supplier_id">Supplier *</Label>
@@ -359,7 +436,7 @@ export default function PurchasingEdit() {
                           </TableCell>
                           <TableCell>{line.uom}</TableCell>
                           <TableCell className="font-medium">
-                            ${(line.quantity * line.unit_price).toFixed(2)}
+                            {formatCurrency(line.quantity * line.unit_price)}
                           </TableCell>
                           <TableCell>
                             <Button
@@ -381,7 +458,7 @@ export default function PurchasingEdit() {
               <div className="flex justify-end pt-4 border-t">
                 <div className="text-right">
                   <p className="text-sm text-muted-foreground">Total Amount</p>
-                  <p className="text-2xl font-bold">${totalAmount.toFixed(2)}</p>
+                  <p className="text-2xl font-bold">{formatCurrency(totalAmount)}</p>
                 </div>
               </div>
             </CardContent>

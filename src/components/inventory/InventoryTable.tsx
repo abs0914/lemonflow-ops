@@ -20,6 +20,7 @@ import { StockAdjustmentDialog } from "./StockAdjustmentDialog";
 import { Pencil, RefreshCw, Trash2, Package } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Component } from "@/types/inventory";
+import { formatCurrency } from "@/lib/currency";
 
 interface InventoryTableProps {
   components: Component[];
@@ -233,10 +234,10 @@ export function InventoryTable({ components, isLoading, onRefetch, onAdjustStock
                 </TableCell>
                 <TableCell>{component.unit}</TableCell>
                 <TableCell className="text-right">
-                  {component.price ? `$${component.price.toFixed(2)}` : "-"}
+                  {component.price ? formatCurrency(component.price) : "-"}
                 </TableCell>
                 <TableCell className="text-right">
-                  {component.cost_per_unit ? `$${component.cost_per_unit.toFixed(2)}` : "-"}
+                  {component.cost_per_unit ? formatCurrency(component.cost_per_unit) : "-"}
                 </TableCell>
                 <TableCell>
                   <div className="space-y-1">

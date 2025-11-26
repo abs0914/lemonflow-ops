@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Edit, Package, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { formatCurrency } from "@/lib/currency";
 
 interface MobileInventoryCardProps {
   component: Component;
@@ -57,11 +58,11 @@ export function MobileInventoryCard({ component, onAdjustStock, onDelete }: Mobi
       <MobileDataRow label="Reserved" value={component.reserved_quantity.toString()} />
       <MobileDataRow 
         label="Price" 
-        value={component.price ? `$${component.price.toFixed(2)}` : "-"} 
+        value={component.price ? formatCurrency(component.price) : "-"} 
       />
       <MobileDataRow 
         label="Cost" 
-        value={component.cost_per_unit ? `$${component.cost_per_unit.toFixed(2)}` : "-"} 
+        value={component.cost_per_unit ? formatCurrency(component.cost_per_unit) : "-"} 
       />
       {component.description && (
         <MobileDataRow label="Description" value={component.description} />

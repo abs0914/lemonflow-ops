@@ -26,25 +26,17 @@ Deno.serve(async (req) => {
   try {
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      {
-        global: {
-          headers: { Authorization: req.headers.get("Authorization")! },
-        },
-      }
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Get the authorization header
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       throw new Error("No authorization header");
     }
 
-    // Verify user is authenticated
-    const {
-      data: { user },
-      error: authError,
-    } = await supabaseClient.auth.getUser();
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(
+      authHeader.replace("Bearer ", "")
+    );
 
     if (authError || !user) {
       throw new Error("Unauthorized");
@@ -121,6 +113,16 @@ Deno.serve(async (req) => {
     const result = await response.json();
     console.log("AutoCount adjustment successful:", result);
 
+    // Log sync success
+    await supabaseClient.from("autocount_sync_log").insert({
+      reference_id: requestData.itemCode,
+      reference_type: "stock_adjustment",
+      sync_type: "stock_adjustment",
+      sync_status: "success",
+      autocount_doc_no: result.docNo || null,
+      synced_at: new Date().toISOString(),
+    });
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -134,6 +136,25 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     console.error("Error syncing stock adjustment:", error);
+    
+    // Log sync failure
+    try {
+      const supabaseClient = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+      );
+      const requestData: StockAdjustmentRequest = await req.json();
+      await supabaseClient.from("autocount_sync_log").insert({
+        reference_id: requestData.itemCode,
+        reference_type: "stock_adjustment",
+        sync_type: "stock_adjustment",
+        sync_status: "failed",
+        error_message: error instanceof Error ? error.message : "Unknown error occurred",
+      });
+    } catch (logError) {
+      console.error("Failed to log sync error:", logError);
+    }
+    
     return new Response(
       JSON.stringify({
         success: false,

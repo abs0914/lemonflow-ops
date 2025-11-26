@@ -16,13 +16,19 @@ import { useSuppliers } from "@/hooks/useSuppliers";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { dateFormatters } from "@/lib/datetime";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Checkbox } from "@/components/ui/checkbox";
+import { formatCurrency } from "@/lib/currency";
+
 const poSchema = z.object({
   supplier_id: z.string().min(1, "Supplier is required"),
   doc_date: z.string().min(1, "Date is required"),
   delivery_date: z.string().optional(),
-  remarks: z.string().optional()
+  remarks: z.string().optional(),
+  is_cash_purchase: z.boolean().default(false),
+  cash_advance: z.number().optional(),
+  cash_given_by: z.string().optional(),
 });
 type POFormData = z.infer<typeof poSchema>;
 interface POLine {
@@ -39,53 +45,57 @@ export default function PurchasingCreate() {
   const isMobile = useIsMobile();
   const [lines, setLines] = useState<POLine[]>([]);
   const [selectedComponent, setSelectedComponent] = useState<string>("");
-  const {
-    data: suppliers
-  } = useSuppliers(true);
-  const {
-    data: components
-  } = useQuery({
+  const [isCashPurchase, setIsCashPurchase] = useState(false);
+  
+  const { data: suppliers } = useSuppliers(true);
+  const { data: components } = useQuery({
     queryKey: ["components"],
     queryFn: async () => {
-      const {
-        data,
-        error
-      } = await supabase.from("components").select("*").order("name");
+      const { data, error } = await supabase.from("components").select("*").order("name");
       if (error) throw error;
       return data;
     }
   });
+
+  const { data: users } = useQuery({
+    queryKey: ["user-profiles"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .select("id, full_name")
+        .order("full_name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const {
     register,
     handleSubmit,
     setValue,
     watch,
-    formState: {
-      errors
-    }
+    formState: { errors }
   } = useForm<POFormData>({
     resolver: zodResolver(poSchema),
     defaultValues: {
-      doc_date: format(new Date(), "yyyy-MM-dd")
+      doc_date: dateFormatters.input(new Date()),
+      is_cash_purchase: false,
+      cash_advance: 0,
     }
   });
   const createPOMutation = useMutation({
-    mutationFn: async (data: POFormData & {
-      lines: POLine[];
-    }) => {
-      const {
-        data: {
-          user
-        }
-      } = await supabase.auth.getUser();
+    mutationFn: async (data: POFormData & { lines: POLine[] }) => {
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       // Generate PO number
-      const {
-        data: lastPO
-      } = await supabase.from("purchase_orders").select("po_number").order("created_at", {
-        ascending: false
-      }).limit(1).single();
+      const { data: lastPO } = await supabase
+        .from("purchase_orders")
+        .select("po_number")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+      
       let nextNumber = 1;
       if (lastPO?.po_number) {
         const match = lastPO.po_number.match(/PO(\d+)/);
@@ -93,20 +103,27 @@ export default function PurchasingCreate() {
       }
       const po_number = `PO${nextNumber.toString().padStart(5, "0")}`;
       const total_amount = data.lines.reduce((sum, line) => sum + line.quantity * line.unit_price, 0);
-      const {
-        data: po,
-        error: poError
-      } = await supabase.from("purchase_orders").insert({
-        po_number,
-        supplier_id: data.supplier_id,
-        doc_date: data.doc_date,
-        delivery_date: data.delivery_date || null,
-        remarks: data.remarks,
-        total_amount,
-        status: "draft",
-        created_by: user.id
-      }).select().single();
+      
+      const { data: po, error: poError } = await supabase
+        .from("purchase_orders")
+        .insert({
+          po_number,
+          supplier_id: data.supplier_id,
+          doc_date: data.doc_date,
+          delivery_date: data.delivery_date || null,
+          remarks: data.remarks,
+          total_amount,
+          status: "draft",
+          created_by: user.id,
+          is_cash_purchase: data.is_cash_purchase || false,
+          cash_advance: data.cash_advance || 0,
+          cash_given_by: data.cash_given_by || null,
+        })
+        .select()
+        .single();
+      
       if (poError) throw poError;
+      
       const poLines = data.lines.map((line, index) => ({
         purchase_order_id: po.id,
         component_id: line.component_id,
@@ -116,9 +133,11 @@ export default function PurchasingCreate() {
         line_remarks: line.line_remarks,
         line_number: index + 1
       }));
-      const {
-        error: linesError
-      } = await supabase.from("purchase_order_lines").insert(poLines);
+      
+      const { error: linesError } = await supabase
+        .from("purchase_order_lines")
+        .insert(poLines);
+      
       if (linesError) throw linesError;
       return po;
     },
@@ -190,6 +209,51 @@ export default function PurchasingCreate() {
               <CardTitle>Purchase Order Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="flex items-center space-x-2 mb-4 p-4 bg-muted/50 rounded-lg">
+                <Checkbox
+                  id="is_cash_purchase"
+                  checked={isCashPurchase}
+                  onCheckedChange={(checked) => {
+                    setIsCashPurchase(checked as boolean);
+                    setValue("is_cash_purchase", checked as boolean);
+                  }}
+                />
+                <Label htmlFor="is_cash_purchase" className="text-sm font-medium cursor-pointer">
+                  This is a Cash Purchase
+                </Label>
+              </div>
+
+              {isCashPurchase && (
+                <div className="grid gap-4 md:grid-cols-2 p-4 bg-primary/5 rounded-lg border border-primary/20">
+                  <div className="space-y-2">
+                    <Label htmlFor="cash_advance">Cash Advance Amount</Label>
+                    <Input
+                      id="cash_advance"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      {...register("cash_advance", { valueAsNumber: true })}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cash_given_by">Cash Given By</Label>
+                    <Select onValueChange={(value) => setValue("cash_given_by", value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select user" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {users?.map((user) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.full_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="supplier_id">Supplier *</Label>
@@ -270,7 +334,7 @@ export default function PurchasingCreate() {
                           </TableCell>
                           <TableCell>{line.uom}</TableCell>
                           <TableCell className="font-medium">
-                            ${(line.quantity * line.unit_price).toFixed(2)}
+                            {formatCurrency(line.quantity * line.unit_price)}
                           </TableCell>
                           <TableCell>
                             <Button type="button" variant="ghost" size="icon" onClick={() => removeLine(index)}>
@@ -285,7 +349,7 @@ export default function PurchasingCreate() {
               <div className="flex justify-end pt-4 border-t">
                 <div className="text-right">
                   <p className="text-sm text-muted-foreground">Total Amount</p>
-                  <p className="text-2xl font-bold">${totalAmount.toFixed(2)}</p>
+                  <p className="text-2xl font-bold">{formatCurrency(totalAmount)}</p>
                 </div>
               </div>
             </CardContent>
