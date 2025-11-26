@@ -157,6 +157,27 @@ export type Database = {
         }
         Relationships: []
       }
+      batch_sequences: {
+        Row: {
+          created_at: string | null
+          date_key: string
+          id: string
+          last_sequence: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          date_key: string
+          id?: string
+          last_sequence?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          date_key?: string
+          id?: string
+          last_sequence?: number | null
+        }
+        Relationships: []
+      }
       bom_items: {
         Row: {
           component_id: string
@@ -445,12 +466,20 @@ export type Database = {
         Row: {
           autocount_doc_no: string | null
           autocount_synced: boolean
+          cash_advance: number | null
+          cash_given_by: string | null
+          cash_returned: number | null
+          cash_returned_to: string | null
           created_at: string
           created_by: string
           delivery_date: string | null
           doc_date: string
+          goods_received: boolean | null
           id: string
+          is_cash_purchase: boolean | null
           po_number: string
+          received_at: string | null
+          received_by: string | null
           remarks: string | null
           status: string
           supplier_id: string
@@ -461,12 +490,20 @@ export type Database = {
         Insert: {
           autocount_doc_no?: string | null
           autocount_synced?: boolean
+          cash_advance?: number | null
+          cash_given_by?: string | null
+          cash_returned?: number | null
+          cash_returned_to?: string | null
           created_at?: string
           created_by: string
           delivery_date?: string | null
           doc_date: string
+          goods_received?: boolean | null
           id?: string
+          is_cash_purchase?: boolean | null
           po_number: string
+          received_at?: string | null
+          received_by?: string | null
           remarks?: string | null
           status?: string
           supplier_id: string
@@ -477,12 +514,20 @@ export type Database = {
         Update: {
           autocount_doc_no?: string | null
           autocount_synced?: boolean
+          cash_advance?: number | null
+          cash_given_by?: string | null
+          cash_returned?: number | null
+          cash_returned_to?: string | null
           created_at?: string
           created_by?: string
           delivery_date?: string | null
           doc_date?: string
+          goods_received?: boolean | null
           id?: string
+          is_cash_purchase?: boolean | null
           po_number?: string
+          received_at?: string | null
+          received_by?: string | null
           remarks?: string | null
           status?: string
           supplier_id?: string
@@ -491,6 +536,27 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "purchase_orders_cash_given_by_fkey"
+            columns: ["cash_given_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_cash_returned_to_fkey"
+            columns: ["cash_returned_to"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_received_by_fkey"
+            columns: ["received_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "purchase_orders_supplier_id_fkey"
             columns: ["supplier_id"]
@@ -506,9 +572,13 @@ export type Database = {
           autocount_synced: boolean | null
           batch_number: string | null
           created_at: string
+          expired_at: string | null
+          expiry_notes: string | null
           id: string
+          is_expired: boolean | null
           item_id: string
           item_type: string
+          marked_expired_by: string | null
           movement_type: string
           notes: string | null
           performed_by: string
@@ -518,6 +588,8 @@ export type Database = {
           reference_id: string | null
           reference_type: string | null
           supplier_reference: string | null
+          total_cost: number | null
+          unit_cost: number | null
           unit_received: string | null
           warehouse_location: string | null
         }
@@ -526,9 +598,13 @@ export type Database = {
           autocount_synced?: boolean | null
           batch_number?: string | null
           created_at?: string
+          expired_at?: string | null
+          expiry_notes?: string | null
           id?: string
+          is_expired?: boolean | null
           item_id: string
           item_type: string
+          marked_expired_by?: string | null
           movement_type: string
           notes?: string | null
           performed_by: string
@@ -538,6 +614,8 @@ export type Database = {
           reference_id?: string | null
           reference_type?: string | null
           supplier_reference?: string | null
+          total_cost?: number | null
+          unit_cost?: number | null
           unit_received?: string | null
           warehouse_location?: string | null
         }
@@ -546,9 +624,13 @@ export type Database = {
           autocount_synced?: boolean | null
           batch_number?: string | null
           created_at?: string
+          expired_at?: string | null
+          expiry_notes?: string | null
           id?: string
+          is_expired?: boolean | null
           item_id?: string
           item_type?: string
+          marked_expired_by?: string | null
           movement_type?: string
           notes?: string | null
           performed_by?: string
@@ -558,10 +640,19 @@ export type Database = {
           reference_id?: string | null
           reference_type?: string | null
           supplier_reference?: string | null
+          total_cost?: number | null
+          unit_cost?: number | null
           unit_received?: string | null
           warehouse_location?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "stock_movements_marked_expired_by_fkey"
+            columns: ["marked_expired_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "stock_movements_purchase_order_id_fkey"
             columns: ["purchase_order_id"]

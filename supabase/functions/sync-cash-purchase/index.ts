@@ -7,14 +7,14 @@ const corsHeaders = {
 };
 
 interface CashPurchaseRequest {
-  movementId: string;
-  supplierId: string;
-  componentId: string;
-  quantity: number;
-  unitPrice: number;
-  batchNumber?: string;
-  warehouseLocation: string;
-  notes?: string;
+  purchaseOrderId: string;
+  lines: {
+    componentId: string;
+    quantity: number;
+    unitCost: number;
+    batchNumber: string;
+    lineNumber: number;
+  }[];
 }
 
 Deno.serve(async (req) => {

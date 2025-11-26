@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSuppliers } from "@/hooks/useSuppliers";
@@ -25,6 +26,8 @@ const poSchema = z.object({
   doc_date: z.string().min(1, "Date is required"),
   delivery_date: z.string().optional(),
   remarks: z.string().optional(),
+  cash_returned: z.number().optional(),
+  cash_returned_to: z.string().optional(),
 });
 
 type POFormData = z.infer<typeof poSchema>;
@@ -57,6 +60,18 @@ export default function PurchasingEdit() {
         .from("components")
         .select("*")
         .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: users } = useQuery({
+    queryKey: ["user-profiles"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .select("id, full_name")
+        .order("full_name");
       if (error) throw error;
       return data;
     },
@@ -116,6 +131,8 @@ export default function PurchasingEdit() {
           delivery_date: data.delivery_date || null,
           remarks: data.remarks,
           total_amount,
+          cash_returned: data.cash_returned || 0,
+          cash_returned_to: data.cash_returned_to || null,
         })
         .eq("id", id);
 
@@ -243,6 +260,65 @@ export default function PurchasingEdit() {
               <CardTitle>Purchase Order Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {purchaseOrder.is_cash_purchase && (
+                <div className="p-4 bg-primary/5 rounded-lg border border-primary/20 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">Cash Purchase Mode</p>
+                      <p className="text-xs text-muted-foreground">This PO was created as a cash purchase</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Cash Advance</p>
+                      <p className="font-mono font-bold">${purchaseOrder.cash_advance?.toFixed(2) || "0.00"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Spent</p>
+                      <p className="font-mono font-bold">${totalAmount.toFixed(2)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Cash to Return</p>
+                      <p className={`font-mono font-bold ${(purchaseOrder.cash_advance || 0) - totalAmount < 0 ? "text-destructive" : "text-green-600"}`}>
+                        ${((purchaseOrder.cash_advance || 0) - totalAmount).toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="cash_returned">Cash Returned Amount</Label>
+                      <Input
+                        id="cash_returned"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        {...register("cash_returned", { valueAsNumber: true })}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="cash_returned_to">Returned To</Label>
+                      <Select onValueChange={(value) => setValue("cash_returned_to", value)} defaultValue={purchaseOrder.cash_returned_to || ""}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select user" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {users?.map((user) => (
+                            <SelectItem key={user.id} value={user.id}>
+                              {user.full_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="supplier_id">Supplier *</Label>
