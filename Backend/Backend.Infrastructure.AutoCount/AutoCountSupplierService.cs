@@ -177,13 +177,23 @@ namespace Backend.Infrastructure.AutoCount
 	   	 	    return (string)row[columnName];
 	   	 	}
 	   	 
-	   	 	private static bool GetBool(DataRow row, string columnName, bool defaultValue)
-	   	 	{
-	   	 	    if (row == null || row.Table == null || !row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
-	   	 	        return defaultValue;
-	   	 
-	   	 	    return Convert.ToBoolean(row[columnName]);
-	   	 	}
+        private static bool GetBool(DataRow row, string columnName, bool defaultValue)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
+                return defaultValue;
+
+            var value = row[columnName];
+            if (value is bool)
+                return (bool)value;
+
+            var s = value.ToString().Trim().ToUpperInvariant();
+            if (s == "T" || s == "Y" || s == "1" || s == "TRUE" || s == "YES")
+                return true;
+            if (s == "F" || s == "N" || s == "0" || s == "FALSE" || s == "NO")
+                return false;
+
+            return defaultValue;
+        }
 	   	 
 	   	 	private string CombineAddress(string address1, string address2)
         {
