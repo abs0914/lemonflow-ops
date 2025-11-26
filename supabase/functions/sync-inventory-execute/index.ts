@@ -157,6 +157,16 @@ Deno.serve(async (req) => {
 
     console.log('[sync-inventory-execute] Sync complete:', { created, updated, errors: errors.length });
 
+    // Log sync summary
+    await supabaseClient.from('autocount_sync_log').insert({
+      reference_id: 'inventory_sync',
+      reference_type: 'inventory',
+      sync_type: 'pull',
+      sync_status: errors.length === 0 ? 'success' : 'partial',
+      error_message: errors.length > 0 ? errors.join('; ') : null,
+      synced_at: new Date().toISOString(),
+    });
+
     return new Response(
       JSON.stringify({
         success: true,
