@@ -490,10 +490,10 @@ export default function PurchaseOrderDetail() {
                     <TableCell>{line.components?.name}</TableCell>
                     <TableCell className="font-mono text-sm">{line.components?.sku}</TableCell>
                     <TableCell className="text-right">{line.quantity}</TableCell>
-                    <TableCell className="text-right">${line.unit_price.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(line.unit_price)}</TableCell>
                     <TableCell>{line.uom}</TableCell>
                     <TableCell className="text-right font-medium">
-                      ${(line.quantity * line.unit_price).toFixed(2)}
+                      {formatCurrency(line.quantity * line.unit_price)}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -503,7 +503,7 @@ export default function PurchaseOrderDetail() {
             <div className="flex justify-end">
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Total Amount</p>
-                <p className="text-3xl font-bold">${purchaseOrder.total_amount.toFixed(2)}</p>
+                <p className="text-3xl font-bold">{formatCurrency(purchaseOrder.total_amount)}</p>
               </div>
             </div>
           </CardContent>

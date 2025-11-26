@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { PurchaseOrderLine } from "@/types/inventory";
+import { formatCurrency } from "@/lib/currency";
 
 interface ReceiveFromCashPOProps {
   open: boolean;
@@ -224,7 +225,7 @@ export function ReceiveFromCashPO({
                         <span className="font-mono text-sm">{line.batch_number}</span>
                       </TableCell>
                       <TableCell className="text-right font-medium">
-                        ${(line.quantity * line.unit_cost).toFixed(2)}
+                        {formatCurrency(line.quantity * line.unit_cost)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -236,7 +237,7 @@ export function ReceiveFromCashPO({
               <div className="flex justify-end">
                 <div className="text-right">
                   <p className="text-sm text-muted-foreground">Total Amount</p>
-                  <p className="text-2xl font-bold">${totalAmount.toFixed(2)}</p>
+                  <p className="text-2xl font-bold">{formatCurrency(totalAmount)}</p>
                 </div>
               </div>
             </>

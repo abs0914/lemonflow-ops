@@ -3,7 +3,7 @@ import { MobileDataCard, MobileDataRow } from "@/components/ui/mobile-data-card"
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MoreVertical, Package } from "lucide-react";
-import { format } from "date-fns";
+import { dateFormatters } from "@/lib/datetime";
 
 interface MobileAssemblyOrderCardProps {
   order: AssemblyOrder;
@@ -40,11 +40,11 @@ export function MobileAssemblyOrderCard({ order, onOpenActions }: MobileAssembly
       <MobileDataRow label="Created By" value={order.user_profiles?.full_name || "-"} />
       <MobileDataRow 
         label="Due Date" 
-        value={order.due_date ? format(new Date(order.due_date), "MMM dd, yyyy") : "Not set"} 
+        value={order.due_date ? dateFormatters.medium(order.due_date) : "Not set"} 
       />
       <MobileDataRow 
         label="Created" 
-        value={format(new Date(order.created_at), "MMM dd, yyyy HH:mm")} 
+        value={dateFormatters.dateTime(order.created_at)} 
       />
       {order.notes && (
         <MobileDataRow label="Notes" value={order.notes} />
