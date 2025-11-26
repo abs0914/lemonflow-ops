@@ -113,6 +113,16 @@ Deno.serve(async (req) => {
     const result = await response.json();
     console.log("AutoCount PO created successfully:", result);
 
+    // Log sync success
+    await supabaseClient.from("autocount_sync_log").insert({
+      reference_id: requestData.supplierId,
+      reference_type: "purchase_order",
+      sync_type: "po_create",
+      sync_status: "success",
+      autocount_doc_no: result.docNo || requestData.poNumber,
+      synced_at: new Date().toISOString(),
+    });
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -127,6 +137,25 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     console.error("Error creating PO in AutoCount:", error);
+    
+    // Log sync failure
+    try {
+      const supabaseClient = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+      );
+      const requestData: CreatePORequest = await req.json();
+      await supabaseClient.from("autocount_sync_log").insert({
+        reference_id: requestData.supplierId,
+        reference_type: "purchase_order",
+        sync_type: "po_create",
+        sync_status: "failed",
+        error_message: error instanceof Error ? error.message : "Unknown error occurred",
+      });
+    } catch (logError) {
+      console.error("Failed to log sync error:", logError);
+    }
+    
     return new Response(
       JSON.stringify({
         success: false,

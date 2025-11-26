@@ -86,6 +86,12 @@ export function AppSidebar() {
       roles: ["Admin", "Warehouse"],
     },
     {
+      title: "AutoCount Sync",
+      url: "/autocount-sync",
+      icon: Database,
+      roles: ["Admin"],
+    },
+    {
       title: "Suppliers",
       url: "/suppliers",
       icon: Users,
