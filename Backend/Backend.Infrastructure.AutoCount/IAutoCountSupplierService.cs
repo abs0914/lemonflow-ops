@@ -5,7 +5,7 @@ namespace Backend.Infrastructure.AutoCount
 {
     /// <summary>
     /// Abstraction for AutoCount supplier (creditor) operations.
-    /// For now this is read-only and used to sync suppliers out of AutoCount.
+    /// Supports both read and write operations for supplier sync.
     /// </summary>
     public interface IAutoCountSupplierService
     {
@@ -28,6 +28,20 @@ namespace Backend.Infrastructure.AutoCount
         /// <param name="supplierCode">Supplier/creditor code.</param>
         /// <returns>True if the supplier exists; otherwise false.</returns>
         bool SupplierExists(string supplierCode);
+
+        /// <summary>
+        /// Creates a new supplier in AutoCount.
+        /// </summary>
+        /// <param name="supplier">The supplier to create.</param>
+        /// <returns>The created supplier with any AutoCount-assigned values.</returns>
+        Supplier CreateSupplier(Supplier supplier);
+
+        /// <summary>
+        /// Updates an existing supplier in AutoCount.
+        /// </summary>
+        /// <param name="supplier">The supplier to update.</param>
+        /// <returns>The updated supplier.</returns>
+        Supplier UpdateSupplier(Supplier supplier);
     }
 }
 

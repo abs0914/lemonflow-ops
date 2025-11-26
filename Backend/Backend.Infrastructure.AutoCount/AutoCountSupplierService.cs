@@ -195,7 +195,7 @@ namespace Backend.Infrastructure.AutoCount
             return defaultValue;
         }
 	   	 
-	   	 	private string CombineAddress(string address1, string address2)
+        private string CombineAddress(string address1, string address2)
         {
             if (string.IsNullOrWhiteSpace(address1) && string.IsNullOrWhiteSpace(address2))
                 return null;
@@ -208,6 +208,100 @@ namespace Backend.Infrastructure.AutoCount
 
             return address1.Trim() + ", " + address2.Trim();
         }
+
+        /// <inheritdoc />
+        public Supplier CreateSupplier(Supplier supplier)
+        {
+            if (supplier == null)
+                throw new ArgumentNullException("supplier");
+            if (string.IsNullOrWhiteSpace(supplier.Code))
+                throw new ArgumentException("Supplier code is required.", "supplier");
+
+            lock (_lockObject)
+            {
+                try
+                {
+                    var userSession = _sessionProvider.GetUserSession();
+                    var dbSetting = userSession.DBSetting;
+
+                    var cmd = CreditorDataAccess.Create(userSession, dbSetting);
+
+                    // Check if supplier already exists
+                    var existing = cmd.GetCreditor(supplier.Code);
+                    if (existing != null)
+                    {
+                        throw new InvalidOperationException("Supplier '" + supplier.Code + "' already exists in AutoCount.");
+                    }
+
+                    var acCreditor = cmd.NewCreditor();
+                    MapDomainToCreditorEntity(supplier, acCreditor);
+                    cmd.SaveCreditor(acCreditor, userSession.LoginUserID);
+
+                    // Reload to get any AutoCount-assigned values
+                    var reloaded = cmd.GetCreditor(supplier.Code);
+                    return MapAutoCountCreditorToDomain(reloaded);
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException("Failed to create supplier in AutoCount.", ex);
+                }
+            }
+        }
+
+        /// <inheritdoc />
+        public Supplier UpdateSupplier(Supplier supplier)
+        {
+            if (supplier == null)
+                throw new ArgumentNullException("supplier");
+            if (string.IsNullOrWhiteSpace(supplier.Code))
+                throw new ArgumentException("Supplier code is required.", "supplier");
+
+            lock (_lockObject)
+            {
+                try
+                {
+                    var userSession = _sessionProvider.GetUserSession();
+                    var dbSetting = userSession.DBSetting;
+
+                    var cmd = CreditorDataAccess.Create(userSession, dbSetting);
+                    var acCreditor = cmd.GetCreditor(supplier.Code);
+
+                    if (acCreditor == null)
+                    {
+                        throw new InvalidOperationException("Supplier '" + supplier.Code + "' not found in AutoCount.");
+                    }
+
+                    MapDomainToCreditorEntity(supplier, acCreditor);
+                    cmd.SaveCreditor(acCreditor, userSession.LoginUserID);
+
+                    // Reload to confirm changes
+                    var reloaded = cmd.GetCreditor(supplier.Code);
+                    return MapAutoCountCreditorToDomain(reloaded);
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException("Failed to update supplier in AutoCount.", ex);
+                }
+            }
+        }
+
+        private void MapDomainToCreditorEntity(Supplier supplier, CreditorEntity entity)
+        {
+            entity.AccNo = supplier.Code;
+            entity.CompanyName = supplier.CompanyName ?? "";
+            entity.Attention = supplier.ContactPerson ?? "";
+            entity.Phone1 = supplier.Phone ?? "";
+            entity.EmailAddress = supplier.Email ?? "";
+
+            // Split address if needed (simple approach: put everything in Address1)
+            if (!string.IsNullOrWhiteSpace(supplier.Address))
+            {
+                entity.Address1 = supplier.Address;
+            }
+
+            entity.IsActive = supplier.IsActive;
+        }
     }
 }
+
 

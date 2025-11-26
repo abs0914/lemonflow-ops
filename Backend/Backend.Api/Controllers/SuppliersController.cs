@@ -11,11 +11,13 @@ namespace Backend.Api.Controllers
     /// <summary>
     /// HTTP API controller exposing AutoCount suppliers (creditors) for Supabase sync.
     ///
-    /// Route shape is aligned with Supabase Edge function expectations:
-    ///   - GET /autocount/suppliers  (Authorization: Bearer &lt;jwt&gt;)
+    /// Route shapes:
+    ///   - GET  /autocount/suppliers       (Authorization: Bearer jwt)
+    ///   - POST /autocount/suppliers       (Authorization: Bearer jwt)
+    ///   - PUT  /autocount/suppliers/{code} (Authorization: Bearer jwt)
     ///
     /// The controller validates the JWT using JwtAuthenticationHelper and then
-    /// delegates to IAutoCountSupplierService for data retrieval.
+    /// delegates to IAutoCountSupplierService for data operations.
     /// </summary>
     [RoutePrefix("autocount/suppliers")]
     public class SuppliersController : ApiController
@@ -82,6 +84,123 @@ namespace Backend.Api.Controllers
         }
 
         /// <summary>
+        /// POST /autocount/suppliers
+        /// Creates a new supplier in AutoCount.
+        /// Requires a valid Bearer JWT in the Authorization header.
+        /// </summary>
+        [HttpPost]
+        [Route("")]
+        public IHttpActionResult CreateSupplier([FromBody] SupplierCreateRequest request)
+        {
+            try
+            {
+                ClaimsPrincipal principal;
+                IHttpActionResult authError;
+                if (!TryAuthorizeRequest(out principal, out authError))
+                    return authError;
+
+                if (request == null || string.IsNullOrWhiteSpace(request.Code))
+                    return BadRequest("Supplier code is required.");
+
+                var supplier = new Supplier
+                {
+                    Code = request.Code,
+                    CompanyName = request.CompanyName ?? "",
+                    ContactPerson = request.ContactPerson ?? "",
+                    Phone = request.Phone ?? "",
+                    Email = request.Email ?? "",
+                    Address = request.Address ?? "",
+                    CreditTerms = request.CreditTerms,
+                    IsActive = request.IsActive
+                };
+
+                var created = _supplierService.CreateSupplier(supplier);
+
+                return Ok(new
+                {
+                    code = created.Code,
+                    companyName = created.CompanyName,
+                    contactPerson = created.ContactPerson,
+                    phone = created.Phone,
+                    email = created.Email,
+                    address = created.Address,
+                    creditTerms = created.CreditTerms,
+                    isActive = created.IsActive
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                if (ex.Message.Contains("already exists"))
+                    return Conflict();
+                return InternalServerError(ex);
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(ex);
+            }
+        }
+
+        /// <summary>
+        /// PUT /autocount/suppliers/{code}
+        /// Updates an existing supplier in AutoCount.
+        /// Requires a valid Bearer JWT in the Authorization header.
+        /// </summary>
+        [HttpPut]
+        [Route("{code}")]
+        public IHttpActionResult UpdateSupplier(string code, [FromBody] SupplierUpdateRequest request)
+        {
+            try
+            {
+                ClaimsPrincipal principal;
+                IHttpActionResult authError;
+                if (!TryAuthorizeRequest(out principal, out authError))
+                    return authError;
+
+                if (string.IsNullOrWhiteSpace(code))
+                    return BadRequest("Supplier code is required.");
+
+                if (!_supplierService.SupplierExists(code))
+                    return NotFound();
+
+                var supplier = new Supplier
+                {
+                    Code = code,
+                    CompanyName = request != null ? request.CompanyName : null,
+                    ContactPerson = request != null ? request.ContactPerson : null,
+                    Phone = request != null ? request.Phone : null,
+                    Email = request != null ? request.Email : null,
+                    Address = request != null ? request.Address : null,
+                    CreditTerms = request != null ? request.CreditTerms : null,
+                    IsActive = request != null ? request.IsActive : true
+                };
+
+                var updated = _supplierService.UpdateSupplier(supplier);
+
+                return Ok(new
+                {
+                    code = updated.Code,
+                    companyName = updated.CompanyName,
+                    contactPerson = updated.ContactPerson,
+                    phone = updated.Phone,
+                    email = updated.Email,
+                    address = updated.Address,
+                    creditTerms = updated.CreditTerms,
+                    isActive = updated.IsActive
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                if (ex.Message.Contains("not found"))
+                    return NotFound();
+                return InternalServerError(ex);
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(ex);
+            }
+        }
+
+        /// <summary>
         /// Extracts and validates the Bearer token from the Authorization header.
         /// </summary>
         private bool TryAuthorizeRequest(out ClaimsPrincipal principal, out IHttpActionResult errorResult)
@@ -108,6 +227,35 @@ namespace Backend.Api.Controllers
             principal = claims;
             return true;
         }
+    }
+
+    /// <summary>
+    /// Request model for creating a supplier.
+    /// </summary>
+    public class SupplierCreateRequest
+    {
+        public string Code { get; set; }
+        public string CompanyName { get; set; }
+        public string ContactPerson { get; set; }
+        public string Phone { get; set; }
+        public string Email { get; set; }
+        public string Address { get; set; }
+        public int? CreditTerms { get; set; }
+        public bool IsActive { get; set; }
+    }
+
+    /// <summary>
+    /// Request model for updating a supplier.
+    /// </summary>
+    public class SupplierUpdateRequest
+    {
+        public string CompanyName { get; set; }
+        public string ContactPerson { get; set; }
+        public string Phone { get; set; }
+        public string Email { get; set; }
+        public string Address { get; set; }
+        public int? CreditTerms { get; set; }
+        public bool IsActive { get; set; }
     }
 }
 
