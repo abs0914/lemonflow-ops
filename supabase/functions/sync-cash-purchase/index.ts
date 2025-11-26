@@ -31,48 +31,72 @@ Deno.serve(async (req) => {
     const body: CashPurchaseRequest = await req.json();
     console.log("Cash Purchase sync request:", body);
 
-    // Fetch supplier details
-    const { data: supplier, error: supplierError } = await supabase
-      .from("suppliers")
-      .select("supplier_code, company_name")
-      .eq("id", body.supplierId)
+    // Fetch PO details
+    const { data: po, error: poError } = await supabase
+      .from("purchase_orders")
+      .select(`
+        po_number,
+        supplier_id,
+        suppliers (
+          supplier_code,
+          company_name
+        )
+      `)
+      .eq("id", body.purchaseOrderId)
       .single();
 
-    if (supplierError) throw supplierError;
+    if (poError) throw poError;
 
-    // Fetch component details
-    const { data: component, error: componentError } = await supabase
+    const supplier = Array.isArray(po.suppliers) ? po.suppliers[0] : po.suppliers;
+
+    // Fetch all component details
+    const componentIds = body.lines.map(line => line.componentId);
+    const { data: components, error: compError } = await supabase
       .from("components")
-      .select("autocount_item_code, name, sku")
-      .eq("id", body.componentId)
-      .single();
+      .select("id, autocount_item_code, name, sku")
+      .in("id", componentIds);
 
-    if (componentError) throw componentError;
+    if (compError) throw compError;
 
-    const itemCode = component.autocount_item_code || component.sku;
+    const componentMap = new Map(components?.map(c => [c.id, c]) || []);
 
-    // Prepare AutoCount Purchase Invoice payload
+    // Prepare AutoCount Purchase Invoice payload with multiple lines
     const docDate = new Date().toISOString().split("T")[0];
-    const totalAmount = body.quantity * body.unitPrice;
+    
+    const detailKeys = body.lines.map(() => 0);
+    const itemCodes = body.lines.map(line => {
+      const comp = componentMap.get(line.componentId);
+      return comp?.autocount_item_code || comp?.sku || "";
+    });
+    const locations = body.lines.map(() => "MAIN");
+    const descriptions = body.lines.map(line => line.batchNumber);
+    const quantities = body.lines.map(line => line.quantity);
+    const uoms = body.lines.map(() => "");
+    const unitPrices = body.lines.map(line => line.unitCost);
+    const amounts = body.lines.map(line => line.quantity * line.unitCost);
+    const taxTypes = body.lines.map(() => "None");
+    const taxRates = body.lines.map(() => 0);
+    const taxAmts = body.lines.map(() => 0);
+    const taxInclusives = body.lines.map(() => false);
 
     const autCountPayload = {
       DocKey: 0,
       DocNo: "",
       DocDate: docDate,
-      CreditorCode: supplier.supplier_code,
-      Description: body.notes || `Cash Purchase - ${component.name}`,
-      DetailKey: [0],
-      ItemCode: [itemCode],
-      Location: [body.warehouseLocation],
-      Description2: [body.batchNumber || ""],
-      Qty: [body.quantity],
-      UOM: [""],
-      UnitPrice: [body.unitPrice],
-      Amount: [totalAmount],
-      TaxType: ["None"],
-      TaxRate: [0],
-      TaxAmt: [0],
-      TaxInclusive: [false],
+      CreditorCode: supplier?.supplier_code || "",
+      Description: `Cash Purchase PO - ${po.po_number}`,
+      DetailKey: detailKeys,
+      ItemCode: itemCodes,
+      Location: locations,
+      Description2: descriptions,
+      Qty: quantities,
+      UOM: uoms,
+      UnitPrice: unitPrices,
+      Amount: amounts,
+      TaxType: taxTypes,
+      TaxRate: taxRates,
+      TaxAmt: taxAmts,
+      TaxInclusive: taxInclusives,
     };
 
     console.log("Sending to AutoCount Purchase Invoice API:", autCountPayload);
@@ -110,19 +134,19 @@ Deno.serve(async (req) => {
       autoCountData = { DocNo: "UNKNOWN" };
     }
 
-    // Update stock movement with AutoCount doc number
+    // Update PO with AutoCount doc number
     await supabase
-      .from("stock_movements")
+      .from("purchase_orders")
       .update({
         autocount_synced: true,
         autocount_doc_no: autoCountData.DocNo || "SYNCED",
       })
-      .eq("id", body.movementId);
+      .eq("id", body.purchaseOrderId);
 
     // Log sync success
     await supabase.from("autocount_sync_log").insert({
-      reference_id: body.movementId,
-      reference_type: "cash_purchase",
+      reference_id: body.purchaseOrderId,
+      reference_type: "cash_purchase_po",
       sync_type: "purchase_invoice",
       sync_status: "success",
       autocount_doc_no: autoCountData.DocNo,
@@ -133,7 +157,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         autoCountDocNo: autoCountData.DocNo,
-        message: "Cash purchase synced to AutoCount successfully",
+        message: "Cash purchase PO synced to AutoCount successfully",
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
