@@ -19,7 +19,7 @@ import { usePurchaseOrder, usePurchaseOrderLines } from "@/hooks/usePurchaseOrde
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { dateFormatters } from "@/lib/datetime";
 
 const poSchema = z.object({
   supplier_id: z.string().min(1, "Supplier is required"),
@@ -91,9 +91,9 @@ export default function PurchasingEdit() {
   useState(() => {
     if (purchaseOrder && !loadingPO) {
       setValue("supplier_id", purchaseOrder.supplier_id);
-      setValue("doc_date", format(new Date(purchaseOrder.doc_date), "yyyy-MM-dd"));
+      setValue("doc_date", dateFormatters.input(purchaseOrder.doc_date));
       if (purchaseOrder.delivery_date) {
-        setValue("delivery_date", format(new Date(purchaseOrder.delivery_date), "yyyy-MM-dd"));
+        setValue("delivery_date", dateFormatters.input(purchaseOrder.delivery_date));
       }
       setValue("remarks", purchaseOrder.remarks || "");
     }

@@ -2,7 +2,8 @@ import { Building2, Calendar, DollarSign, FileText } from "lucide-react";
 import { MobileDataCard, MobileDataRow } from "@/components/ui/mobile-data-card";
 import { Badge } from "@/components/ui/badge";
 import { PurchaseOrder } from "@/types/inventory";
-import { format } from "date-fns";
+import { dateFormatters } from "@/lib/datetime";
+import { formatCurrency } from "@/lib/currency";
 
 interface MobilePOCardProps {
   order: PurchaseOrder;
@@ -47,8 +48,8 @@ export function MobilePOCard({ order, onClick }: MobilePOCardProps) {
           </div>
         </div>
         <MobileDataRow label="PO Number" value={order.po_number} />
-        <MobileDataRow label="Date" value={format(new Date(order.doc_date), "dd/MM/yyyy")} />
-        <MobileDataRow label="Amount" value={`$${order.total_amount.toFixed(2)}`} />
+        <MobileDataRow label="Date" value={dateFormatters.short(order.doc_date)} />
+        <MobileDataRow label="Amount" value={formatCurrency(order.total_amount)} />
       </div>
     </MobileDataCard>
   );

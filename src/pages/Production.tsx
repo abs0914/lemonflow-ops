@@ -20,7 +20,7 @@ import { DeleteAssemblyOrderDialog } from "@/components/production/DeleteAssembl
 import { FloatingActionButton } from "@/components/ui/floating-action-button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { dateFormatters } from "@/lib/datetime";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -319,7 +319,7 @@ export default function Production() {
                       <TableCell>{order.quantity}</TableCell>
                       <TableCell>{order.user_profiles?.full_name}</TableCell>
                       <TableCell>
-                        {order.due_date ? format(new Date(order.due_date), "MMM dd, yyyy") : "-"}
+                        {order.due_date ? dateFormatters.medium(order.due_date) : "-"}
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary">{order.status}</Badge>
@@ -403,7 +403,7 @@ export default function Production() {
                       <TableCell>{order.products?.sku}</TableCell>
                       <TableCell>{order.quantity}</TableCell>
                       <TableCell>{order.user_profiles?.full_name}</TableCell>
-                      <TableCell>{format(new Date(order.updated_at), "MMM dd, yyyy")}</TableCell>
+                      <TableCell>{dateFormatters.medium(order.updated_at)}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>

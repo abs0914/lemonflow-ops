@@ -13,7 +13,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { MobilePOCard } from "@/components/purchasing/MobilePOCard";
 import { FloatingActionButton } from "@/components/ui/floating-action-button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { format } from "date-fns";
+import { dateFormatters } from "@/lib/datetime";
+import { formatCurrency } from "@/lib/currency";
 export default function Purchasing() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<string>("all");
@@ -93,9 +94,9 @@ export default function Purchasing() {
                   {filteredOrders?.map(order => <TableRow key={order.id}>
                       <TableCell className="font-mono">{order.po_number}</TableCell>
                       <TableCell className="font-medium">{order.suppliers?.company_name}</TableCell>
-                      <TableCell>{format(new Date(order.doc_date), "dd/MM/yyyy")}</TableCell>
-                      <TableCell>{order.delivery_date ? format(new Date(order.delivery_date), "dd/MM/yyyy") : "-"}</TableCell>
-                      <TableCell>${order.total_amount.toFixed(2)}</TableCell>
+                      <TableCell>{dateFormatters.short(order.doc_date)}</TableCell>
+                      <TableCell>{order.delivery_date ? dateFormatters.short(order.delivery_date) : "-"}</TableCell>
+                      <TableCell>{formatCurrency(order.total_amount)}</TableCell>
                       <TableCell>{getStatusBadge(order.status)}</TableCell>
                       <TableCell>
                         <Badge variant={order.autocount_synced ? "default" : "outline"}>

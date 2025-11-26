@@ -10,7 +10,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+import { dateFormatters } from "@/lib/datetime";
+import { formatCurrency } from "@/lib/currency";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -201,7 +202,7 @@ export default function ExpiredStock() {
                 <AlertTriangle className="h-5 w-5 text-destructive" />
                 <p className="text-sm text-muted-foreground">Total Expired Value</p>
               </div>
-              <p className="text-3xl font-bold text-destructive">${totalValue.toFixed(2)}</p>
+              <p className="text-3xl font-bold text-destructive">{formatCurrency(totalValue)}</p>
             </CardContent>
           </Card>
         </div>
@@ -238,11 +239,11 @@ export default function ExpiredStock() {
                       <TableCell className="font-medium">{batch.component_name}</TableCell>
                       <TableCell className="font-mono text-sm">{batch.sku}</TableCell>
                       <TableCell className="text-right">{batch.quantity}</TableCell>
-                      <TableCell className="text-right">${batch.unit_cost.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(batch.unit_cost)}</TableCell>
                       <TableCell className="text-right font-medium">
-                        ${(batch.quantity * batch.unit_cost).toFixed(2)}
+                        {formatCurrency(batch.quantity * batch.unit_cost)}
                       </TableCell>
-                      <TableCell>{format(new Date(batch.expired_at), "dd/MM/yyyy")}</TableCell>
+                      <TableCell>{dateFormatters.short(batch.expired_at)}</TableCell>
                       <TableCell>{batch.marked_by_name}</TableCell>
                       <TableCell className="max-w-xs truncate">{batch.expiry_notes}</TableCell>
                       <TableCell className="text-right">

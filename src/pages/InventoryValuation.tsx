@@ -8,7 +8,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+import { dateFormatters } from "@/lib/datetime";
+import { formatCurrency } from "@/lib/currency";
 
 interface ComponentValuation {
   component_id: string;
@@ -136,7 +137,7 @@ export default function InventoryValuation() {
                 <DollarSign className="h-5 w-5 text-primary" />
                 <p className="text-sm text-muted-foreground">Total Inventory Value</p>
               </div>
-              <p className="text-3xl font-bold">${grandTotal.toFixed(2)}</p>
+              <p className="text-3xl font-bold">{formatCurrency(grandTotal)}</p>
             </CardContent>
           </Card>
         </div>
@@ -177,8 +178,8 @@ export default function InventoryValuation() {
                       <TableCell className="text-right">
                         {valuation.total_stock} {valuation.unit}
                       </TableCell>
-                      <TableCell className="text-right">${valuation.avg_cost.toFixed(2)}</TableCell>
-                      <TableCell className="text-right font-bold">${valuation.total_value.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(valuation.avg_cost)}</TableCell>
+                      <TableCell className="text-right font-bold">{formatCurrency(valuation.total_value)}</TableCell>
                     </TableRow>
                     {expandedRows.has(valuation.component_id) && (
                       <TableRow>
@@ -199,11 +200,11 @@ export default function InventoryValuation() {
                                 {valuation.batches.map((batch, idx) => (
                                   <TableRow key={idx}>
                                     <TableCell className="font-mono text-sm">{batch.batch_number}</TableCell>
-                                    <TableCell>{format(new Date(batch.date_received), "dd/MM/yyyy")}</TableCell>
+                                    <TableCell>{dateFormatters.short(batch.date_received)}</TableCell>
                                     <TableCell className="text-right">{batch.quantity}</TableCell>
-                                    <TableCell className="text-right">${batch.unit_cost.toFixed(2)}</TableCell>
+                                    <TableCell className="text-right">{formatCurrency(batch.unit_cost)}</TableCell>
                                     <TableCell className="text-right font-medium">
-                                      ${batch.batch_value.toFixed(2)}
+                                      {formatCurrency(batch.batch_value)}
                                     </TableCell>
                                   </TableRow>
                                 ))}
