@@ -3,7 +3,7 @@ import { MobileDataCard, MobileDataRow } from "@/components/ui/mobile-data-card"
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Supplier } from "@/types/inventory";
-import { format } from "date-fns";
+import { dateFormatters } from "@/lib/datetime";
 
 interface MobileSupplierCardProps {
   supplier: Supplier;
@@ -47,7 +47,7 @@ export function MobileSupplierCard({ supplier, onEdit }: MobileSupplierCardProps
         <MobileDataRow label="Email" value={supplier.email || "—"} />
         <MobileDataRow 
           label="Created" 
-          value={format(new Date(supplier.created_at), "dd/MM/yyyy")} 
+          value={dateFormatters.short(supplier.created_at)} 
         />
       </div>
     </MobileDataCard>

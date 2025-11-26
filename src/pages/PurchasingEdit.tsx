@@ -20,6 +20,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { dateFormatters } from "@/lib/datetime";
+import { formatCurrency } from "@/lib/currency";
 
 const poSchema = z.object({
   supplier_id: z.string().min(1, "Supplier is required"),
@@ -272,16 +273,16 @@ export default function PurchasingEdit() {
                   <div className="grid gap-4 md:grid-cols-3">
                     <div>
                       <p className="text-sm text-muted-foreground">Cash Advance</p>
-                      <p className="font-mono font-bold">${purchaseOrder.cash_advance?.toFixed(2) || "0.00"}</p>
+                      <p className="font-mono font-bold">{formatCurrency(purchaseOrder.cash_advance || 0)}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Total Spent</p>
-                      <p className="font-mono font-bold">${totalAmount.toFixed(2)}</p>
+                      <p className="font-mono font-bold">{formatCurrency(totalAmount)}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Cash to Return</p>
                       <p className={`font-mono font-bold ${(purchaseOrder.cash_advance || 0) - totalAmount < 0 ? "text-destructive" : "text-green-600"}`}>
-                        ${((purchaseOrder.cash_advance || 0) - totalAmount).toFixed(2)}
+                        {formatCurrency((purchaseOrder.cash_advance || 0) - totalAmount)}
                       </p>
                     </div>
                   </div>
@@ -435,7 +436,7 @@ export default function PurchasingEdit() {
                           </TableCell>
                           <TableCell>{line.uom}</TableCell>
                           <TableCell className="font-medium">
-                            ${(line.quantity * line.unit_price).toFixed(2)}
+                            {formatCurrency(line.quantity * line.unit_price)}
                           </TableCell>
                           <TableCell>
                             <Button
@@ -457,7 +458,7 @@ export default function PurchasingEdit() {
               <div className="flex justify-end pt-4 border-t">
                 <div className="text-right">
                   <p className="text-sm text-muted-foreground">Total Amount</p>
-                  <p className="text-2xl font-bold">${totalAmount.toFixed(2)}</p>
+                  <p className="text-2xl font-bold">{formatCurrency(totalAmount)}</p>
                 </div>
               </div>
             </CardContent>

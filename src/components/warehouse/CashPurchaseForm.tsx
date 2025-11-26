@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Receipt, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { formatCurrency } from "@/lib/currency";
 
 interface Component {
   id: string;
@@ -287,7 +288,7 @@ export function CashPurchaseForm() {
                 <div className="p-3 bg-primary/10 rounded-md">
                   <div className="text-sm text-muted-foreground">Total Amount</div>
                   <div className="text-2xl font-bold">
-                    ${(parseFloat(quantity) * parseFloat(unitPrice)).toFixed(2)}
+                    {formatCurrency(parseFloat(quantity) * parseFloat(unitPrice))}
                   </div>
                 </div>
               )}

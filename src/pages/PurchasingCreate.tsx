@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { dateFormatters } from "@/lib/datetime";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Checkbox } from "@/components/ui/checkbox";
+import { formatCurrency } from "@/lib/currency";
 
 const poSchema = z.object({
   supplier_id: z.string().min(1, "Supplier is required"),
@@ -333,7 +334,7 @@ export default function PurchasingCreate() {
                           </TableCell>
                           <TableCell>{line.uom}</TableCell>
                           <TableCell className="font-medium">
-                            ${(line.quantity * line.unit_price).toFixed(2)}
+                            {formatCurrency(line.quantity * line.unit_price)}
                           </TableCell>
                           <TableCell>
                             <Button type="button" variant="ghost" size="icon" onClick={() => removeLine(index)}>
@@ -348,7 +349,7 @@ export default function PurchasingCreate() {
               <div className="flex justify-end pt-4 border-t">
                 <div className="text-right">
                   <p className="text-sm text-muted-foreground">Total Amount</p>
-                  <p className="text-2xl font-bold">${totalAmount.toFixed(2)}</p>
+                  <p className="text-2xl font-bold">{formatCurrency(totalAmount)}</p>
                 </div>
               </div>
             </CardContent>
