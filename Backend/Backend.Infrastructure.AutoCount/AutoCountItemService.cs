@@ -37,38 +37,57 @@ namespace Backend.Infrastructure.AutoCount
                     var userSession = _sessionProvider.GetUserSession();
                     var dbSetting = userSession.DBSetting;
 
-                    // Strategy based on official sample "GetModifiedItemData":
-                    //   1. Query Item table for active ItemCode list
-                    //   2. Use ItemDataAccess.LoadAllItem(string[]) to get full item data
-
+                    // Query Item table for active ItemCode list (C# 5.0 compatible)
                     string sql = "SELECT ItemCode FROM Item WHERE IsActive='T'";
                     DataTable tblItemCode = dbSetting.GetDataTable(sql, false);
 
-                    var itemCodes = tblItemCode
-                        .AsEnumerable()
-                        .Select(r => r.Field<string>("ItemCode"))
-                        .Where(code => !string.IsNullOrWhiteSpace(code))
-                        .Distinct()
-                        .ToList();
+                    var itemCodeSet = new HashSet<string>();
+                    foreach (DataRow r in tblItemCode.Rows)
+                    {
+                        if (r["ItemCode"] != DBNull.Value)
+                        {
+                            string code = r["ItemCode"].ToString();
+                            if (!string.IsNullOrWhiteSpace(code))
+                                itemCodeSet.Add(code);
+                        }
+                    }
+                    var itemCodes = new List<string>(itemCodeSet);
 
                     if (limit.HasValue && limit.Value > 0 && itemCodes.Count > limit.Value)
-                    {
-                        itemCodes = itemCodes.Take(limit.Value).ToList();
-                    }
+                        itemCodes = itemCodes.GetRange(0, limit.Value);
 
                     if (itemCodes.Count == 0)
                         return new List<StockItem>();
+
+                    // Get stock balances from vItemBalQty view
+                    var balanceLookup = new Dictionary<string, decimal>();
+                    try
+                    {
+                        string balanceSql = "SELECT ItemCode, SUM(BalQty) AS TotalBalance FROM vItemBalQty GROUP BY ItemCode";
+                        DataTable tblBalance = dbSetting.GetDataTable(balanceSql, false);
+                        foreach (DataRow balRow in tblBalance.Rows)
+                        {
+                            if (balRow["ItemCode"] != DBNull.Value && balRow["TotalBalance"] != DBNull.Value)
+                            {
+                                string itemCode = balRow["ItemCode"].ToString();
+                                decimal balance = Convert.ToDecimal(balRow["TotalBalance"]);
+                                balanceLookup[itemCode] = balance;
+                            }
+                        }
+                    }
+                    catch { }
 
                     var cmd = ItemDataAccess.Create(userSession, dbSetting);
                     ItemEntities items = cmd.LoadAllItem(itemCodes.ToArray());
 
                     var result = new List<StockItem>();
-                    var table = items.ItemTable;
-                    foreach (DataRow row in table.Rows)
+                    foreach (DataRow row in items.ItemTable.Rows)
                     {
                         var item = MapDataRowToStockItem(row);
                         if (item != null)
                         {
+                            if (item.ItemCode != null && balanceLookup.ContainsKey(item.ItemCode))
+                                item.StockBalance = balanceLookup[item.ItemCode];
                             result.Add(item);
                         }
                     }
@@ -172,7 +191,7 @@ namespace Backend.Infrastructure.AutoCount
 	   	 	        Barcode = GetString(row, "Barcode"),
 	   	 	        HasBom = GetNullableBool(row, "HasBom")
 	   	 	    };
-	   	 
+
 	   	 	    return item;
 	   	 	}
 
@@ -180,60 +199,43 @@ namespace Backend.Infrastructure.AutoCount
 	   	 	{
 	   	 	    if (row == null || row.Table == null || !row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
 	   	 	        return null;
-	   	 
+
 	   	 	    return (string)row[columnName];
 	   	 	}
-	   	 
+
 	   	 	private static bool GetBool(DataRow row, string columnName, bool defaultValue)
 	   	 	{
 	   	 	    if (row == null || row.Table == null || !row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
 	   	 	        return defaultValue;
 
 	   	 	    var value = row[columnName];
-	   	 	    if (value is bool)
-	   	 	        return (bool)value;
-
-	   	 	    var strValue = value.ToString().Trim().ToUpperInvariant();
-	   	 	    if (strValue == "T" || strValue == "Y" || strValue == "1" || strValue == "TRUE" || strValue == "YES")
-	   	 	        return true;
-	   	 	    if (strValue == "F" || strValue == "N" || strValue == "0" || strValue == "FALSE" || strValue == "NO")
-	   	 	        return false;
-
-	   	 	    if (value is int || value is short || value is long || value is byte)
-	   	 	        return System.Convert.ToInt64(value) != 0;
-
+	   	 	    if (value is bool) return (bool)value;
+	   	 	    var s = value.ToString().Trim().ToUpperInvariant();
+	   	 	    if (s == "T" || s == "Y" || s == "1" || s == "TRUE" || s == "YES") return true;
+	   	 	    if (s == "F" || s == "N" || s == "0" || s == "FALSE" || s == "NO") return false;
 	   	 	    return defaultValue;
-	   	 	}
-
-	   	 	private static decimal? GetDecimal(DataRow row, string columnName)
-	   	 	{
-	   	 	    if (row == null || row.Table == null || !row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
-	   	 	        return null;
-
-	   	 	    return Convert.ToDecimal(row[columnName]);
 	   	 	}
 
 	   	 	private static bool? GetNullableBool(DataRow row, string columnName)
 	   	 	{
 	   	 	    if (row == null || row.Table == null || !row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
 	   	 	        return null;
-
 	   	 	    var value = row[columnName];
-	   	 	    if (value is bool)
-	   	 	        return (bool)value;
-
-	   	 	    var strValue = value.ToString().Trim().ToUpperInvariant();
-	   	 	    if (strValue == "T" || strValue == "Y" || strValue == "1" || strValue == "TRUE" || strValue == "YES")
-	   	 	        return true;
-	   	 	    if (strValue == "F" || strValue == "N" || strValue == "0" || strValue == "FALSE" || strValue == "NO")
-	   	 	        return false;
-
-	   	 	    if (value is int || value is short || value is long || value is byte)
-	   	 	        return System.Convert.ToInt64(value) != 0;
-
+	   	 	    if (value is bool) return (bool)value;
+	   	 	    var s = value.ToString().Trim().ToUpperInvariant();
+	   	 	    if (s == "T" || s == "Y" || s == "1" || s == "TRUE" || s == "YES") return true;
+	   	 	    if (s == "F" || s == "N" || s == "0" || s == "FALSE" || s == "NO") return false;
 	   	 	    return null;
 	   	 	}
 
+	   	 	private static decimal? GetDecimal(DataRow row, string columnName)
+	   	 	{
+	   	 	    if (row == null || row.Table == null || !row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
+	   	 	        return null;
+	   	 
+	   	 	    return Convert.ToDecimal(row[columnName]);
+	   	 	}
+	   	 
 	   	 	private StockItem MapItemEntityToDomain(ItemEntity entity)
         {
             if (entity == null)
@@ -251,11 +253,10 @@ namespace Backend.Infrastructure.AutoCount
                 StockControl = entity.StockControl,
                 HasBatchNo = entity.HasBatchNo,
                 IsActive = entity.IsActive,
-                StandardCost = baseUom != null ? baseUom.StandardCost : null,
-                Price = baseUom != null ? baseUom.StandardSellingPrice : null,
+                StandardCost = baseUom != null ? (decimal?)baseUom.StandardCost : null,
+                Price = baseUom != null ? (decimal?)baseUom.StandardSellingPrice : null,
                 MainSupplier = entity.MainSupplier,
-                Barcode = entity.Barcode,
-                // StockBalance and HasBom are not directly available from ItemEntity; leave null/false.
+                Barcode = null,
                 HasBom = null,
                 StockBalance = null
             };
@@ -315,8 +316,7 @@ namespace Backend.Infrastructure.AutoCount
             if (!string.IsNullOrWhiteSpace(source.MainSupplier))
                 target.MainSupplier = source.MainSupplier;
 
-            if (!string.IsNullOrWhiteSpace(source.Barcode))
-                target.Barcode = source.Barcode;
+            // Barcode not available on ItemEntity
 
             // Costing method, tax types etc. are left to default account book settings.
         }
