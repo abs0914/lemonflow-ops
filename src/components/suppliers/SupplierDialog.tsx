@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -36,6 +36,7 @@ interface SupplierFormData {
 export function SupplierDialog({ open, onOpenChange, supplierId }: SupplierDialogProps) {
   const queryClient = useQueryClient();
   const { data: supplier } = useSupplier(supplierId);
+  const [isLoadingCode, setIsLoadingCode] = useState(false);
 
   const {
     register,
@@ -52,6 +53,34 @@ export function SupplierDialog({ open, onOpenChange, supplierId }: SupplierDialo
   });
 
   const isActive = watch("is_active");
+
+  // Auto-generate supplier code when creating new supplier
+  useEffect(() => {
+    const generateSupplierCode = async () => {
+      if (!supplierId && open) {
+        setIsLoadingCode(true);
+        try {
+          const { data, error } = await supabase.rpc('get_next_supplier_code');
+          
+          if (error) {
+            console.error('Error generating supplier code:', error);
+            toast.error('Failed to generate supplier code');
+            return;
+          }
+          
+          if (data) {
+            setValue('supplier_code', data);
+          }
+        } catch (error) {
+          console.error('Error generating supplier code:', error);
+        } finally {
+          setIsLoadingCode(false);
+        }
+      }
+    };
+
+    generateSupplierCode();
+  }, [supplierId, open, setValue]);
 
   useEffect(() => {
     if (supplier) {
@@ -111,8 +140,14 @@ export function SupplierDialog({ open, onOpenChange, supplierId }: SupplierDialo
               <Input
                 id="supplier_code"
                 {...register("supplier_code", { required: "Supplier code is required" })}
-                placeholder="SUP001"
+                placeholder="CR-TLC-001"
+                readOnly={!supplierId}
+                className={!supplierId ? "bg-muted cursor-not-allowed" : ""}
+                disabled={isLoadingCode}
               />
+              {!supplierId && (
+                <p className="text-xs text-muted-foreground">Auto-generated based on latest entry</p>
+              )}
               {errors.supplier_code && (
                 <p className="text-sm text-destructive">{errors.supplier_code.message}</p>
               )}
