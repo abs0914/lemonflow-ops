@@ -65,8 +65,18 @@ Deno.serve(async (req) => {
       },
     });
 
+    console.log('[sync-suppliers-preview] Response status:', acResponse.status);
+    console.log('[sync-suppliers-preview] Response headers:', JSON.stringify([...acResponse.headers]));
+
     if (!acResponse.ok) {
-      throw new Error(`Failed to fetch AutoCount suppliers: ${acResponse.status}`);
+      const errorText = await acResponse.text();
+      console.error('[sync-suppliers-preview] API Error Response:', errorText);
+      console.error('[sync-suppliers-preview] Full error details:', {
+        status: acResponse.status,
+        statusText: acResponse.statusText,
+        url: `${apiUrl}/autocount/suppliers`,
+      });
+      throw new Error(`Failed to fetch AutoCount suppliers: ${acResponse.status} - ${errorText}`);
     }
 
     const autoCountSuppliers: AutoCountSupplier[] = await acResponse.json();
