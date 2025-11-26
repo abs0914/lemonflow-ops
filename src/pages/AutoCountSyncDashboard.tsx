@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { RefreshCw, CheckCircle2, XCircle, Clock, AlertCircle } from "lucide-react";
-import { format } from "date-fns";
+import { dateFormatters } from "@/lib/datetime";
 
 // AutoCount Sync Dashboard - Monitor and manage synchronization operations
 export default function AutoCountSyncDashboard() {
@@ -220,7 +220,7 @@ export default function AutoCountSyncDashboard() {
                       <TableCell>{getSyncStatusBadge(log.sync_status)}</TableCell>
                       <TableCell>{log.autocount_doc_no || "-"}</TableCell>
                       <TableCell>{log.retry_count || 0}</TableCell>
-                      <TableCell>{format(new Date(log.created_at), "PPp")}</TableCell>
+                      <TableCell>{dateFormatters.dateTime(log.created_at)}</TableCell>
                       <TableCell className="max-w-xs truncate text-sm text-muted-foreground">
                         {log.error_message || "-"}
                       </TableCell>

@@ -12,7 +12,8 @@ import { usePurchaseOrder, usePurchaseOrderLines } from "@/hooks/usePurchaseOrde
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { dateFormatters } from "@/lib/datetime";
+import { formatCurrency } from "@/lib/currency";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ReceiveFromCashPO } from "@/components/warehouse/ReceiveFromCashPO";
 
@@ -241,7 +242,7 @@ export default function PurchaseOrderDetail() {
               <h1 className="text-3xl font-bold">Purchase Order {purchaseOrder.po_number}</h1>
               <p className="text-muted-foreground">
                 Created by {purchaseOrder.user_profiles?.full_name} on{" "}
-                {format(new Date(purchaseOrder.created_at), "dd/MM/yyyy")}
+                {dateFormatters.short(purchaseOrder.created_at)}
               </p>
             </div>
           </div>
@@ -351,13 +352,13 @@ export default function PurchaseOrderDetail() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">PO Date</p>
-                  <p className="font-medium">{format(new Date(purchaseOrder.doc_date), "dd/MM/yyyy")}</p>
+                  <p className="font-medium">{dateFormatters.short(purchaseOrder.doc_date)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Delivery Date</p>
                   <p className="font-medium">
                     {purchaseOrder.delivery_date
-                      ? format(new Date(purchaseOrder.delivery_date), "dd/MM/yyyy")
+                      ? dateFormatters.short(purchaseOrder.delivery_date)
                       : "—"}
                   </p>
                 </div>
@@ -415,18 +416,18 @@ export default function PurchaseOrderDetail() {
               <div className="grid gap-4 md:grid-cols-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Cash Advance</p>
-                  <p className="text-2xl font-bold">${purchaseOrder.cash_advance?.toFixed(2) || "0.00"}</p>
+                  <p className="text-2xl font-bold">{formatCurrency(purchaseOrder.cash_advance || 0)}</p>
                   {cashGivenByUser && (
                     <p className="text-xs text-muted-foreground mt-1">Given by: {cashGivenByUser.full_name}</p>
                   )}
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Total Spent</p>
-                  <p className="text-2xl font-bold">${purchaseOrder.total_amount.toFixed(2)}</p>
+                  <p className="text-2xl font-bold">{formatCurrency(purchaseOrder.total_amount)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Cash Returned</p>
-                  <p className="text-2xl font-bold">${purchaseOrder.cash_returned?.toFixed(2) || "0.00"}</p>
+                  <p className="text-2xl font-bold">{formatCurrency(purchaseOrder.cash_returned || 0)}</p>
                   {cashReturnedToUser && (
                     <p className="text-xs text-muted-foreground mt-1">To: {cashReturnedToUser.full_name}</p>
                   )}
@@ -440,7 +441,7 @@ export default function PurchaseOrderDetail() {
                   }`}>
                     {Math.abs((purchaseOrder.cash_advance || 0) - purchaseOrder.total_amount - (purchaseOrder.cash_returned || 0)) < 0.01
                       ? "✓ Settled"
-                      : `⚠ $${Math.abs((purchaseOrder.cash_advance || 0) - purchaseOrder.total_amount - (purchaseOrder.cash_returned || 0)).toFixed(2)}`}
+                      : `⚠ ${formatCurrency(Math.abs((purchaseOrder.cash_advance || 0) - purchaseOrder.total_amount - (purchaseOrder.cash_returned || 0)))}`}
                   </p>
                 </div>
               </div>
@@ -457,7 +458,7 @@ export default function PurchaseOrderDetail() {
               {purchaseOrder.goods_received && (
                 <div className="mt-4 pt-4 border-t">
                   <Badge variant="default">
-                    Goods Received on {purchaseOrder.received_at ? format(new Date(purchaseOrder.received_at), "dd/MM/yyyy") : ""}
+                    Goods Received on {purchaseOrder.received_at ? dateFormatters.short(purchaseOrder.received_at) : ""}
                   </Badge>
                 </div>
               )}

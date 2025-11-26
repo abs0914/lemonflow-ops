@@ -7,7 +7,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
+import { dateFormatters } from "@/lib/datetime";
 
 export default function Dashboard() {
   const { profile, loading } = useAuth();
@@ -231,7 +231,7 @@ export default function Dashboard() {
                       <div className="text-right">
                         <p className="font-medium">Qty: {order.quantity}</p>
                         <p className="text-sm text-muted-foreground">
-                          {format(new Date(order.created_at), "MMM dd, yyyy")}
+                          {dateFormatters.medium(order.created_at)}
                         </p>
                       </div>
                       <Badge className={getStatusColor(order.status)}>

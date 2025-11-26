@@ -16,7 +16,7 @@ import { useSuppliers } from "@/hooks/useSuppliers";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { dateFormatters } from "@/lib/datetime";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -77,7 +77,7 @@ export default function PurchasingCreate() {
   } = useForm<POFormData>({
     resolver: zodResolver(poSchema),
     defaultValues: {
-      doc_date: format(new Date(), "yyyy-MM-dd"),
+      doc_date: dateFormatters.input(new Date()),
       is_cash_purchase: false,
       cash_advance: 0,
     }
