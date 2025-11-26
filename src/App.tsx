@@ -49,10 +49,12 @@ const App = () => (
             <Route path="/warehouse" element={<Warehouse />} />
             <Route path="/inventory" element={<Inventory />} />
             <Route path="/suppliers" element={<Suppliers />} />
-          <Route path="/purchasing" element={<Purchasing />} />
-          <Route path="/purchasing/create" element={<PurchasingCreate />} />
-          <Route path="/purchasing/:id" element={<PurchaseOrderDetail />} />
-          <Route path="/purchasing/:id/edit" element={<PurchasingEdit />} />
+            <Route path="/purchasing" element={<Purchasing />} />
+            <Route path="/purchasing/create" element={<PurchasingCreate />} />
+            <Route path="/purchasing/:id" element={<PurchaseOrderDetail />} />
+            <Route path="/purchasing/:id/edit" element={<PurchasingEdit />} />
+            <Route path="/inventory-valuation" element={<InventoryValuation />} />
+            <Route path="/expired-stock" element={<ExpiredStock />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
