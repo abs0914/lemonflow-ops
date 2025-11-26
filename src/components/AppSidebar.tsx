@@ -74,6 +74,18 @@ export function AppSidebar() {
       roles: ["Admin", "Warehouse"],
     },
     {
+      title: "Inventory Valuation",
+      url: "/inventory-valuation",
+      icon: Database,
+      roles: ["Admin"],
+    },
+    {
+      title: "Expired Stock",
+      url: "/expired-stock",
+      icon: Database,
+      roles: ["Admin", "Warehouse"],
+    },
+    {
       title: "Suppliers",
       url: "/suppliers",
       icon: Users,

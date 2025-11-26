@@ -18,6 +18,8 @@ import Purchasing from "./pages/Purchasing";
 import PurchasingCreate from "./pages/PurchasingCreate";
 import PurchasingEdit from "./pages/PurchasingEdit";
 import PurchaseOrderDetail from "./pages/PurchaseOrderDetail";
+import InventoryValuation from "./pages/InventoryValuation";
+import ExpiredStock from "./pages/ExpiredStock";
 import NotFound from "./pages/NotFound";
 
 // Create QueryClient instance outside component to prevent recreation
