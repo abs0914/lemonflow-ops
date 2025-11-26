@@ -246,7 +246,7 @@ namespace Backend.Api.Controllers
             principal = null;
             errorResult = null;
 
-            var authHeader = Request?.Headers?.Authorization;
+            var authHeader = Request != null && Request.Headers != null ? Request.Headers.Authorization : null;
             if (authHeader == null ||
                 !authHeader.Scheme.Equals("Bearer", StringComparison.OrdinalIgnoreCase) ||
                 string.IsNullOrWhiteSpace(authHeader.Parameter))
@@ -275,7 +275,7 @@ namespace Backend.Api.Controllers
             username = null;
             errorResult = null;
 
-            var authHeader = Request?.Headers?.Authorization;
+            var authHeader = Request != null && Request.Headers != null ? Request.Headers.Authorization : null;
             if (authHeader == null ||
                 !authHeader.Scheme.Equals("Basic", StringComparison.OrdinalIgnoreCase) ||
                 string.IsNullOrWhiteSpace(authHeader.Parameter))

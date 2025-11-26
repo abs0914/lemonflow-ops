@@ -17,7 +17,9 @@ namespace Backend.Infrastructure.AutoCount
 
         public BasicAuthHelper(BasicAuthConfig config)
         {
-            _config = config ?? throw new ArgumentNullException("config");
+            if (config == null)
+                throw new ArgumentNullException("config");
+            _config = config;
         }
 
         /// <summary>

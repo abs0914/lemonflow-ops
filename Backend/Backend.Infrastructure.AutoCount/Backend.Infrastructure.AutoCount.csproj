@@ -30,11 +30,12 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Configuration" />
-    <Reference Include="System.IdentityModel" />
-    <Reference Include="System.Xml" />
+	    <Reference Include="System" />
+	    <Reference Include="System.Core" />
+	    <Reference Include="System.Configuration" />
+	    <Reference Include="System.IdentityModel" />
+	    <Reference Include="System.Xml" />
+	    <Reference Include="System.Data" />
     <Reference Include="AutoCount2.MainEntry">
       <HintPath>..\lib\AutoCount2.MainEntry.dll</HintPath>
     </Reference>
@@ -46,6 +47,18 @@
     </Reference>
     <Reference Include="AutoCount.Accounting">
       <HintPath>..\lib\AutoCount.Accounting.dll</HintPath>
+    </Reference>
+    <Reference Include="AutoCount.Invoicing">
+      <HintPath>..\lib\AutoCount.Invoicing.dll</HintPath>
+    </Reference>
+    <Reference Include="AutoCount.Stock">
+      <HintPath>..\lib\AutoCount.Stock.dll</HintPath>
+    </Reference>
+    <Reference Include="AutoCount.Sales">
+      <HintPath>..\lib\AutoCount.Sales.dll</HintPath>
+    </Reference>
+    <Reference Include="AutoCount.Purchase">
+      <HintPath>..\lib\AutoCount.Purchase.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>

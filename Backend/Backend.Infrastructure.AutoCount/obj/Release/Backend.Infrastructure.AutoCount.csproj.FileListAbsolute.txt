@@ -11,9 +11,8 @@ C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release
 C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\System.IdentityModel.Tokens.Jwt.dll
 C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\Microsoft.IdentityModel.Tokens.xml
 C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\System.IdentityModel.Tokens.Jwt.xml
-C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\obj\Release\Backend.Infrastructure.AutoCount.csproj.AssemblyReference.cache
-C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\obj\Release\Backend.Infrastructure.AutoCount.csproj.CoreCompileInputs.cache
-C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\obj\Release\Backend..02D9D26F.Up2Date
-C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\System.Memory.dll
-C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\System.Numerics.Vectors.dll
-C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\System.Buffers.dll
+C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\obj\Release\Backend.Infrastructure.AutoCount.csprojResolveAssemblyReference.cache
+C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\AutoCount.Invoicing.dll
+C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\AutoCount.Purchase.dll
+C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\AutoCount.Sales.dll
+C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\AutoCount.Stock.dll

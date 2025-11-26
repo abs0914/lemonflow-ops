@@ -324,10 +324,10 @@ namespace Backend.Infrastructure.AutoCount
             {
                 DocumentNo = acInvoice.DocNo,
                 DebtorCode = acInvoice.DebtorCode,
-                InvoiceDate = acInvoice.DocDate,
+                InvoiceDate = acInvoice.DocDate.HasValue ? acInvoice.DocDate.Value : DateTime.MinValue,
                 Remarks = acInvoice.Description,
-                Total = acInvoice.FinalTotal,
-                Status = acInvoice.DocStatus,
+                Total = acInvoice.FinalTotal.HasValue ? acInvoice.FinalTotal.Value : 0m,
+                Status = acInvoice.DocStatus.HasValue ? acInvoice.DocStatus.Value.ToString() : string.Empty,
                 Lines = new List<SalesInvoiceLine>()
             };
 

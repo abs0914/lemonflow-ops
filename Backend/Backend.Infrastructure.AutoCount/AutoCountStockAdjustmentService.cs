@@ -2,6 +2,7 @@ using System;
 using AutoCount;
 using AutoCount.Stock.StockAdjustment;
 using Backend.Domain;
+using DomainStockAdjustment = Backend.Domain.StockAdjustment;
 
 namespace Backend.Infrastructure.AutoCount
 {
@@ -25,7 +26,7 @@ namespace Backend.Infrastructure.AutoCount
         }
 
         /// <inheritdoc />
-        public string CreateStockAdjustment(StockAdjustment adjustment)
+        public string CreateStockAdjustment(DomainStockAdjustment adjustment)
         {
             if (adjustment == null)
                 throw new ArgumentNullException("adjustment");

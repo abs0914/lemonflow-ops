@@ -2,5 +2,4 @@ C:\Users\USER\lemonflow-ops\Backend\Backend.Domain\bin\Release\Backend.Domain.dl
 C:\Users\USER\lemonflow-ops\Backend\Backend.Domain\bin\Release\Backend.Domain.pdb
 C:\Users\USER\lemonflow-ops\Backend\Backend.Domain\obj\Release\Backend.Domain.dll
 C:\Users\USER\lemonflow-ops\Backend\Backend.Domain\obj\Release\Backend.Domain.pdb
-C:\Users\USER\lemonflow-ops\Backend\Backend.Domain\obj\Release\Backend.Domain.csproj.AssemblyReference.cache
-C:\Users\USER\lemonflow-ops\Backend\Backend.Domain\obj\Release\Backend.Domain.csproj.CoreCompileInputs.cache
+C:\Users\USER\lemonflow-ops\Backend\Backend.Domain\obj\Release\Backend.Domain.csprojResolveAssemblyReference.cache

@@ -19,10 +19,9 @@ C:\Users\USER\lemonflow-ops\Backend\Backend.Api\bin\Microsoft.IdentityModel.Toke
 C:\Users\USER\lemonflow-ops\Backend\Backend.Api\bin\System.IdentityModel.Tokens.Jwt.xml
 C:\Users\USER\lemonflow-ops\Backend\Backend.Api\obj\Release\Backend.Api.dll
 C:\Users\USER\lemonflow-ops\Backend\Backend.Api\obj\Release\Backend.Api.pdb
-C:\Users\USER\lemonflow-ops\Backend\Backend.Api\obj\Release\Backend.Api.csproj.AssemblyReference.cache
-C:\Users\USER\lemonflow-ops\Backend\Backend.Api\obj\Release\Backend.Api.csproj.CoreCompileInputs.cache
-C:\Users\USER\lemonflow-ops\Backend\Backend.Api\obj\Release\Backend..0C93C9B3.Up2Date
-C:\Users\USER\lemonflow-ops\Backend\Backend.Api\bin\System.Net.Http.Formatting.dll
-C:\Users\USER\lemonflow-ops\Backend\Backend.Api\bin\System.Memory.dll
-C:\Users\USER\lemonflow-ops\Backend\Backend.Api\bin\System.Numerics.Vectors.dll
-C:\Users\USER\lemonflow-ops\Backend\Backend.Api\bin\System.Buffers.dll
+C:\Users\USER\lemonflow-ops\Backend\Backend.Api\obj\Release\Backend.Api.csprojResolveAssemblyReference.cache
+C:\Users\USER\lemonflow-ops\Backend\Backend.Api\bin\AutoCount.Accounting.dll
+C:\Users\USER\lemonflow-ops\Backend\Backend.Api\bin\AutoCount.Sales.dll
+C:\Users\USER\lemonflow-ops\Backend\Backend.Api\bin\AutoCount.Stock.dll
+C:\Users\USER\lemonflow-ops\Backend\Backend.Api\bin\AutoCount.Purchase.dll
+C:\Users\USER\lemonflow-ops\Backend\Backend.Api\bin\AutoCount.Invoicing.dll

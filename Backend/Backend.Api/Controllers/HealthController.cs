@@ -86,8 +86,8 @@ namespace Backend.Api.Controllers
 	                    });
 	                }
 
-	                string localCurrency = AutoCount.Data.DBRegistry.Create(dbSetting)
-	                    .GetString(new AutoCount.RegistryID.LocalCurrencyCode());
+                string localCurrency = global::AutoCount.Data.DBRegistry.Create(dbSetting)
+                    .GetString(new global::AutoCount.RegistryID.LocalCurrencyCode());
 	                bool connected = !string.IsNullOrEmpty(localCurrency);
 
 	                return Ok(new

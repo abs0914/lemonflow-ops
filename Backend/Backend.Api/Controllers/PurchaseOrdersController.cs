@@ -104,7 +104,7 @@ namespace Backend.Api.Controllers
             }
         }
 
-        private class CancelPurchaseOrderRequest
+        public class CancelPurchaseOrderRequest
         {
             public string DocNo { get; set; }
         }
@@ -161,7 +161,7 @@ namespace Backend.Api.Controllers
             username = null;
             errorResult = null;
 
-            var authHeader = Request?.Headers?.Authorization;
+            var authHeader = Request != null && Request.Headers != null ? Request.Headers.Authorization : null;
             if (authHeader == null ||
                 !authHeader.Scheme.Equals("Basic", StringComparison.OrdinalIgnoreCase) ||
                 string.IsNullOrWhiteSpace(authHeader.Parameter))

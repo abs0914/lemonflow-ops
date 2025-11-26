@@ -230,7 +230,7 @@ namespace Backend.Infrastructure.AutoCount
 	                ContactPerson = acDebtor.Attention,
 	                Phone = acDebtor.Phone1,
 	                Email = acDebtor.EmailAddress,
-	                CreditLimit = acDebtor.CreditLimit ?? 0m,
+	                CreditLimit = acDebtor.CreditLimit,
 	                CurrencyCode = acDebtor.CurrencyCode,
 	                IsActive = acDebtor.IsActive
 	            };
@@ -261,7 +261,7 @@ namespace Backend.Infrastructure.AutoCount
 	            return debtor;
 	        }
 
-	        private void MapDomainDebtorToEntity(Debtor source, DebtorEntity target, AutoCount.Authentication.UserSession userSession)
+	        private void MapDomainDebtorToEntity(Debtor source, DebtorEntity target, global::AutoCount.Authentication.UserSession userSession)
 	        {
 	            if (source == null)
 	                throw new ArgumentNullException("source");
@@ -281,8 +281,8 @@ namespace Backend.Infrastructure.AutoCount
 	            // Use account book local currency when no currency is specified.
 	            if (string.IsNullOrWhiteSpace(source.CurrencyCode))
 	            {
-	                target.CurrencyCode = AutoCount.Data.DBRegistry.Create(userSession.DBSetting)
-	                    .GetString(new AutoCount.RegistryID.LocalCurrencyCode());
+	                target.CurrencyCode = global::AutoCount.Data.DBRegistry.Create(userSession.DBSetting)
+	                    .GetString(new global::AutoCount.RegistryID.LocalCurrencyCode());
 	            }
 	            else
 	            {

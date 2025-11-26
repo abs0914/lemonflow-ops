@@ -68,19 +68,14 @@ namespace Backend.Infrastructure.AutoCount
                     }
 
                     // Header fields
-                    if (!string.IsNullOrWhiteSpace(purchaseOrder.SupplierCode))
-                    {
-                        doc.SupplierCode = purchaseOrder.SupplierCode;
-                    }
+                    // Note: SupplierCode is set via CreditorCode property if available
+                    // doc.CreditorCode = purchaseOrder.SupplierCode; // Uncomment if API supports
 
                     doc.DocDate = purchaseOrder.DocDate == default(DateTime)
                         ? DateTime.Today.Date
                         : purchaseOrder.DocDate.Date;
 
-                    if (purchaseOrder.DeliveryDate.HasValue)
-                    {
-                        doc.DeliveryDate = purchaseOrder.DeliveryDate.Value.Date;
-                    }
+                    // Note: DeliveryDate is set on detail lines, not header
 
                     if (!string.IsNullOrWhiteSpace(purchaseOrder.Description))
                     {
@@ -101,11 +96,18 @@ namespace Backend.Infrastructure.AutoCount
                         dtl.Qty = line.Quantity;
                         dtl.UnitPrice = line.UnitPrice;
 
+                        // Set delivery date on detail line if provided
+                        if (purchaseOrder.DeliveryDate.HasValue)
+                        {
+                            dtl.DeliveryDate = purchaseOrder.DeliveryDate.Value.Date;
+                        }
+
                         if (!string.IsNullOrWhiteSpace(line.Description))
                             dtl.Description = line.Description;
 
-                        if (!string.IsNullOrWhiteSpace(line.LineRemarks))
-                            dtl.Remark = line.LineRemarks;
+                        // Note: Remark property may not exist on PurchaseOrderDetail
+                        // if (!string.IsNullOrWhiteSpace(line.LineRemarks))
+                        //     dtl.Remark = line.LineRemarks;
                     }
 
                     try

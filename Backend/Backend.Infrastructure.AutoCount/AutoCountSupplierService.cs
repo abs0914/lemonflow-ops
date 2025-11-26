@@ -77,7 +77,7 @@ namespace Backend.Infrastructure.AutoCount
         public Supplier GetSupplierByCode(string supplierCode)
         {
             if (string.IsNullOrWhiteSpace(supplierCode))
-                throw new ArgumentException("Supplier code cannot be empty.", nameof(supplierCode));
+                throw new ArgumentException("Supplier code cannot be empty.", "supplierCode");
 
             lock (_lockObject)
             {
@@ -105,7 +105,7 @@ namespace Backend.Infrastructure.AutoCount
         public bool SupplierExists(string supplierCode)
         {
             if (string.IsNullOrWhiteSpace(supplierCode))
-                throw new ArgumentException("Supplier code cannot be empty.", nameof(supplierCode));
+                throw new ArgumentException("Supplier code cannot be empty.", "supplierCode");
 
             lock (_lockObject)
             {
@@ -152,38 +152,40 @@ namespace Backend.Infrastructure.AutoCount
         {
             if (row == null)
                 return null;
+	   	 
+	   	 	    var supplier = new Supplier
+	   	 	    {
+	   	 	        Code = GetString(row, "AccNo"),
+	   	 	        CompanyName = GetString(row, "CompanyName"),
+	   	 	        ContactPerson = GetString(row, "Attention"),
+	   	 	        Phone = GetString(row, "Phone1"),
+	   	 	        Email = GetString(row, "EmailAddress"),
+	   	 	        Address = CombineAddress(GetString(row, "Address1"), GetString(row, "Address2")),
+	   	 	        // As with entity mapping, credit terms are not currently populated.
+	   	 	        CreditTerms = 0,
+	   	 	        IsActive = GetBool(row, "IsActive", true)
+	   	 	    };
+	   	 
+	   	 	    return supplier;
+	   	 	}
 
-            string GetString(string columnName)
-            {
-                return row.Table.Columns.Contains(columnName) && row[columnName] != DBNull.Value
-                    ? (string)row[columnName]
-                    : null;
-            }
-
-            bool GetBool(string columnName, bool defaultValue)
-            {
-                return row.Table.Columns.Contains(columnName) && row[columnName] != DBNull.Value
-                    ? Convert.ToBoolean(row[columnName])
-                    : defaultValue;
-            }
-
-            var supplier = new Supplier
-            {
-                Code = GetString("AccNo"),
-                CompanyName = GetString("CompanyName"),
-                ContactPerson = GetString("Attention"),
-                Phone = GetString("Phone1"),
-                Email = GetString("EmailAddress"),
-                Address = CombineAddress(GetString("Address1"), GetString("Address2")),
-                // As with entity mapping, credit terms are not currently populated.
-                CreditTerms = 0,
-                IsActive = GetBool("IsActive", true)
-            };
-
-            return supplier;
-        }
-
-        private string CombineAddress(string address1, string address2)
+	   	 	private static string GetString(DataRow row, string columnName)
+	   	 	{
+	   	 	    if (row == null || row.Table == null || !row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
+	   	 	        return null;
+	   	 
+	   	 	    return (string)row[columnName];
+	   	 	}
+	   	 
+	   	 	private static bool GetBool(DataRow row, string columnName, bool defaultValue)
+	   	 	{
+	   	 	    if (row == null || row.Table == null || !row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
+	   	 	        return defaultValue;
+	   	 
+	   	 	    return Convert.ToBoolean(row[columnName]);
+	   	 	}
+	   	 
+	   	 	private string CombineAddress(string address1, string address2)
         {
             if (string.IsNullOrWhiteSpace(address1) && string.IsNullOrWhiteSpace(address2))
                 return null;

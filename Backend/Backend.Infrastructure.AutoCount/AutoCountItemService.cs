@@ -154,53 +154,87 @@ namespace Backend.Infrastructure.AutoCount
         {
             if (row == null)
                 return null;
+	   	 
+	   	 	    var item = new StockItem
+	   	 	    {
+	   	 	        ItemCode = GetString(row, "ItemCode"),
+	   	 	        Description = GetString(row, "Description"),
+	   	 	        ItemGroup = GetString(row, "ItemGroup"),
+	   	 	        ItemType = GetString(row, "ItemType"),
+	   	 	        BaseUom = GetString(row, "BaseUOM"),
+	   	 	        StockControl = GetBool(row, "StockControl", true),
+	   	 	        HasBatchNo = GetBool(row, "HasBatchNo", false),
+	   	 	        IsActive = GetBool(row, "IsActive", true),
+	   	 	        StandardCost = GetDecimal(row, "StandardCost"),
+	   	 	        Price = GetDecimal(row, "Price"),
+	   	 	        StockBalance = GetDecimal(row, "StockBalance"),
+	   	 	        MainSupplier = GetString(row, "MainSupplier"),
+	   	 	        Barcode = GetString(row, "Barcode"),
+	   	 	        HasBom = GetNullableBool(row, "HasBom")
+	   	 	    };
+	   	 
+	   	 	    return item;
+	   	 	}
 
-            string GetString(string columnName)
-            {
-                return row.Table.Columns.Contains(columnName) && row[columnName] != DBNull.Value
-                    ? (string)row[columnName]
-                    : null;
-            }
+	   	 	private static string GetString(DataRow row, string columnName)
+	   	 	{
+	   	 	    if (row == null || row.Table == null || !row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
+	   	 	        return null;
+	   	 
+	   	 	    return (string)row[columnName];
+	   	 	}
+	   	 
+	   	 	private static bool GetBool(DataRow row, string columnName, bool defaultValue)
+	   	 	{
+	   	 	    if (row == null || row.Table == null || !row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
+	   	 	        return defaultValue;
 
-            bool GetBool(string columnName, bool defaultValue)
-            {
-                return row.Table.Columns.Contains(columnName) && row[columnName] != DBNull.Value
-                    ? Convert.ToBoolean(row[columnName])
-                    : defaultValue;
-            }
+	   	 	    var value = row[columnName];
+	   	 	    if (value is bool)
+	   	 	        return (bool)value;
 
-            decimal? GetDecimal(string columnName)
-            {
-                if (!row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
-                    return null;
+	   	 	    var strValue = value.ToString().Trim().ToUpperInvariant();
+	   	 	    if (strValue == "T" || strValue == "Y" || strValue == "1" || strValue == "TRUE" || strValue == "YES")
+	   	 	        return true;
+	   	 	    if (strValue == "F" || strValue == "N" || strValue == "0" || strValue == "FALSE" || strValue == "NO")
+	   	 	        return false;
 
-                return Convert.ToDecimal(row[columnName]);
-            }
+	   	 	    if (value is int || value is short || value is long || value is byte)
+	   	 	        return System.Convert.ToInt64(value) != 0;
 
-            var item = new StockItem
-            {
-                ItemCode = GetString("ItemCode"),
-                Description = GetString("Description"),
-                ItemGroup = GetString("ItemGroup"),
-                ItemType = GetString("ItemType"),
-                BaseUom = GetString("BaseUOM"),
-                StockControl = GetBool("StockControl", true),
-                HasBatchNo = GetBool("HasBatchNo", false),
-                IsActive = GetBool("IsActive", true),
-                StandardCost = GetDecimal("StandardCost"),
-                Price = GetDecimal("Price"),
-                StockBalance = GetDecimal("StockBalance"),
-                MainSupplier = GetString("MainSupplier"),
-                Barcode = GetString("Barcode"),
-                HasBom = row.Table.Columns.Contains("HasBom") && row["HasBom"] != DBNull.Value
-                    ? (bool?)Convert.ToBoolean(row["HasBom"])
-                    : null
-            };
+	   	 	    return defaultValue;
+	   	 	}
 
-            return item;
-        }
+	   	 	private static decimal? GetDecimal(DataRow row, string columnName)
+	   	 	{
+	   	 	    if (row == null || row.Table == null || !row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
+	   	 	        return null;
 
-        private StockItem MapItemEntityToDomain(ItemEntity entity)
+	   	 	    return Convert.ToDecimal(row[columnName]);
+	   	 	}
+
+	   	 	private static bool? GetNullableBool(DataRow row, string columnName)
+	   	 	{
+	   	 	    if (row == null || row.Table == null || !row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
+	   	 	        return null;
+
+	   	 	    var value = row[columnName];
+	   	 	    if (value is bool)
+	   	 	        return (bool)value;
+
+	   	 	    var strValue = value.ToString().Trim().ToUpperInvariant();
+	   	 	    if (strValue == "T" || strValue == "Y" || strValue == "1" || strValue == "TRUE" || strValue == "YES")
+	   	 	        return true;
+	   	 	    if (strValue == "F" || strValue == "N" || strValue == "0" || strValue == "FALSE" || strValue == "NO")
+	   	 	        return false;
+
+	   	 	    if (value is int || value is short || value is long || value is byte)
+	   	 	        return System.Convert.ToInt64(value) != 0;
+
+	   	 	    return null;
+	   	 	}
+
+	   	 	private StockItem MapItemEntityToDomain(ItemEntity entity)
         {
             if (entity == null)
                 return null;

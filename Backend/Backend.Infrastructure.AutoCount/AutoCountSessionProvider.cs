@@ -90,22 +90,21 @@ namespace Backend.Infrastructure.AutoCount
                     // Ensure configuration is complete and valid before attempting to connect.
                     config.Validate();
 
-                    // Step 1: Create and configure DBSetting
+                    // Step 1: Create DBSetting with SQL Authentication
                     // Per docs: https://wiki.autocountsoft.com/wiki/Initiate_UserSession_and_DBSetting
-                    var dbSetting = new DBSetting
-                    {
-                        DBServerType = config.DBServerType,
-                        ServerName = config.ServerName,
-                        DatabaseName = config.DatabaseName,
-                        UserName = config.SqlUsername,
-                        Password = config.SqlPassword
-                    };
+                    // Use constructor overload: DBSetting(DBServerType, serverName, sqlUser, sqlPassword, dbName)
+                    var dbSetting = new DBSetting(
+                        config.DBServerType,
+                        config.ServerName,
+                        config.SqlUsername,
+                        config.SqlPassword,
+                        config.DatabaseName);
 
-                    // Step 2: Create UserSession
-                    var userSession = new UserSession();
+                    // Step 2: Create UserSession with DBSetting
+                    var userSession = new UserSession(dbSetting);
 
                     // Step 3: Login to AutoCount
-                    var loginSuccess = userSession.Login(dbSetting, config.AutoCountUsername, config.AutoCountPassword);
+                    var loginSuccess = userSession.Login(config.AutoCountUsername, config.AutoCountPassword);
                     if (!loginSuccess)
                     {
                         throw new InvalidOperationException("Failed to login to AutoCount Accounting with the provided credentials.");
@@ -113,7 +112,7 @@ namespace Backend.Infrastructure.AutoCount
 
                     // Step 4: SubProjectStartup (required for non-UI integration)
                     var startup = new Startup();
-                    startup.SubProjectStartup(userSession, StartupPlugInOption.LoadStandardPlugIn);
+                    startup.SubProjectStartup(userSession);
 
                     _dbSetting = dbSetting;
                     _userSession = userSession;
