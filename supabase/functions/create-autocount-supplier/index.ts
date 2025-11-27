@@ -6,8 +6,7 @@ const corsHeaders = {
 };
 
 interface SupplierData {
-  supplierId: string;
-  supplierCode: string;
+  code: string;
   companyName: string;
   contactPerson?: string;
   phone?: string;
@@ -76,15 +75,14 @@ Deno.serve(async (req) => {
 
     // Prepare supplier data for AutoCount
     const supplierPayload: SupplierData = {
-      supplierId: supplier.id,
-      supplierCode: supplier.supplier_code,
-      companyName: supplier.company_name,
-      contactPerson: supplier.contact_person,
-      phone: supplier.phone,
-      email: supplier.email,
-      address: supplier.address,
+      code: supplier.supplier_code,
+      companyName: supplier.company_name || '',
+      contactPerson: supplier.contact_person || '',
+      phone: supplier.phone || '',
+      email: supplier.email || '',
+      address: supplier.address || '',
       creditTerms: supplier.credit_terms || 0,
-      isActive: supplier.is_active,
+      isActive: supplier.is_active !== false,
     };
 
     console.log('[create-autocount-supplier] Creating supplier in AutoCount:', supplierPayload);
