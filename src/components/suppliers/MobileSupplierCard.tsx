@@ -1,4 +1,4 @@
-import { Building2, Phone, Mail, Calendar } from "lucide-react";
+import { Building2, Phone, Mail, Calendar, Trash2 } from "lucide-react";
 import { MobileDataCard, MobileDataRow } from "@/components/ui/mobile-data-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,9 +8,10 @@ import { dateFormatters } from "@/lib/datetime";
 interface MobileSupplierCardProps {
   supplier: Supplier;
   onEdit: () => void;
+  onDelete: () => void;
 }
 
-export function MobileSupplierCard({ supplier, onEdit }: MobileSupplierCardProps) {
+export function MobileSupplierCard({ supplier, onEdit, onDelete }: MobileSupplierCardProps) {
   return (
     <MobileDataCard
       expandableContent={
@@ -21,9 +22,22 @@ export function MobileSupplierCard({ supplier, onEdit }: MobileSupplierCardProps
         ) : undefined
       }
       actions={
-        <Button variant="outline" size="sm" onClick={onEdit} className="w-full">
-          Edit
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={onEdit} className="flex-1">
+            Edit
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       }
       onClick={onEdit}
     >
