@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, FileText } from "lucide-react";
+import { Plus, Search, FileText, Trash2, Edit } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,11 +15,19 @@ import { FloatingActionButton } from "@/components/ui/floating-action-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { dateFormatters } from "@/lib/datetime";
 import { formatCurrency } from "@/lib/currency";
+import { DeletePurchaseOrderDialog } from "@/components/purchasing/DeletePurchaseOrderDialog";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { PurchaseOrder } from "@/types/inventory";
 export default function Purchasing() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<string>("all");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [poToDelete, setPoToDelete] = useState<PurchaseOrder | null>(null);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const queryClient = useQueryClient();
   const {
     data: allOrders,
     isLoading
@@ -29,6 +37,44 @@ export default function Purchasing() {
     const matchesTab = activeTab === "all" || order.status === activeTab;
     return matchesSearch && matchesTab;
   });
+  const deleteMutation = useMutation({
+    mutationFn: async (poId: string) => {
+      // Delete lines first
+      const { error: linesError } = await supabase
+        .from("purchase_order_lines")
+        .delete()
+        .eq("purchase_order_id", poId);
+      if (linesError) throw linesError;
+
+      // Delete PO
+      const { error: poError } = await supabase
+        .from("purchase_orders")
+        .delete()
+        .eq("id", poId);
+      if (poError) throw poError;
+    },
+    onSuccess: () => {
+      toast.success("Purchase order deleted successfully");
+      setDeleteDialogOpen(false);
+      setPoToDelete(null);
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to delete: ${error.message}`);
+    },
+  });
+
+  const handleDeleteClick = (order: PurchaseOrder) => {
+    setPoToDelete(order);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (poToDelete && (poToDelete.status === "draft" || poToDelete.status === "submitted")) {
+      deleteMutation.mutate(poToDelete.id);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       draft: "outline",
@@ -104,9 +150,33 @@ export default function Purchasing() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Button variant="outline" size="sm" onClick={() => navigate(`/purchasing/${order.id}`)}>
-                          View
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={() => navigate(`/purchasing/${order.id}`)}>
+                            View
+                          </Button>
+                          {(order.status === "draft" || order.status === "submitted") && (
+                            <>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => navigate(`/purchasing/${order.id}/edit`)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteClick(order);
+                                }}
+                                className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>)}
                   {filteredOrders?.length === 0 && <TableRow>
@@ -121,6 +191,15 @@ export default function Purchasing() {
         </Card>
 
         {isMobile && <FloatingActionButton onClick={() => navigate("/purchasing/create")} icon={Plus} />}
+
+        <DeletePurchaseOrderDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onConfirm={handleConfirmDelete}
+          poNumber={poToDelete?.po_number || ""}
+          status={poToDelete?.status || ""}
+          isDeleting={deleteMutation.isPending}
+        />
       </div>
     </DashboardLayout>;
 }
