@@ -227,7 +227,17 @@ namespace Backend.Infrastructure.AutoCount
                     var cmd = CreditorDataAccess.Create(userSession, dbSetting);
 
                     // Check if supplier already exists
-                    var existing = cmd.GetCreditor(supplier.Code);
+                    CreditorEntity existing = null;
+                    try
+                    {
+                        existing = cmd.GetCreditor(supplier.Code);
+                    }
+                    catch (AutoCount.ARAP.Creditor.CreditorRecordNotFoundException)
+                    {
+                        // Expected when creating a new supplier - the record shouldn't exist yet
+                        existing = null;
+                    }
+
                     if (existing != null)
                     {
                         throw new InvalidOperationException("Supplier '" + supplier.Code + "' already exists in AutoCount.");

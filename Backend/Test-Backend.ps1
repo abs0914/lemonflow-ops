@@ -1,57 +1,66 @@
 Write-Host "=== Backend Testing Script ===" -ForegroundColor Cyan
 
-# Check if running as Administrator
-$isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
-if (-not $isAdmin) {
+# Ensure the script is running as Administrator
+$currentIdentity = [Security.Principal.WindowsIdentity]::GetCurrent()
+$principal = New-Object Security.Principal.WindowsPrincipal($currentIdentity)
+if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Host "ERROR: This script must be run as Administrator!" -ForegroundColor Red
     exit 1
 }
 
 Import-Module WebAdministration -ErrorAction Stop
 
-Write-Host "`n[1/4] Checking IIS Website..." -ForegroundColor Yellow
-$site = Get-Website -Name "AutoCountBackend" -ErrorAction SilentlyContinue
-if ($site) {
-    Write-Host "  ✓ Website found: $($site.Name)"
-    Write-Host "    State: $($site.State)"
-    Write-Host "    Physical Path: $($site.PhysicalPath)"
+$siteName = "AutoCountBackend"
+$appPoolName = "AutoCountBackend"
+
+Write-Host ""
+Write-Host "[1/4] Checking IIS Website..." -ForegroundColor Yellow
+$site = Get-Website -Name $siteName -ErrorAction SilentlyContinue
+if ($null -ne $site) {
+    Write-Host ("  Website: {0}" -f $site.Name)
+    Write-Host ("  State  : {0}" -f $site.State)
+    Write-Host ("  Path   : {0}" -f $site.PhysicalPath)
 }
 else {
-    Write-Host "  ✗ Website not found" -ForegroundColor Red
+    Write-Host "  Website not found" -ForegroundColor Red
     exit 1
 }
 
-Write-Host "`n[2/4] Checking Application Pool..." -ForegroundColor Yellow
-$pool = Get-WebAppPool -Name "AutoCountBackend" -ErrorAction SilentlyContinue
-if ($pool) {
-    Write-Host "  ✓ App Pool found: $($pool.Name)"
-    Write-Host "    State: $($pool.State)"
-    Write-Host "    .NET Version: $($pool.managedRuntimeVersion)"
+Write-Host ""
+Write-Host "[2/4] Checking Application Pool..." -ForegroundColor Yellow
+$pool = Get-WebAppPool -Name $appPoolName -ErrorAction SilentlyContinue
+if ($null -ne $pool) {
+    Write-Host ("  App Pool: {0}" -f $pool.Name)
+    Write-Host ("  State   : {0}" -f $pool.State)
+    Write-Host ("  .NET    : {0}" -f $pool.managedRuntimeVersion)
 }
 else {
-    Write-Host "  ✗ App Pool not found" -ForegroundColor Red
+    Write-Host "  App Pool not found" -ForegroundColor Red
     exit 1
 }
 
-Write-Host "`n[3/4] Starting Application Pool..." -ForegroundColor Yellow
+Write-Host ""
+Write-Host "[3/4] Ensuring Application Pool is started..." -ForegroundColor Yellow
 if ($pool.State -ne "Started") {
-    Start-WebAppPool -Name "AutoCountBackend"
-    Write-Host "  ✓ App Pool started"
+    Start-WebAppPool -Name $appPoolName
+    Write-Host "  Application Pool started"
 }
 else {
-    Write-Host "  ✓ App Pool already running"
+    Write-Host "  Application Pool already running"
 }
 
-Write-Host "`n[4/4] Starting Website..." -ForegroundColor Yellow
+Write-Host ""
+Write-Host "[4/4] Ensuring Website is started..." -ForegroundColor Yellow
 if ($site.State -ne "Started") {
-    Start-Website -Name "AutoCountBackend"
-    Write-Host "  ✓ Website started"
+    Start-Website -Name $siteName
+    Write-Host "  Website started"
 }
 else {
-    Write-Host "  ✓ Website already running"
+    Write-Host "  Website already running"
 }
 
-Write-Host "`n=== Testing Endpoints ===" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "=== Testing Endpoints ===" -ForegroundColor Cyan
 
 $baseUrl = "https://api.thelemonco.online"
 $endpoints = @(
@@ -60,17 +69,19 @@ $endpoints = @(
 )
 
 foreach ($endpoint in $endpoints) {
-    Write-Host "`nTesting: $baseUrl$endpoint" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host ("Testing: {0}{1}" -f $baseUrl, $endpoint) -ForegroundColor Yellow
     try {
-        $response = Invoke-WebRequest -Uri "$baseUrl$endpoint" -Method GET -SkipCertificateCheck -TimeoutSec 10 -ErrorAction Stop
-        Write-Host "  ✓ Status: $($response.StatusCode)"
+        $uri = $baseUrl + $endpoint
+        $response = Invoke-WebRequest -Uri $uri -Method Get -TimeoutSec 15 -ErrorAction Stop
+        Write-Host ("  Status: {0}" -f $response.StatusCode)
     }
     catch {
-        Write-Host "  ✗ Error: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host ("  Error : {0}" -f $_.Exception.Message) -ForegroundColor Red
     }
 }
 
-Write-Host "`n=== Backend Ready ===" -ForegroundColor Green
-Write-Host "Website: https://api.thelemonco.online"
+Write-Host ""
+Write-Host "=== Backend Ready ===" -ForegroundColor Green
+Write-Host ("Website: {0}" -f $baseUrl)
 Write-Host "Status: Running"
-

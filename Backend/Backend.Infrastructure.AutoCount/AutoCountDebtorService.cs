@@ -255,10 +255,40 @@ namespace Backend.Infrastructure.AutoCount
 	                Phone = row.Table.Columns.Contains("Phone1") && row["Phone1"] != DBNull.Value ? (string)row["Phone1"] : null,
 	                Email = row.Table.Columns.Contains("EmailAddress") && row["EmailAddress"] != DBNull.Value ? (string)row["EmailAddress"] : null,
 	                CreditLimit = row.Table.Columns.Contains("CreditLimit") && row["CreditLimit"] != DBNull.Value ? Convert.ToDecimal(row["CreditLimit"]) : 0m,
-	                IsActive = row.Table.Columns.Contains("IsActive") && row["IsActive"] != DBNull.Value ? Convert.ToBoolean(row["IsActive"]) : true
+	                IsActive = ParseIsActive(row)
 	            };
 
 	            return debtor;
+	        }
+
+	        /// <summary>
+	        /// Safely parses the IsActive column which may be stored as various types
+	        /// (bool, string "T"/"F", int 1/0, etc.) depending on AutoCount version.
+	        /// </summary>
+	        private bool ParseIsActive(DataRow row)
+	        {
+	            if (!row.Table.Columns.Contains("IsActive") || row["IsActive"] == DBNull.Value)
+	                return true;
+
+	            var value = row["IsActive"];
+
+	            // Handle bool directly
+	            if (value is bool)
+	                return (bool)value;
+
+	            // Handle numeric (1/0)
+	            if (value is int || value is short || value is byte || value is long)
+	                return Convert.ToInt64(value) != 0;
+
+	            // Handle string representations
+	            var strValue = value.ToString().Trim().ToUpperInvariant();
+	            if (strValue == "T" || strValue == "TRUE" || strValue == "Y" || strValue == "YES" || strValue == "1")
+	                return true;
+	            if (strValue == "F" || strValue == "FALSE" || strValue == "N" || strValue == "NO" || strValue == "0")
+	                return false;
+
+	            // Default to true if we can't parse
+	            return true;
 	        }
 
 	        private void MapDomainDebtorToEntity(Debtor source, DebtorEntity target, global::AutoCount.Authentication.UserSession userSession)
