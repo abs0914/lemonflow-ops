@@ -244,7 +244,7 @@ namespace Backend.Infrastructure.AutoCount
                     }
 
                     var acCreditor = cmd.NewCreditor();
-                    MapDomainToCreditorEntity(supplier, acCreditor);
+                    MapDomainToCreditorEntity(supplier, acCreditor, userSession);
                     cmd.SaveCreditor(acCreditor, userSession.LoginUserID);
 
                     // Reload to get any AutoCount-assigned values
@@ -281,7 +281,7 @@ namespace Backend.Infrastructure.AutoCount
                         throw new InvalidOperationException("Supplier '" + supplier.Code + "' not found in AutoCount.");
                     }
 
-                    MapDomainToCreditorEntity(supplier, acCreditor);
+                    MapDomainToCreditorEntity(supplier, acCreditor, userSession);
                     cmd.SaveCreditor(acCreditor, userSession.LoginUserID);
 
                     // Reload to confirm changes
@@ -295,8 +295,12 @@ namespace Backend.Infrastructure.AutoCount
             }
         }
 
-        private void MapDomainToCreditorEntity(Supplier supplier, CreditorEntity entity)
+        private void MapDomainToCreditorEntity(Supplier supplier, CreditorEntity entity, global::AutoCount.Authentication.UserSession userSession)
         {
+            // ControlAccount is REQUIRED - links creditor to GL control account (Trade Creditors)
+            // This sets the ParentAccNo in GLMast with SpecialAccType = 'SCR'
+            entity.ControlAccount = "400-0000";
+
             entity.AccNo = supplier.Code;
             entity.CompanyName = supplier.CompanyName ?? "";
             entity.Attention = supplier.ContactPerson ?? "";
@@ -310,6 +314,10 @@ namespace Backend.Infrastructure.AutoCount
             }
 
             entity.IsActive = supplier.IsActive;
+
+            // Set currency to account book local currency
+            entity.CurrencyCode = global::AutoCount.Data.DBRegistry.Create(userSession.DBSetting)
+                .GetString(new global::AutoCount.RegistryID.LocalCurrencyCode());
         }
     }
 }
