@@ -232,7 +232,7 @@ namespace Backend.Infrastructure.AutoCount
                     {
                         existing = cmd.GetCreditor(supplier.Code);
                     }
-                    catch (AutoCount.ARAP.Creditor.CreditorRecordNotFoundException)
+                    catch (CreditorRecordNotFoundException)
                     {
                         // Expected when creating a new supplier - the record shouldn't exist yet
                         existing = null;
