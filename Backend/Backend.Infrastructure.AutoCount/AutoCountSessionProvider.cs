@@ -111,12 +111,36 @@ namespace Backend.Infrastructure.AutoCount
                     }
 
                     // Step 4: SubProjectStartup (required for non-UI integration)
+                    // Note: This triggers license validation via gRPC to AutoCount Server.
+                    // If the gRPC connection fails (e.g., in IIS service context), we'll
+                    // try to continue without it, but some features may not work.
                     var startup = new Startup();
-                    startup.SubProjectStartup(userSession);
+                    try
+                    {
+                        startup.SubProjectStartup(userSession);
+                    }
+                    catch (Exception subProjectEx)
+                    {
+                        // Log the SubProjectStartup error but continue
+                        System.Diagnostics.Debug.WriteLine("SubProjectStartup failed (may affect some features): " + subProjectEx.Message);
+
+                        // Check if this is a license/gRPC connection error
+                        if (subProjectEx.Message.Contains("Fail to connect to AutoCount Server") ||
+                            subProjectEx.Message.Contains("RemoteLicense"))
+                        {
+                            // Log warning but allow initialization to continue
+                            System.Diagnostics.Debug.WriteLine("WARNING: AutoCount Server license validation failed. Some features may be limited.");
+                            _initializationError = "License validation skipped: " + subProjectEx.Message;
+                        }
+                        else
+                        {
+                            // For other errors, re-throw
+                            throw;
+                        }
+                    }
 
                     _dbSetting = dbSetting;
                     _userSession = userSession;
-                    _initializationError = null;
                     _isInitialized = true;
                 }
                 catch (Exception ex)
