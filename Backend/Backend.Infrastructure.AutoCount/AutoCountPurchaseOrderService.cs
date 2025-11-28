@@ -43,33 +43,94 @@ namespace Backend.Infrastructure.AutoCount
             {
                 try
                 {
-                    var userSession = _sessionProvider.GetUserSession();
-                    var cmd = PurchaseOrderCommand.Create(userSession, userSession.DBSetting);
+                    global::AutoCount.Authentication.UserSession userSession;
+                    try
+                    {
+                        userSession = _sessionProvider.GetUserSession();
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new InvalidOperationException("Exception getting user session: " + ex.Message, ex);
+                    }
+                    if (userSession == null)
+                        throw new InvalidOperationException("Failed to get AutoCount user session - returned null.");
+
+                    PurchaseOrderCommand cmd;
+                    try
+                    {
+                        cmd = PurchaseOrderCommand.Create(userSession, userSession.DBSetting);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new InvalidOperationException("Exception creating PurchaseOrderCommand: " + ex.Message, ex);
+                    }
+                    if (cmd == null)
+                        throw new InvalidOperationException("Failed to create PurchaseOrderCommand - returned null.");
 
                     AutoCountPurchaseOrderDocument doc;
 
                     if (!string.IsNullOrWhiteSpace(purchaseOrder.DocNo))
                     {
                         // Try to edit existing document; if not found, create new.
-                        doc = cmd.Edit(purchaseOrder.DocNo);
+                        try
+                        {
+                            doc = cmd.Edit(purchaseOrder.DocNo);
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new InvalidOperationException("Exception editing document: " + ex.Message, ex);
+                        }
                         if (doc == null)
                         {
-                            doc = cmd.AddNew();
-                            doc.DocNo = purchaseOrder.DocNo;
+                            try
+                            {
+                                doc = cmd.AddNew();
+                            }
+                            catch (Exception ex)
+                            {
+                                throw new InvalidOperationException("Exception in AddNew after Edit: " + ex.Message, ex);
+                            }
+                            if (doc == null)
+                                throw new InvalidOperationException("Failed to create new purchase order document - returned null.");
+                            try
+                            {
+                                doc.DocNo = purchaseOrder.DocNo;
+                            }
+                            catch (Exception ex)
+                            {
+                                throw new InvalidOperationException("Exception setting DocNo: " + ex.Message, ex);
+                            }
                         }
                         else
                         {
-                            doc.ClearDetails();
+                            try
+                            {
+                                doc.ClearDetails();
+                            }
+                            catch (Exception ex)
+                            {
+                                throw new InvalidOperationException("Exception clearing details: " + ex.Message, ex);
+                            }
                         }
                     }
                     else
                     {
-                        doc = cmd.AddNew();
+                        try
+                        {
+                            doc = cmd.AddNew();
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new InvalidOperationException("Exception in AddNew: " + ex.Message, ex);
+                        }
+                        if (doc == null)
+                            throw new InvalidOperationException("Failed to create new purchase order document - returned null.");
                     }
 
                     // Header fields
-                    // Note: SupplierCode is set via CreditorCode property if available
-                    // doc.CreditorCode = purchaseOrder.SupplierCode; // Uncomment if API supports
+                    // Note: Purchase Orders in AutoCount may not require CreditorCode at header level.
+                    // The supplier association typically happens when converting to GRN or Purchase Invoice.
+                    // Storing SupplierCode in Description for reference if needed.
 
                     doc.DocDate = purchaseOrder.DocDate == default(DateTime)
                         ? DateTime.Today.Date
@@ -83,31 +144,87 @@ namespace Backend.Infrastructure.AutoCount
                     }
 
                     // Details
+                    int lineIndex = 0;
                     foreach (var line in purchaseOrder.Details)
                     {
-                        var dtl = doc.AddDetail();
-                        if (!string.IsNullOrWhiteSpace(line.ItemCode))
+                        lineIndex++;
+                        PurchaseOrderDetail dtl;
+                        try
                         {
-                            dtl.ItemCode = line.ItemCode;
+                            dtl = doc.AddDetail();
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new InvalidOperationException("Exception adding detail line " + lineIndex + ": " + ex.Message, ex);
+                        }
+                        if (dtl == null)
+                            throw new InvalidOperationException("Failed to add detail line " + lineIndex);
+
+                        try
+                        {
+                            if (!string.IsNullOrWhiteSpace(line.ItemCode))
+                            {
+                                dtl.ItemCode = line.ItemCode;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new InvalidOperationException("Failed to set ItemCode '" + line.ItemCode + "' on line " + lineIndex + ": " + ex.Message, ex);
                         }
 
-                        dtl.UOM = string.IsNullOrWhiteSpace(line.UOM) ? "UNIT" : line.UOM;
-                        dtl.Location = "HQ"; // Default location; can be parameterized later.
-                        dtl.Qty = line.Quantity;
-                        dtl.UnitPrice = line.UnitPrice;
+                        try
+                        {
+                            dtl.UOM = string.IsNullOrWhiteSpace(line.UOM) ? "UNIT" : line.UOM;
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new InvalidOperationException("Failed to set UOM on line " + lineIndex + ": " + ex.Message, ex);
+                        }
+
+                        try
+                        {
+                            // Skip Location - it may not be required
+                            // dtl.Location = "HQ";
+                            dtl.Qty = line.Quantity;
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new InvalidOperationException("Failed to set Qty on line " + lineIndex + ": " + ex.Message, ex);
+                        }
+
+                        try
+                        {
+                            dtl.UnitPrice = line.UnitPrice;
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new InvalidOperationException("Failed to set UnitPrice on line " + lineIndex + ": " + ex.Message, ex);
+                        }
 
                         // Set delivery date on detail line if provided
                         if (purchaseOrder.DeliveryDate.HasValue)
                         {
-                            dtl.DeliveryDate = purchaseOrder.DeliveryDate.Value.Date;
+                            try
+                            {
+                                dtl.DeliveryDate = purchaseOrder.DeliveryDate.Value.Date;
+                            }
+                            catch (Exception ex)
+                            {
+                                throw new InvalidOperationException("Failed to set DeliveryDate on line " + lineIndex + ": " + ex.Message, ex);
+                            }
                         }
 
                         if (!string.IsNullOrWhiteSpace(line.Description))
-                            dtl.Description = line.Description;
-
-                        // Note: Remark property may not exist on PurchaseOrderDetail
-                        // if (!string.IsNullOrWhiteSpace(line.LineRemarks))
-                        //     dtl.Remark = line.LineRemarks;
+                        {
+                            try
+                            {
+                                dtl.Description = line.Description;
+                            }
+                            catch (Exception ex)
+                            {
+                                throw new InvalidOperationException("Failed to set Description on line " + lineIndex + ": " + ex.Message, ex);
+                            }
+                        }
                     }
 
                     try
@@ -123,9 +240,13 @@ namespace Backend.Infrastructure.AutoCount
                     purchaseOrder.DocNo = doc.DocNo;
                     return purchaseOrder;
                 }
+                catch (InvalidOperationException)
+                {
+                    throw;
+                }
                 catch (Exception ex)
                 {
-                    throw new InvalidOperationException("Failed to create purchase order in AutoCount.", ex);
+                    throw new InvalidOperationException("Failed to create purchase order in AutoCount: " + ex.Message, ex);
                 }
             }
         }

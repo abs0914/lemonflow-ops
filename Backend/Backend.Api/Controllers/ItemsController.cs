@@ -13,11 +13,11 @@ namespace Backend.Api.Controllers
     /// maintenance.
     ///
     /// Routes are aligned with Supabase Edge function expectations:
-    ///   - GET  /items                 (Authorization: Bearer &lt;jwt&gt;)
-    ///   - POST /items                 (Authorization: Bearer &lt;jwt&gt;)
+    ///   - GET  /autocount/items       (Authorization: Bearer jwt)
+    ///   - POST /autocount/items       (Authorization: Bearer jwt)
     ///   - PUT  /api/stock/update-item (Authorization: Basic ...)
     /// </summary>
-    [RoutePrefix("items")]
+    [RoutePrefix("autocount/items")]
     public class ItemsController : ApiController
     {
         private readonly IAutoCountItemService _itemService;
@@ -51,12 +51,12 @@ namespace Backend.Api.Controllers
         }
 
         /// <summary>
-        /// GET /items
+        /// GET /autocount/items
         /// Returns the list of stock items from AutoCount for synchronization.
         /// Requires a valid Bearer JWT in the Authorization header.
         ///
         /// Supabase will call this as:
-        ///   GET /items?limit=1000
+        ///   GET /autocount/items?limit=1000
         /// and accepts either an array or an object with an "items" or
         /// "data" property. We simply return an array of camelCase objects.
         /// </summary>
@@ -101,7 +101,7 @@ namespace Backend.Api.Controllers
         }
 
         /// <summary>
-        /// POST /items
+        /// POST /autocount/items
         /// Creates a new stock item in AutoCount.
         ///
         /// Called by the Supabase create-autocount-item function with a

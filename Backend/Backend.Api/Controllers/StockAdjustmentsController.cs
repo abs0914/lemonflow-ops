@@ -12,12 +12,12 @@ namespace Backend.Api.Controllers
     /// Supabase sync-stock-adjustment function.
     ///
     /// Route shape is aligned with Supabase expectations:
-    ///   - POST /stock-adjustments  (Authorization: Bearer &lt;jwt&gt;)
+    ///   - POST /autocount/stock-adjustments  (Authorization: Bearer jwt)
     ///
     /// The controller validates the JWT using JwtAuthenticationHelper
     /// and delegates to IAutoCountStockAdjustmentService.
     /// </summary>
-    [RoutePrefix("stock-adjustments")]
+    [RoutePrefix("autocount/stock-adjustments")]
     public class StockAdjustmentsController : ApiController
     {
         private readonly IAutoCountStockAdjustmentService _adjustmentService;

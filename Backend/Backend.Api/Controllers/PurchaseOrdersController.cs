@@ -1,5 +1,6 @@
 using System;
 using System.Net;
+using System.Security.Claims;
 using System.Web.Http;
 using Backend.Domain;
 using Backend.Infrastructure.AutoCount;
@@ -7,67 +8,56 @@ using Backend.Infrastructure.AutoCount;
 namespace Backend.Api.Controllers
 {
     /// <summary>
-    /// HTTP API controller exposing AutoCount Purchase Orders for the
-    /// Supabase sync-po-create and sync-po-cancel functions.
+    /// HTTP API controller exposing AutoCount Purchase Orders.
     ///
-    /// Route shapes are aligned with Supabase expectations:
-    ///   - POST /api/purchase/create  (Authorization: Basic ...)
-    ///   - POST /api/purchase/cancel  (Authorization: Basic ...)
+    /// Route shapes:
+    ///   - POST /autocount/purchase-orders        (Authorization: Bearer jwt)
+    ///   - POST /autocount/purchase-orders/cancel (Authorization: Bearer jwt)
     ///
-    /// Both endpoints validate credentials against BasicAuthConfig and
+    /// Both endpoints validate JWT using JwtAuthenticationHelper and
     /// delegate to IAutoCountPurchaseOrderService.
     /// </summary>
-    [RoutePrefix("api/purchase")]
+    [RoutePrefix("autocount/purchase-orders")]
     public class PurchaseOrdersController : ApiController
     {
         private readonly IAutoCountPurchaseOrderService _purchaseOrderService;
-        private readonly BasicAuthHelper _basicAuthHelper;
+        private readonly JwtAuthenticationHelper _jwtHelper;
 
         // Parameterless constructor for Web API default activator.
         public PurchaseOrdersController()
             : this(
                 new AutoCountPurchaseOrderService(AutoCountSessionProvider.Instance),
-                new BasicAuthHelper(BasicAuthConfig.LoadFromConfig()))
+                new JwtAuthenticationHelper(JwtConfig.LoadFromConfig()))
         {
         }
 
         public PurchaseOrdersController(
             IAutoCountPurchaseOrderService purchaseOrderService,
-            BasicAuthHelper basicAuthHelper)
+            JwtAuthenticationHelper jwtHelper)
         {
             if (purchaseOrderService == null)
                 throw new ArgumentNullException("purchaseOrderService");
-            if (basicAuthHelper == null)
-                throw new ArgumentNullException("basicAuthHelper");
+            if (jwtHelper == null)
+                throw new ArgumentNullException("jwtHelper");
 
             _purchaseOrderService = purchaseOrderService;
-            _basicAuthHelper = basicAuthHelper;
+            _jwtHelper = jwtHelper;
         }
 
         /// <summary>
-        /// Supabase-compatible endpoint to create a purchase order in AutoCount.
-        ///
-        /// Called by sync-po-create as:
-        ///   POST /api/purchase/create
-        ///   Authorization: Basic base64(username:password)
-        ///   Body: {
-        ///     "DocNo": "PO0001",
-        ///     "SupplierCode": "SUP001",
-        ///     "DocDate": "2025-01-01",
-        ///     "DeliveryDate": "2025-01-02",
-        ///     "Description": "...",
-        ///     "Details": [ { ... } ]
-        ///   }
+        /// POST /autocount/purchase-orders
+        /// Creates a purchase order in AutoCount.
+        /// Requires a valid Bearer JWT in the Authorization header.
         /// </summary>
         [HttpPost]
-        [Route("create")]
+        [Route("")]
         public IHttpActionResult CreatePurchaseOrder([FromBody] PurchaseOrder request)
         {
             try
             {
-                string username;
+                ClaimsPrincipal principal;
                 IHttpActionResult authError;
-                if (!TryAuthorizeBasicRequest(out username, out authError))
+                if (!TryAuthorizeRequest(out principal, out authError))
                     return authError;
 
                 if (request == null)
@@ -90,17 +80,30 @@ namespace Backend.Api.Controllers
                 return Ok(new
                 {
                     success = true,
-                    docNo = created.DocNo,
-                    createdBy = username
+                    docNo = created.DocNo
                 });
             }
             catch (InvalidOperationException ex)
             {
-                return Content(HttpStatusCode.BadRequest, new { message = ex.Message });
+                var innerMessage = ex.InnerException != null ? ex.InnerException.Message : null;
+                var innerStack = ex.InnerException != null ? ex.InnerException.StackTrace : null;
+                return Content(HttpStatusCode.BadRequest, new {
+                    message = ex.Message,
+                    innerError = innerMessage,
+                    stackTrace = ex.StackTrace,
+                    innerStackTrace = innerStack
+                });
             }
             catch (Exception ex)
             {
-                return InternalServerError(ex);
+                var innerMessage = ex.InnerException != null ? ex.InnerException.Message : null;
+                var innerStack = ex.InnerException != null ? ex.InnerException.StackTrace : null;
+                return Content(HttpStatusCode.InternalServerError, new {
+                    message = ex.Message,
+                    innerError = innerMessage,
+                    stackTrace = ex.StackTrace,
+                    innerStackTrace = innerStack
+                });
             }
         }
 
@@ -110,12 +113,9 @@ namespace Backend.Api.Controllers
         }
 
         /// <summary>
-        /// Supabase-compatible endpoint to cancel a purchase order in AutoCount.
-        ///
-        /// Called by sync-po-cancel as:
-        ///   POST /api/purchase/cancel
-        ///   Authorization: Basic base64(username:password)
-        ///   Body: { "DocNo": "PO0001" }
+        /// POST /autocount/purchase-orders/cancel
+        /// Cancels a purchase order in AutoCount.
+        /// Requires a valid Bearer JWT in the Authorization header.
         /// </summary>
         [HttpPost]
         [Route("cancel")]
@@ -123,9 +123,9 @@ namespace Backend.Api.Controllers
         {
             try
             {
-                string username;
+                ClaimsPrincipal principal;
                 IHttpActionResult authError;
-                if (!TryAuthorizeBasicRequest(out username, out authError))
+                if (!TryAuthorizeRequest(out principal, out authError))
                     return authError;
 
                 if (request == null || string.IsNullOrWhiteSpace(request.DocNo))
@@ -138,8 +138,7 @@ namespace Backend.Api.Controllers
                 return Ok(new
                 {
                     success = true,
-                    docNo = request.DocNo,
-                    cancelledBy = username
+                    docNo = request.DocNo
                 });
             }
             catch (InvalidOperationException ex)
@@ -153,30 +152,30 @@ namespace Backend.Api.Controllers
         }
 
         /// <summary>
-        /// Validates HTTP Basic authentication against configured Lemon-co
-        /// API credentials.
+        /// Validates Bearer JWT token from Authorization header.
         /// </summary>
-        private bool TryAuthorizeBasicRequest(out string username, out IHttpActionResult errorResult)
+        private bool TryAuthorizeRequest(out ClaimsPrincipal principal, out IHttpActionResult errorResult)
         {
-            username = null;
+            principal = null;
             errorResult = null;
 
             var authHeader = Request != null && Request.Headers != null ? Request.Headers.Authorization : null;
             if (authHeader == null ||
-                !authHeader.Scheme.Equals("Basic", StringComparison.OrdinalIgnoreCase) ||
+                !authHeader.Scheme.Equals("Bearer", StringComparison.OrdinalIgnoreCase) ||
                 string.IsNullOrWhiteSpace(authHeader.Parameter))
             {
                 errorResult = Unauthorized();
                 return false;
             }
 
-            string errorMessage;
-            if (!_basicAuthHelper.TryValidateCredentials(authHeader.Parameter, out username, out errorMessage))
+            ClaimsPrincipal claims;
+            if (!_jwtHelper.ValidateToken(authHeader.Parameter, out claims))
             {
                 errorResult = Unauthorized();
                 return false;
             }
 
+            principal = claims;
             return true;
         }
     }
