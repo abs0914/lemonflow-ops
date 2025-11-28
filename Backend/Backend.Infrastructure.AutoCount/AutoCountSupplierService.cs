@@ -245,6 +245,19 @@ namespace Backend.Infrastructure.AutoCount
 
                     var acCreditor = cmd.NewCreditor();
                     MapDomainToCreditorEntity(supplier, acCreditor, userSession);
+
+                    // Also set currency code in GLMastTable DataTable if present
+                    if (acCreditor.GLMastTable != null && acCreditor.GLMastTable.Rows.Count > 0)
+                    {
+                        foreach (System.Data.DataRow row in acCreditor.GLMastTable.Rows)
+                        {
+                            if (acCreditor.GLMastTable.Columns.Contains("CurrencyCode"))
+                            {
+                                row["CurrencyCode"] = "PHP";
+                            }
+                        }
+                    }
+
                     cmd.SaveCreditor(acCreditor, userSession.LoginUserID);
 
                     // Reload to get any AutoCount-assigned values
@@ -315,9 +328,11 @@ namespace Backend.Infrastructure.AutoCount
 
             entity.IsActive = supplier.IsActive;
 
-            // Set currency to account book local currency
-            entity.CurrencyCode = global::AutoCount.Data.DBRegistry.Create(userSession.DBSetting)
-                .GetString(new global::AutoCount.RegistryID.LocalCurrencyCode());
+            // Set currency to PHP (hardcoded for LemonCo production)
+            entity.CurrencyCode = "PHP";
+
+            // Log what we're setting for debugging
+            System.Diagnostics.Debug.WriteLine($"[MapDomainToCreditorEntity] AccNo={entity.AccNo}, CurrencyCode={entity.CurrencyCode}, ControlAccount={entity.ControlAccount}");
         }
     }
 }

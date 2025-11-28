@@ -161,7 +161,17 @@ namespace Backend.Api.Controllers
             catch (InvalidOperationException ex)
             {
                 // Surface domain-level conflicts (e.g. item already exists) as 409.
-                return Content(System.Net.HttpStatusCode.Conflict, ex.Message);
+                // Include inner exception message for debugging
+                var message = ex.Message;
+                if (ex.InnerException != null)
+                {
+                    message += " | Inner: " + ex.InnerException.Message;
+                    if (ex.InnerException.InnerException != null)
+                    {
+                        message += " | Inner2: " + ex.InnerException.InnerException.Message;
+                    }
+                }
+                return Content(System.Net.HttpStatusCode.Conflict, message);
             }
             catch (Exception ex)
             {
