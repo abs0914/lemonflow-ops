@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
 
     console.log('[create-autocount-item] Creating item in AutoCount:', JSON.stringify(itemPayload));
 
-    const createResponse = await fetch(`${apiUrl}/items`, {
+    const createResponse = await fetch(`${apiUrl}/autocount/items`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${authData.token}`,
