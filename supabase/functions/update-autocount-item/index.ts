@@ -25,81 +25,71 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      {
-        global: {
-          headers: { Authorization: req.headers.get("Authorization")! },
-        },
-      }
-    );
-
-    // Get the authorization header
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      throw new Error("No authorization header");
-    }
-
-    // Verify user is authenticated
-    const {
-      data: { user },
-      error: authError,
-    } = await supabaseClient.auth.getUser();
-
-    if (authError || !user) {
-      throw new Error("Unauthorized");
-    }
-
     const requestData: UpdateItemRequest = await req.json();
 
-    console.log("Updating AutoCount item:", requestData);
+    console.log('[update-autocount-item] Updating AutoCount item:', requestData);
 
     // Get AutoCount credentials from environment variables (Supabase secrets)
-    const apiUrl = Deno.env.get("LEMONCO_API_URL");
-    const username = Deno.env.get("LEMONCO_USERNAME");
-    const password = Deno.env.get("LEMONCO_PASSWORD");
+    const apiUrl = Deno.env.get('LEMONCO_API_URL');
+    const username = Deno.env.get('LEMONCO_USERNAME');
+    const password = Deno.env.get('LEMONCO_PASSWORD');
 
     if (!apiUrl || !username || !password) {
-      throw new Error("AutoCount configuration is incomplete. Please check LEMONCO_API_URL, LEMONCO_USERNAME, and LEMONCO_PASSWORD secrets.");
+      throw new Error('Missing LemonCo API credentials');
     }
 
-    // Create Basic Auth header
-    const credentials = btoa(`${username}:${password}`);
-    const basicAuth = `Basic ${credentials}`;
+    // Authenticate
+    console.log('[update-autocount-item] Authenticating');
+    const authResponse = await fetch(`${apiUrl}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
 
-    // Update item in AutoCount
+    if (!authResponse.ok) {
+      const errorText = await authResponse.text();
+      console.error('[update-autocount-item] Auth failed:', errorText);
+      throw new Error(`Authentication failed: ${authResponse.status}`);
+    }
+
+    const authData = await authResponse.json();
+    console.log('[update-autocount-item] Authenticated successfully');
+
+    // Update item in AutoCount - use camelCase payload
     const updatePayload = {
-      ItemCode: requestData.itemCode,
-      Description: requestData.description,
-      ItemGroup: requestData.itemGroup || "",
-      ItemType: requestData.itemType || "CONSUMABLE",
-      BaseUOM: requestData.baseUom,
-      StockControl: requestData.stockControl ?? true,
-      HasBatchNo: requestData.hasBatchNo ?? false,
-      StandardCost: requestData.standardCost || 0,
-      Price: requestData.price || 0,
+      itemCode: requestData.itemCode,
+      description: requestData.description,
+      itemGroup: requestData.itemGroup || '',
+      itemType: requestData.itemType || 'CONSUMABLE',
+      baseUom: requestData.baseUom,
+      stockControl: requestData.stockControl ?? true,
+      hasBatchNo: requestData.hasBatchNo ?? false,
+      standardCost: requestData.standardCost || 0,
+      price: requestData.price || 0,
+      isActive: true,
     };
 
-    console.log("Calling AutoCount API to update item:", updatePayload);
+    console.log('[update-autocount-item] Updating item in AutoCount:', JSON.stringify(updatePayload));
 
-    const response = await fetch(`${apiUrl}/api/stock/update-item`, {
-      method: "PUT",
+    const response = await fetch(`${apiUrl}/autocount/items`, {
+      method: 'PUT',
       headers: {
-        "Content-Type": "application/json",
-        Authorization: basicAuth,
+        'Authorization': `Bearer ${authData.token}`,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify(updatePayload),
     });
 
+    console.log('[update-autocount-item] Response status:', response.status);
+
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("AutoCount API error:", errorText);
-      throw new Error(`AutoCount API error: ${response.status} - ${errorText}`);
+      console.error('[update-autocount-item] Update failed:', errorText);
+      throw new Error(`Failed to update item in AutoCount: ${response.status} - ${errorText}`);
     }
 
     const result = await response.json();
-    console.log("AutoCount update successful:", result);
+    console.log('[update-autocount-item] Item updated successfully:', JSON.stringify(result));
 
     return new Response(
       JSON.stringify({
