@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
 
     console.log('[update-autocount-item] Updating item in AutoCount:', JSON.stringify(updatePayload));
 
-    const response = await fetch(`${apiUrl}/autocount/items`, {
+    const response = await fetch(`${apiUrl}/autocount/items/${requestData.itemCode}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${authData.token}`,
