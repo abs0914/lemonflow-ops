@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
 
     // Get AutoCount stock items
     // Try with limit parameter in case API uses pagination
-    const itemsUrl = `${apiUrl}/items?limit=1000`;
+    const itemsUrl = `${apiUrl}/autocount/items?limit=1000`;
     console.log('[sync-inventory-execute] Fetching AutoCount stock items');
     console.log('[sync-inventory-execute] API URL:', apiUrl);
     console.log('[sync-inventory-execute] Full URL:', itemsUrl);

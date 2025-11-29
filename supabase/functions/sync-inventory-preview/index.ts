@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
 
     // Get AutoCount stock items
     // Try with limit parameter in case API uses pagination
-    const itemsUrl = `${apiUrl}/items?limit=1000`;
+    const itemsUrl = `${apiUrl}/autocount/items?limit=1000`;
     console.log('[sync-inventory-preview] Fetching AutoCount stock items');
     console.log('[sync-inventory-preview] API URL:', apiUrl);
     console.log('[sync-inventory-preview] Full URL:', itemsUrl);
@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
       console.error('[sync-inventory-preview] Full error details:', {
         status: acResponse.status,
         statusText: acResponse.statusText,
-        url: `${apiUrl}/items`,
+        url: `${apiUrl}/autocount/items`,
       });
       throw new Error(`Failed to fetch AutoCount stock items: ${acResponse.status} - ${errorText}`);
     }
