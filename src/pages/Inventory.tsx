@@ -216,8 +216,12 @@ export default function Inventory() {
 
           // If item already exists (409 conflict), try to update instead
           if (createError) {
-            const errorMsg = createError.message || '';
-            if (errorMsg.includes('409') || errorMsg.includes('already exists') || createData?.error?.includes('already exists')) {
+            // Check if it's a 409 conflict by inspecting the error
+            const is409 = createError.message?.includes('409') || 
+                         createError.message?.includes('already exists') ||
+                         (createError as any).context?.body?.error?.includes('already exists');
+            
+            if (is409) {
               console.log(`Item ${component.sku} already exists, attempting update...`);
               
               const { error: updateError } = await supabase.functions.invoke('update-autocount-item', {
