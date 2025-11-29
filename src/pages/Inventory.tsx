@@ -214,30 +214,26 @@ export default function Inventory() {
             body: itemPayload,
           });
 
-          // If item already exists (409 conflict), try to update instead
-          if (createError) {
-            // Check if it's a 409 conflict by inspecting the error
-            const is409 = createError.message?.includes('409') || 
-                         createError.message?.includes('already exists') ||
-                         (createError as any).context?.body?.error?.includes('already exists');
+          // Check if item already exists (409 conflict) - the data field contains the response even on error
+          const is409 = createData?.success === false && 
+                       (createData?.error?.includes('already exists') || createData?.error?.includes('Item already exists'));
+          
+          if (is409) {
+            console.log(`Item ${component.sku} already exists, attempting update...`);
             
-            if (is409) {
-              console.log(`Item ${component.sku} already exists, attempting update...`);
-              
-              const { error: updateError } = await supabase.functions.invoke('update-autocount-item', {
-                body: itemPayload,
-              });
+            const { error: updateError } = await supabase.functions.invoke('update-autocount-item', {
+              body: itemPayload,
+            });
 
-              if (updateError) {
-                console.error(`Failed to update ${component.sku}:`, updateError);
-                errorCount++;
-              } else {
-                successCount++;
-              }
-            } else {
-              console.error(`Failed to sync ${component.sku}:`, createError);
+            if (updateError) {
+              console.error(`Failed to update ${component.sku}:`, updateError);
               errorCount++;
+            } else {
+              successCount++;
             }
+          } else if (createError) {
+            console.error(`Failed to sync ${component.sku}:`, createError);
+            errorCount++;
           } else {
             successCount++;
           }
