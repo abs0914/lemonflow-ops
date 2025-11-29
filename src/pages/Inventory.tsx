@@ -192,27 +192,48 @@ export default function Inventory() {
 
       let successCount = 0;
       let errorCount = 0;
+      let skippedCount = 0;
 
       // Sync each component to AutoCount
       for (const component of localComponents || []) {
         try {
-          const { error: syncError } = await supabase.functions.invoke('create-autocount-item', {
-            body: {
-              itemCode: component.autocount_item_code || component.sku,
-              description: component.name,
-              itemGroup: component.item_group || '',
-              itemType: component.item_type || 'CONSUMABLE',
-              baseUom: component.unit,
-              stockControl: component.stock_control,
-              hasBatchNo: component.has_batch_no,
-              standardCost: component.cost_per_unit || 0,
-              price: component.price || 0,
-            },
+          const itemPayload = {
+            itemCode: component.autocount_item_code || component.sku,
+            description: component.name,
+            itemGroup: component.item_group || '',
+            itemType: component.item_type || 'CONSUMABLE',
+            baseUom: component.unit,
+            stockControl: component.stock_control,
+            hasBatchNo: component.has_batch_no,
+            standardCost: component.cost_per_unit || 0,
+            price: component.price || 0,
+          };
+
+          // Try to create the item first
+          const { data: createData, error: createError } = await supabase.functions.invoke('create-autocount-item', {
+            body: itemPayload,
           });
 
-          if (syncError) {
-            console.error(`Failed to sync ${component.sku}:`, syncError);
-            errorCount++;
+          // If item already exists (409 conflict), try to update instead
+          if (createError) {
+            const errorMsg = createError.message || '';
+            if (errorMsg.includes('409') || errorMsg.includes('already exists') || createData?.error?.includes('already exists')) {
+              console.log(`Item ${component.sku} already exists, attempting update...`);
+              
+              const { error: updateError } = await supabase.functions.invoke('update-autocount-item', {
+                body: itemPayload,
+              });
+
+              if (updateError) {
+                console.error(`Failed to update ${component.sku}:`, updateError);
+                errorCount++;
+              } else {
+                successCount++;
+              }
+            } else {
+              console.error(`Failed to sync ${component.sku}:`, createError);
+              errorCount++;
+            }
           } else {
             successCount++;
           }
@@ -224,7 +245,7 @@ export default function Inventory() {
 
       toast({
         title: "Sync Complete",
-        description: `Successfully synced ${successCount} items to AutoCount${errorCount > 0 ? ` (${errorCount} failed)` : ''}`,
+        description: `Synced ${successCount} items to AutoCount${errorCount > 0 ? ` (${errorCount} errors)` : ''}`,
         variant: errorCount > 0 ? "destructive" : "default",
       });
     } catch (error: any) {
