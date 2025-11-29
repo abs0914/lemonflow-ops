@@ -39,6 +39,7 @@ export default function Inventory() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [selectedComponent, setSelectedComponent] = useState<Component | null>(null);
+  const [isSyncingToAutoCount, setIsSyncingToAutoCount] = useState(false);
 
   // Redirect if not authenticated or not authorized
   if (!user) {
@@ -178,6 +179,64 @@ export default function Inventory() {
       deleteMutation.mutate(itemToDelete);
     }
   };
+
+  const handleSyncToAutoCount = async () => {
+    setIsSyncingToAutoCount(true);
+    try {
+      // Get all components that need to be synced
+      const { data: localComponents, error } = await supabase
+        .from("components")
+        .select("*");
+
+      if (error) throw error;
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      // Sync each component to AutoCount
+      for (const component of localComponents || []) {
+        try {
+          const { error: syncError } = await supabase.functions.invoke('create-autocount-item', {
+            body: {
+              itemCode: component.autocount_item_code || component.sku,
+              description: component.name,
+              itemGroup: component.item_group || '',
+              itemType: component.item_type || 'CONSUMABLE',
+              baseUom: component.unit,
+              stockControl: component.stock_control,
+              hasBatchNo: component.has_batch_no,
+              standardCost: component.cost_per_unit || 0,
+              price: component.price || 0,
+            },
+          });
+
+          if (syncError) {
+            console.error(`Failed to sync ${component.sku}:`, syncError);
+            errorCount++;
+          } else {
+            successCount++;
+          }
+        } catch (err) {
+          console.error(`Error syncing ${component.sku}:`, err);
+          errorCount++;
+        }
+      }
+
+      toast({
+        title: "Sync Complete",
+        description: `Successfully synced ${successCount} items to AutoCount${errorCount > 0 ? ` (${errorCount} failed)` : ''}`,
+        variant: errorCount > 0 ? "destructive" : "default",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Sync Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSyncingToAutoCount(false);
+    }
+  };
   return <DashboardLayout>
       <div className="space-y-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between px-[30px] py-[21px]">
@@ -195,6 +254,14 @@ export default function Inventory() {
               <Button variant="outline" onClick={() => setSyncDialogOpen(true)}>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Sync from AutoCount
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleSyncToAutoCount}
+                disabled={isSyncingToAutoCount}
+              >
+                <Database className="mr-2 h-4 w-4" />
+                {isSyncingToAutoCount ? "Syncing..." : "Sync to AutoCount"}
               </Button>
             </div>}
         </div>
@@ -257,6 +324,10 @@ export default function Inventory() {
       icon: RefreshCw,
       label: "Sync from AutoCount",
       onClick: () => setSyncDialogOpen(true)
+    }, {
+      icon: Database,
+      label: isSyncingToAutoCount ? "Syncing..." : "Sync to AutoCount",
+      onClick: handleSyncToAutoCount
     }]} />}
 
       {/* Stock Adjustment Dialog */}
