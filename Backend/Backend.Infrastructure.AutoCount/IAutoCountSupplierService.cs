@@ -42,6 +42,15 @@ namespace Backend.Infrastructure.AutoCount
         /// <param name="supplier">The supplier to update.</param>
         /// <returns>The updated supplier.</returns>
         Supplier UpdateSupplier(Supplier supplier);
+
+        /// <summary>
+        /// Deletes (deactivates) a supplier in AutoCount.
+        /// AutoCount does not support hard deletes for creditors with transactions,
+        /// so this sets IsActive = false.
+        /// </summary>
+        /// <param name="supplierCode">The supplier code to delete.</param>
+        /// <returns>True if the supplier was deactivated; false if not found.</returns>
+        bool DeleteSupplier(string supplierCode);
     }
 }
 

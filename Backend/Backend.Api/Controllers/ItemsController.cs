@@ -248,6 +248,42 @@ namespace Backend.Api.Controllers
         }
 
         /// <summary>
+        /// DELETE /autocount/items/{code}
+        /// Deletes (deactivates) a stock item in AutoCount.
+        /// Requires a valid Bearer JWT in the Authorization header.
+        /// </summary>
+        [HttpDelete]
+        [Route("{code}")]
+        public IHttpActionResult DeleteItem(string code)
+        {
+            try
+            {
+                ClaimsPrincipal principal;
+                IHttpActionResult authError;
+                if (!TryAuthorizeBearerRequest(out principal, out authError))
+                    return authError;
+
+                if (string.IsNullOrWhiteSpace(code))
+                    return BadRequest("Item code is required.");
+
+                var deleted = _itemService.DeleteItem(code);
+
+                if (!deleted)
+                    return NotFound();
+
+                return Ok(new { message = "Item '" + code + "' has been deactivated.", itemCode = code });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return InternalServerError(ex);
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(ex);
+            }
+        }
+
+        /// <summary>
         /// Extracts and validates the Bearer token from the Authorization header.
         /// Reuses the JWT helper from AuthController/SuppliersController.
         /// </summary>

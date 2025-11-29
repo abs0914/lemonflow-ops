@@ -26,5 +26,14 @@ namespace Backend.Infrastructure.AutoCount
         /// item as read back from AutoCount.
         /// </summary>
         StockItem UpdateItem(StockItem item);
+
+        /// <summary>
+        /// Deletes (deactivates) a stock item in AutoCount.
+        /// AutoCount does not support hard deletes for items with transactions,
+        /// so this sets IsActive = false.
+        /// </summary>
+        /// <param name="itemCode">The item code to delete.</param>
+        /// <returns>True if the item was deactivated; false if not found.</returns>
+        bool DeleteItem(string itemCode);
     }
 }

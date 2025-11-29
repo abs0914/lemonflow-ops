@@ -201,6 +201,42 @@ namespace Backend.Api.Controllers
         }
 
         /// <summary>
+        /// DELETE /autocount/suppliers/{code}
+        /// Deletes (deactivates) a supplier in AutoCount.
+        /// Requires a valid Bearer JWT in the Authorization header.
+        /// </summary>
+        [HttpDelete]
+        [Route("{code}")]
+        public IHttpActionResult DeleteSupplier(string code)
+        {
+            try
+            {
+                ClaimsPrincipal principal;
+                IHttpActionResult authError;
+                if (!TryAuthorizeRequest(out principal, out authError))
+                    return authError;
+
+                if (string.IsNullOrWhiteSpace(code))
+                    return BadRequest("Supplier code is required.");
+
+                var deleted = _supplierService.DeleteSupplier(code);
+
+                if (!deleted)
+                    return NotFound();
+
+                return Ok(new { message = "Supplier '" + code + "' has been deactivated.", code = code });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return InternalServerError(ex);
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(ex);
+            }
+        }
+
+        /// <summary>
         /// Extracts and validates the Bearer token from the Authorization header.
         /// </summary>
         private bool TryAuthorizeRequest(out ClaimsPrincipal principal, out IHttpActionResult errorResult)

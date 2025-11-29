@@ -308,6 +308,39 @@ namespace Backend.Infrastructure.AutoCount
             }
         }
 
+        /// <inheritdoc />
+        public bool DeleteSupplier(string supplierCode)
+        {
+            if (string.IsNullOrWhiteSpace(supplierCode))
+                throw new ArgumentException("Supplier code cannot be empty.", "supplierCode");
+
+            lock (_lockObject)
+            {
+                try
+                {
+                    var userSession = _sessionProvider.GetUserSession();
+                    var dbSetting = userSession.DBSetting;
+
+                    var cmd = CreditorDataAccess.Create(userSession, dbSetting);
+                    var acCreditor = cmd.GetCreditor(supplierCode);
+
+                    if (acCreditor == null)
+                        return false;
+
+                    // Soft delete by setting IsActive = false
+                    acCreditor.IsActive = false;
+                    cmd.SaveCreditor(acCreditor, userSession.LoginUserID);
+
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException(
+                        "Failed to delete supplier '" + supplierCode + "' from AutoCount.", ex);
+                }
+            }
+        }
+
         private void MapDomainToCreditorEntity(Supplier supplier, CreditorEntity entity, global::AutoCount.Authentication.UserSession userSession)
         {
             // ControlAccount is REQUIRED - links creditor to GL control account (Trade Creditors)
