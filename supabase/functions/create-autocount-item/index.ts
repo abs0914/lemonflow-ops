@@ -90,16 +90,17 @@ Deno.serve(async (req) => {
       const errorText = await createResponse.text();
       console.error('[create-autocount-item] Create failed:', errorText);
       
-      // Check if item already exists
+      // Check if item already exists - return 200 with alreadyExists flag instead of 409
       if (createResponse.status === 409 || errorText.includes('already exists')) {
         return new Response(
           JSON.stringify({
             success: false,
+            alreadyExists: true,
             error: 'Item already exists in AutoCount',
             details: errorText,
           }),
           {
-            status: 409,
+            status: 200,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           }
         );

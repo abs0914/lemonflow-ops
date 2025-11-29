@@ -139,13 +139,34 @@ export default function Inventory() {
   };
   const deleteMutation = useMutation({
     mutationFn: async (componentId: string) => {
-      // Delete associated stock movements first
+      // Get component details for AutoCount sync
+      const { data: component } = await supabase
+        .from("components")
+        .select("*")
+        .eq("id", componentId)
+        .single();
+
+      if (!component) throw new Error("Component not found");
+
+      // Sync deletion to AutoCount first
+      const { error: syncError } = await supabase.functions.invoke('delete-autocount-item', {
+        body: {
+          itemCode: component.autocount_item_code || component.sku,
+        },
+      });
+
+      if (syncError) {
+        console.error("Failed to sync deletion to AutoCount:", syncError);
+        // Continue with local deletion even if AutoCount sync fails
+      }
+
+      // Delete associated stock movements
       const {
         error: movementError
       } = await supabase.from("stock_movements").delete().eq("item_id", componentId).eq("item_type", "component");
       if (movementError) throw movementError;
 
-      // Delete component
+      // Delete component from local database
       const {
         error: componentError
       } = await supabase.from("components").delete().eq("id", componentId);
@@ -214,9 +235,8 @@ export default function Inventory() {
             body: itemPayload,
           });
 
-          // Check if item already exists (409 conflict) - the data field contains the response even on error
-          const is409 = createData?.success === false && 
-                       (createData?.error?.includes('already exists') || createData?.error?.includes('Item already exists'));
+          // Check if item already exists using the alreadyExists flag
+          const is409 = createData?.alreadyExists === true;
           
           if (is409) {
             console.log(`Item ${component.sku} already exists, attempting update...`);
