@@ -180,45 +180,45 @@ export type Database = {
       }
       bom_items: {
         Row: {
-          component_id: string
           created_at: string
           id: string
           notes: string | null
           product_id: string
           quantity: number
+          raw_material_id: string
           updated_at: string
         }
         Insert: {
-          component_id: string
           created_at?: string
           id?: string
           notes?: string | null
           product_id: string
           quantity: number
+          raw_material_id: string
           updated_at?: string
         }
         Update: {
-          component_id?: string
           created_at?: string
           id?: string
           notes?: string | null
           product_id?: string
           quantity?: number
+          raw_material_id?: string
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "bom_items_component_id_fkey"
-            columns: ["component_id"]
-            isOneToOne: false
-            referencedRelation: "components"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "bom_items_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bom_items_raw_material_id_fkey"
+            columns: ["raw_material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
             referencedColumns: ["id"]
           },
         ]
@@ -327,6 +327,60 @@ export type Database = {
           is_active?: boolean
           last_synced_at?: string | null
           phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      finished_goods: {
+        Row: {
+          autocount_item_code: string
+          autocount_synced: boolean
+          cost_per_unit: number | null
+          created_at: string
+          description: string | null
+          id: string
+          item_group: string | null
+          item_type: string | null
+          last_synced_at: string | null
+          name: string
+          price: number | null
+          sku: string
+          stock_quantity: number
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          autocount_item_code: string
+          autocount_synced?: boolean
+          cost_per_unit?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          item_group?: string | null
+          item_type?: string | null
+          last_synced_at?: string | null
+          name: string
+          price?: number | null
+          sku: string
+          stock_quantity?: number
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          autocount_item_code?: string
+          autocount_synced?: boolean
+          cost_per_unit?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          item_group?: string | null
+          item_type?: string | null
+          last_synced_at?: string | null
+          name?: string
+          price?: number | null
+          sku?: string
+          stock_quantity?: number
+          unit?: string
           updated_at?: string
         }
         Relationships: []
@@ -566,6 +620,66 @@ export type Database = {
           },
         ]
       }
+      raw_materials: {
+        Row: {
+          autocount_item_code: string | null
+          cost_per_unit: number | null
+          created_at: string
+          description: string | null
+          has_batch_no: boolean | null
+          id: string
+          item_group: string | null
+          item_type: string | null
+          last_synced_at: string | null
+          name: string
+          price: number | null
+          reserved_quantity: number
+          sku: string
+          stock_control: boolean | null
+          stock_quantity: number
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          autocount_item_code?: string | null
+          cost_per_unit?: number | null
+          created_at?: string
+          description?: string | null
+          has_batch_no?: boolean | null
+          id?: string
+          item_group?: string | null
+          item_type?: string | null
+          last_synced_at?: string | null
+          name: string
+          price?: number | null
+          reserved_quantity?: number
+          sku: string
+          stock_control?: boolean | null
+          stock_quantity?: number
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          autocount_item_code?: string | null
+          cost_per_unit?: number | null
+          created_at?: string
+          description?: string | null
+          has_batch_no?: boolean | null
+          id?: string
+          item_group?: string | null
+          item_type?: string | null
+          last_synced_at?: string | null
+          name?: string
+          price?: number | null
+          reserved_quantity?: number
+          sku?: string
+          stock_control?: boolean | null
+          stock_quantity?: number
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       stock_movements: {
         Row: {
           autocount_doc_no: string | null
@@ -764,6 +878,7 @@ export type Database = {
     }
     Functions: {
       get_next_item_code: { Args: never; Returns: string }
+      get_next_raw_material_code: { Args: never; Returns: string }
       get_next_supplier_code: { Args: never; Returns: string }
       is_admin: { Args: { user_id: string }; Returns: boolean }
       release_stock_reservation: {

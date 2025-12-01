@@ -50,9 +50,9 @@ export default function Production() {
       const { data: bomItems, error: bomError } = await supabase
         .from("bom_items")
         .select(`
-          component_id,
+          raw_material_id,
           quantity,
-          components(name, sku, stock_quantity, reserved_quantity, autocount_item_code)
+          raw_materials(name, sku, stock_quantity, reserved_quantity, autocount_item_code)
         `)
         .eq("product_id", order.product_id);
 
@@ -63,13 +63,13 @@ export default function Production() {
 
       // 2. Check if sufficient stock is available
       const insufficientStock: string[] = [];
-      bomItems.forEach((item) => {
+      bomItems.forEach((item: any) => {
         const requiredQty = item.quantity * order.quantity;
-        const availableQty = (item.components?.stock_quantity || 0) - (item.components?.reserved_quantity || 0);
+        const availableQty = (item.raw_materials?.stock_quantity || 0) - (item.raw_materials?.reserved_quantity || 0);
         
         if (availableQty < requiredQty) {
           insufficientStock.push(
-            `${item.components?.name}: need ${requiredQty}, have ${availableQty}`
+            `${item.raw_materials?.name}: need ${requiredQty}, have ${availableQty}`
           );
         }
       });
@@ -78,11 +78,11 @@ export default function Production() {
         throw new Error(`Insufficient stock:\n${insufficientStock.join("\n")}`);
       }
 
-      // 3. Create stock movements for component consumption
-      const componentConsumptions = bomItems.map((item) => ({
+      // 3. Create stock movements for raw material consumption
+      const componentConsumptions = bomItems.map((item: any) => ({
         movement_type: "consumption",
-        item_type: "component",
-        item_id: item.component_id,
+        item_type: "raw_material",
+        item_id: item.raw_material_id,
         quantity: -(item.quantity * order.quantity),
         quantity_in_base_unit: -(item.quantity * order.quantity),
         performed_by: profile!.id,
@@ -97,22 +97,68 @@ export default function Production() {
 
       if (consumptionError) throw consumptionError;
 
-      // 4. Create stock movement for finished product addition
-      const { error: productionError } = await supabase
-        .from("stock_movements")
-        .insert({
-          movement_type: "production",
-          item_type: "product",
-          item_id: order.product_id,
-          quantity: order.quantity,
-          quantity_in_base_unit: order.quantity,
-          performed_by: profile!.id,
-          reference_type: "assembly_order",
-          reference_id: order.id,
-          notes: `Produced from assembly order`,
-        });
+      // 4. Add finished product to finished_goods inventory instead of product
+      const { data: product } = await supabase
+        .from("products")
+        .select("name, sku, component_id")
+        .eq("id", order.product_id)
+        .single();
 
-      if (productionError) throw productionError;
+      if (!product) throw new Error("Product not found");
+
+      // Get or create finished good entry
+      const { data: existingFinishedGood } = await supabase
+        .from("finished_goods")
+        .select("id")
+        .eq("sku", product.sku)
+        .maybeSingle();
+
+      let finishedGoodId = existingFinishedGood?.id;
+
+      if (!existingFinishedGood) {
+        // Create finished good entry
+        const { data: newFinishedGood } = await supabase.from("finished_goods").insert({
+          sku: product.sku,
+          name: product.name,
+          autocount_item_code: product.sku,
+          stock_quantity: order.quantity,
+          unit: "unit",
+        }).select().single();
+        finishedGoodId = newFinishedGood?.id;
+      } else {
+        // Update stock quantity by fetching current and adding
+        const { data: currentFG } = await supabase
+          .from("finished_goods")
+          .select("stock_quantity")
+          .eq("id", existingFinishedGood.id)
+          .single();
+        
+        await supabase
+          .from("finished_goods")
+          .update({ 
+            stock_quantity: (currentFG?.stock_quantity || 0) + order.quantity
+          })
+          .eq("id", existingFinishedGood.id);
+      }
+
+      // Create stock movement for finished good
+      if (finishedGoodId) {
+        const { error: productionError } = await supabase
+          .from("stock_movements")
+          .insert({
+            movement_type: "production",
+            item_type: "finished_good",
+            item_id: finishedGoodId,
+            quantity: order.quantity,
+            quantity_in_base_unit: order.quantity,
+            performed_by: profile!.id,
+            reference_type: "assembly_order",
+            reference_id: order.id,
+            notes: `Produced from assembly order`,
+          });
+
+        if (productionError) throw productionError;
+      }
 
       // 5. Release stock reservation if it was reserved
       if (order.stock_reserved) {
@@ -127,25 +173,9 @@ export default function Production() {
         }
       }
 
-      // 6. Sync to AutoCount Stock Assembly
-      const { error: syncError } = await supabase.functions.invoke("sync-assembly-complete", {
-        body: {
-          assemblyOrderId: order.id,
-          productId: order.product_id,
-          productQuantity: order.quantity,
-          componentConsumptions: bomItems.map((item) => ({
-            componentId: item.component_id,
-            quantity: item.quantity * order.quantity,
-          })),
-          warehouseLocation: "MAIN",
-          notes: order.notes || `Assembly: ${order.products?.name}`,
-        },
-      });
-
-      if (syncError) {
-        console.error("AutoCount sync error:", syncError);
-        // Don't throw - assembly is complete, just log the sync error
-      }
+      // 6. Note: DO NOT sync to AutoCount here
+      // Finished goods will be synced manually from /inventory page
+      // when admin decides they are ready
 
       return order;
     },

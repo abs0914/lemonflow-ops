@@ -28,7 +28,7 @@ interface StockAdjustmentFormData {
 interface StockAdjustmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  itemType: "product" | "component";
+  itemType: "product" | "component" | "raw_material" | "finished_good";
   itemId: string;
   itemName: string;
   itemSku: string;

@@ -16,6 +16,44 @@ export interface Component {
   last_synced_at: string | null;
 }
 
+export interface RawMaterial {
+  id: string;
+  sku: string;
+  name: string;
+  description: string | null;
+  item_group: string | null;
+  item_type: string | null;
+  stock_quantity: number;
+  reserved_quantity: number;
+  unit: string;
+  price: number | null;
+  cost_per_unit: number | null;
+  stock_control: boolean | null;
+  has_batch_no: boolean | null;
+  autocount_item_code: string | null;
+  last_synced_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FinishedGood {
+  id: string;
+  sku: string;
+  name: string;
+  description: string | null;
+  item_group: string | null;
+  item_type: string | null;
+  stock_quantity: number;
+  unit: string;
+  price: number | null;
+  cost_per_unit: number | null;
+  autocount_item_code: string;
+  autocount_synced: boolean;
+  last_synced_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Supplier {
   id: string;
   supplier_code: string;
