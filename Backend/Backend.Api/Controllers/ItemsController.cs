@@ -180,6 +180,73 @@ namespace Backend.Api.Controllers
         }
 
         /// <summary>
+        /// PUT /autocount/items/{code}
+        /// Updates an existing stock item in AutoCount.
+        /// Requires a valid Bearer JWT in the Authorization header.
+        ///
+        /// Called by Supabase Edge Functions with a camelCase JSON payload.
+        /// </summary>
+        [HttpPut]
+        [Route("{code}")]
+        public IHttpActionResult UpdateItemByCode(string code, [FromBody] StockItem request)
+        {
+            try
+            {
+                ClaimsPrincipal principal;
+                IHttpActionResult authError;
+                if (!TryAuthorizeBearerRequest(out principal, out authError))
+                    return authError;
+
+                if (request == null)
+                    return BadRequest("Request body is required");
+
+                // Use code from URL if not in body
+                if (string.IsNullOrWhiteSpace(request.ItemCode))
+                    request.ItemCode = code;
+
+                if (string.IsNullOrWhiteSpace(request.Description))
+                    return BadRequest("Description is required");
+
+                if (string.IsNullOrWhiteSpace(request.BaseUom))
+                    return BadRequest("BaseUom is required");
+
+                var updated = _itemService.UpdateItem(request);
+
+                var result = new
+                {
+                    success = true,
+                    item = new
+                    {
+                        itemCode = updated.ItemCode,
+                        description = updated.Description,
+                        itemGroup = updated.ItemGroup,
+                        itemType = updated.ItemType,
+                        baseUom = updated.BaseUom,
+                        stockControl = updated.StockControl,
+                        hasBatchNo = updated.HasBatchNo,
+                        isActive = updated.IsActive,
+                        standardCost = updated.StandardCost,
+                        price = updated.Price,
+                        stockBalance = updated.StockBalance,
+                        mainSupplier = updated.MainSupplier,
+                        barcode = updated.Barcode,
+                        hasBom = updated.HasBom
+                    }
+                };
+
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Content(System.Net.HttpStatusCode.BadRequest, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(ex);
+            }
+        }
+
+        /// <summary>
         /// PUT /api/stock/update-item
         /// Updates an existing stock item in AutoCount.
         ///

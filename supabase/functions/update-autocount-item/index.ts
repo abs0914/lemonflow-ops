@@ -96,7 +96,8 @@ Deno.serve(async (req) => {
 
     console.log("Calling AutoCount API to update item:", updatePayload);
 
-    const response = await fetch(`${apiUrl}/autocount/items`, {
+    // Use PUT /autocount/items/{code} endpoint
+    const response = await fetch(`${apiUrl}/autocount/items/${encodeURIComponent(requestData.itemCode)}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
