@@ -139,8 +139,23 @@ namespace Backend.Infrastructure.AutoCount
                     var entity = cmd.LoadItem(item.ItemCode, ItemEntryAction.Edit);
                     if (entity == null)
                     {
+                        // Check if item exists but is inactive
+                        string sql = "SELECT ItemCode, IsActive FROM Item WHERE ItemCode = @ItemCode";
+                        var param = new System.Data.SqlClient.SqlParameter("@ItemCode", item.ItemCode);
+                        DataTable tbl = dbSetting.GetDataTable(sql, false, new[] { param });
+
+                        if (tbl.Rows.Count > 0)
+                        {
+                            var isActive = tbl.Rows[0]["IsActive"] as string;
+                            throw new InvalidOperationException(
+                                "Stock item '" + item.ItemCode + "' exists but cannot be loaded for editing (IsActive=" +
+                                (isActive ?? "null") + "). It may need to be reactivated manually in AutoCount.");
+                        }
                         throw new InvalidOperationException("Stock item '" + item.ItemCode + "' not found in AutoCount.");
                     }
+
+                    // Re-activate the item if updating
+                    entity.IsActive = true;
 
                     MapDomainToItemEntity(item, entity, dbSetting, isUpdate: true);
 
