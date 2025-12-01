@@ -28,6 +28,7 @@ import { Loader2 } from "lucide-react";
 interface AddInventoryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  isRawMaterial?: boolean;
 }
 
 interface InventoryFormData {
@@ -45,7 +46,7 @@ interface InventoryFormData {
   sync_to_autocount: boolean;
 }
 
-export function AddInventoryDialog({ open, onOpenChange }: AddInventoryDialogProps) {
+export function AddInventoryDialog({ open, onOpenChange, isRawMaterial = false }: AddInventoryDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isSyncing, setIsSyncing] = useState(false);
@@ -79,7 +80,8 @@ export function AddInventoryDialog({ open, onOpenChange }: AddInventoryDialogPro
       if (open) {
         setIsLoadingCode(true);
         try {
-          const { data, error } = await supabase.rpc('get_next_item_code');
+          const rpcFunction = isRawMaterial ? 'get_next_raw_material_code' : 'get_next_item_code';
+          const { data, error } = await supabase.rpc(rpcFunction);
           
           if (error) {
             console.error('Error generating item code:', error);
@@ -103,13 +105,14 @@ export function AddInventoryDialog({ open, onOpenChange }: AddInventoryDialogPro
     };
 
     generateItemCode();
-  }, [open, setValue, toast]);
+  }, [open, setValue, toast, isRawMaterial]);
 
   const createItemMutation = useMutation({
     mutationFn: async (data: InventoryFormData) => {
-      // Create item in Supabase with autocount_item_code set to SKU
+      // Create item in appropriate table
+      const tableName = isRawMaterial ? "raw_materials" : "components";
       const { data: newItem, error: insertError } = await supabase
-        .from("components")
+        .from(tableName)
         .insert({
           sku: data.sku,
           autocount_item_code: data.sku, // Set AutoCount item code to same as SKU
@@ -129,8 +132,8 @@ export function AddInventoryDialog({ open, onOpenChange }: AddInventoryDialogPro
 
       if (insertError) throw insertError;
 
-      // Sync to AutoCount if requested
-      if (data.sync_to_autocount) {
+      // Sync to AutoCount if requested (only for components, not raw materials)
+      if (data.sync_to_autocount && !isRawMaterial) {
         setIsSyncing(true);
         
         const { data: syncResult, error: syncError } = await supabase.functions.invoke(
@@ -160,7 +163,7 @@ export function AddInventoryDialog({ open, onOpenChange }: AddInventoryDialogPro
         } else {
           // Update last_synced_at timestamp
           await supabase
-            .from("components")
+            .from(tableName)
             .update({
               last_synced_at: new Date().toISOString(),
             })
@@ -173,13 +176,16 @@ export function AddInventoryDialog({ open, onOpenChange }: AddInventoryDialogPro
       return newItem;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      const queryKey = isRawMaterial ? "raw-materials" : "inventory";
+      queryClient.invalidateQueries({ queryKey: [queryKey] });
       queryClient.invalidateQueries({ queryKey: ["item-groups"] });
       queryClient.invalidateQueries({ queryKey: ["item-types"] });
       
       toast({
         title: "Item Created",
-        description: syncToAutocount
+        description: isRawMaterial
+          ? "Raw material created successfully"
+          : syncToAutocount
           ? "Item created and synced to AutoCount successfully"
           : "Item created in inventory successfully",
       });
@@ -204,9 +210,13 @@ export function AddInventoryDialog({ open, onOpenChange }: AddInventoryDialogPro
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add New Inventory Item</DialogTitle>
+          <DialogTitle>
+            {isRawMaterial ? "Add New Raw Material" : "Add New Inventory Item"}
+          </DialogTitle>
           <DialogDescription>
-            Create a new inventory item. Optionally sync it to AutoCount.
+            {isRawMaterial
+              ? "Create a new raw material for production (local only, not synced to AutoCount)"
+              : "Create a new inventory item. Optionally sync it to AutoCount."}
           </DialogDescription>
         </DialogHeader>
 
@@ -223,7 +233,9 @@ export function AddInventoryDialog({ open, onOpenChange }: AddInventoryDialogPro
                 disabled={isLoadingCode}
               />
               <p className="text-xs text-muted-foreground">
-                Auto-generated in format TLCXXXXX
+                {isRawMaterial
+                  ? "Auto-generated in format TLC-RAW-00XXX"
+                  : "Auto-generated in format TLCXXXXX"}
               </p>
               {errors.sku && (
                 <p className="text-sm text-destructive">{errors.sku.message}</p>
@@ -353,18 +365,20 @@ export function AddInventoryDialog({ open, onOpenChange }: AddInventoryDialogPro
               </Label>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="sync_to_autocount"
-                checked={watch("sync_to_autocount")}
-                onCheckedChange={(checked) =>
-                  setValue("sync_to_autocount", checked as boolean)
-                }
-              />
-              <Label htmlFor="sync_to_autocount" className="font-normal cursor-pointer">
-                Sync to AutoCount
-              </Label>
-            </div>
+            {!isRawMaterial && (
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="sync_to_autocount"
+                  checked={watch("sync_to_autocount")}
+                  onCheckedChange={(checked) =>
+                    setValue("sync_to_autocount", checked as boolean)
+                  }
+                />
+                <Label htmlFor="sync_to_autocount" className="font-normal cursor-pointer">
+                  Sync to AutoCount
+                </Label>
+              </div>
+            )}
           </div>
 
           <DialogFooter>

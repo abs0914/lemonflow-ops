@@ -303,6 +303,7 @@ export default function RawMaterials() {
       <AddInventoryDialog
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
+        isRawMaterial={true}
       />
     </DashboardLayout>
   );
