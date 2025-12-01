@@ -173,7 +173,7 @@ export default function RawMaterials() {
           <div>
             <h1 className="text-3xl font-bold">Raw Materials Inventory</h1>
             <p className="text-muted-foreground mt-2">
-              Manage raw materials used for production and assembly
+              Local raw materials for production and BOM assembly (not synced to AutoCount)
             </p>
           </div>
           {!isMobile && (
@@ -181,10 +181,6 @@ export default function RawMaterials() {
               <Button onClick={() => setAddDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add Item
-              </Button>
-              <Button variant="outline" onClick={() => setSyncDialogOpen(true)}>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Sync from AutoCount
               </Button>
             </div>
           )}
@@ -276,19 +272,8 @@ export default function RawMaterials() {
       {isMobile && (
         <FloatingActionButton
           icon={Plus}
-          label="Quick Actions"
-          actions={[
-            {
-              icon: Plus,
-              label: "Add Item",
-              onClick: () => setAddDialogOpen(true)
-            },
-            {
-              icon: RefreshCw,
-              label: "Sync from AutoCount",
-              onClick: () => setSyncDialogOpen(true)
-            }
-          ]}
+          label="Add Item"
+          onClick={() => setAddDialogOpen(true)}
         />
       )}
 
@@ -306,12 +291,6 @@ export default function RawMaterials() {
           hasBatchNo={selectedRawMaterial.has_batch_no}
         />
       )}
-
-      <SyncInventoryDialog
-        open={syncDialogOpen}
-        onOpenChange={setSyncDialogOpen}
-        onSyncComplete={handleSyncComplete}
-      />
 
       <DeleteInventoryDialog
         open={deleteDialogOpen}

@@ -17,7 +17,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Package, AlertCircle, Database, Plus, RefreshCw } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
-import { FinishedGood } from "@/types/inventory";
+import { Component } from "@/types/inventory";
+
 export default function Inventory() {
   const {
     user,
@@ -38,7 +39,7 @@ export default function Inventory() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
-  const [selectedFinishedGood, setSelectedFinishedGood] = useState<FinishedGood | null>(null);
+  const [selectedComponent, setSelectedComponent] = useState<Component | null>(null);
 
   // Redirect if not authenticated or not authorized
   if (!user) {
@@ -50,11 +51,11 @@ export default function Inventory() {
     return null;
   }
 
-  // Fetch finished goods inventory data
-  const { data: finishedGoods, isLoading, refetch } = useQuery({
-    queryKey: ["inventory", searchTerm, itemGroupFilter, itemTypeFilter],
+  // Fetch components inventory data from AutoCount
+  const { data: components, isLoading, refetch } = useQuery({
+    queryKey: ["inventory", searchTerm, itemGroupFilter, itemTypeFilter, stockStatusFilter],
     queryFn: async () => {
-      let query = supabase.from("finished_goods").select("*").order("name");
+      let query = supabase.from("components").select("*").order("name");
 
       if (searchTerm) {
         query = query.or(`name.ilike.%${searchTerm}%,sku.ilike.%${searchTerm}%,autocount_item_code.ilike.%${searchTerm}%`);
@@ -71,16 +72,25 @@ export default function Inventory() {
       const { data, error } = await query;
       if (error) throw error;
 
-      return data || [];
+      let filteredData = data || [];
+      if (stockStatusFilter === "in-stock") {
+        filteredData = filteredData.filter(c => c.stock_quantity - c.reserved_quantity > 0);
+      } else if (stockStatusFilter === "low-stock") {
+        filteredData = filteredData.filter(c => c.stock_quantity - c.reserved_quantity > 0 && c.stock_quantity - c.reserved_quantity < 10);
+      } else if (stockStatusFilter === "out-of-stock") {
+        filteredData = filteredData.filter(c => c.stock_quantity - c.reserved_quantity <= 0);
+      }
+      
+      return filteredData;
     }
   });
 
   // Fetch unique item groups and types for filters
   const { data: itemGroups } = useQuery({
-    queryKey: ["finished-goods-groups"],
+    queryKey: ["component-groups"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("finished_goods")
+        .from("components")
         .select("item_group")
         .not("item_group", "is", null);
       if (error) throw error;
@@ -90,10 +100,10 @@ export default function Inventory() {
   });
 
   const { data: itemTypes } = useQuery({
-    queryKey: ["finished-goods-types"],
+    queryKey: ["component-types"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("finished_goods")
+        .from("components")
         .select("item_type")
         .not("item_type", "is", null);
       if (error) throw error;
@@ -103,12 +113,12 @@ export default function Inventory() {
   });
 
   // Calculate KPIs
-  const totalItems = finishedGoods?.length || 0;
-  const notSyncedCount = finishedGoods?.filter(fg => !fg.autocount_synced).length || 0;
-  const syncedCount = finishedGoods?.filter(fg => fg.autocount_synced).length || 0;
+  const totalItems = components?.length || 0;
+  const lowStockCount = components?.filter(c => c.stock_quantity - c.reserved_quantity > 0 && c.stock_quantity - c.reserved_quantity < 10).length || 0;
+  const outOfStockCount = components?.filter(c => c.stock_quantity - c.reserved_quantity <= 0).length || 0;
 
-  const handleAdjustStock = (finishedGood: FinishedGood) => {
-    setSelectedFinishedGood(finishedGood);
+  const handleAdjustStock = (component: Component) => {
+    setSelectedComponent(component);
     setAdjustmentDialogOpen(true);
   };
   const handleSyncComplete = () => {
@@ -117,106 +127,25 @@ export default function Inventory() {
     });
   };
 
-  const handleSyncToAutoCount = async () => {
-    if (!finishedGoods || finishedGoods.length === 0) {
-      toast({
-        title: "No Items",
-        description: "No finished goods to sync",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const unsyncedItems = finishedGoods.filter(fg => !fg.autocount_synced);
-    
-    if (unsyncedItems.length === 0) {
-      toast({
-        title: "All Synced",
-        description: "All finished goods are already synced to AutoCount"
-      });
-      return;
-    }
-
-    toast({
-      title: "Syncing to AutoCount",
-      description: `Syncing ${unsyncedItems.length} items to AutoCount...`
-    });
-
-    let successCount = 0;
-    let errorCount = 0;
-
-    for (const item of unsyncedItems) {
-      try {
-        const itemData = {
-          itemCode: item.autocount_item_code,
-          description: item.name,
-          itemGroup: item.item_group,
-          itemType: item.item_type,
-          baseUom: item.unit,
-          stockControl: true,
-          hasBatchNo: false,
-          standardCost: item.cost_per_unit,
-          price: item.price,
-        };
-
-        const { data: createData, error: createError } = await supabase.functions.invoke(
-          'create-autocount-item',
-          { body: itemData }
-        );
-
-        if (createError) throw createError;
-
-        if (createData?.alreadyExists === true) {
-          const { error: updateError } = await supabase.functions.invoke(
-            'update-autocount-item',
-            { body: itemData }
-          );
-          if (updateError) throw updateError;
-        }
-
-        // Mark as synced
-        await supabase
-          .from("finished_goods")
-          .update({ 
-            autocount_synced: true,
-            last_synced_at: new Date().toISOString()
-          })
-          .eq("id", item.id);
-
-        successCount++;
-      } catch (error: any) {
-        console.error(`Failed to sync ${item.sku}:`, error);
-        errorCount++;
-      }
-    }
-
-    toast({
-      title: "Sync Complete",
-      description: `Successfully synced ${successCount} items. ${errorCount > 0 ? `${errorCount} failed.` : ''}`,
-      variant: errorCount > 0 ? "destructive" : "default"
-    });
-
-    queryClient.invalidateQueries({ queryKey: ["inventory"] });
-  };
   const deleteMutation = useMutation({
-    mutationFn: async (finishedGoodId: string) => {
+    mutationFn: async (componentId: string) => {
       const { error: movementError } = await supabase
         .from("stock_movements")
         .delete()
-        .eq("item_id", finishedGoodId)
-        .eq("item_type", "finished_good");
+        .eq("item_id", componentId)
+        .eq("item_type", "component");
       if (movementError) throw movementError;
 
-      const { error: finishedGoodError } = await supabase
-        .from("finished_goods")
+      const { error: componentError } = await supabase
+        .from("components")
         .delete()
-        .eq("id", finishedGoodId);
-      if (finishedGoodError) throw finishedGoodError;
+        .eq("id", componentId);
+      if (componentError) throw componentError;
     },
     onSuccess: () => {
       toast({
         title: "Item Deleted",
-        description: "Successfully deleted the finished good"
+        description: "Successfully deleted the component"
       });
       setDeleteDialogOpen(false);
       setItemToDelete(null);
@@ -245,16 +174,20 @@ export default function Inventory() {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between px-[30px] py-[21px]">
           <div>
-            <h1 className="text-3xl font-bold">Finished Goods Inventory</h1>
+            <h1 className="text-3xl font-bold">AutoCount Inventory</h1>
             <p className="text-muted-foreground mt-2">
-              Manage finished goods ready for AutoCount synchronization
+              View and manage inventory synced from AutoCount
             </p>
           </div>
           {!isMobile && (
             <div className="flex gap-2">
-              <Button onClick={handleSyncToAutoCount}>
+              <Button onClick={() => setAddDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Item
+              </Button>
+              <Button variant="outline" onClick={() => setSyncDialogOpen(true)}>
                 <RefreshCw className="mr-2 h-4 w-4" />
-                Sync to AutoCount
+                Pull from AutoCount
               </Button>
             </div>
           )}
@@ -275,23 +208,23 @@ export default function Inventory() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Not Synced</CardTitle>
+              <CardTitle className="text-sm font-medium">Low Stock</CardTitle>
               <AlertCircle className="h-4 w-4 text-yellow-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{notSyncedCount}</div>
-              <p className="text-xs text-muted-foreground">Pending AutoCount sync</p>
+              <div className="text-2xl font-bold">{lowStockCount}</div>
+              <p className="text-xs text-muted-foreground">Items below threshold</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Synced</CardTitle>
-              <Database className="h-4 w-4 text-green-500" />
+              <CardTitle className="text-sm font-medium">Out of Stock</CardTitle>
+              <Database className="h-4 w-4 text-red-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{syncedCount}</div>
-              <p className="text-xs text-muted-foreground">Synced to AutoCount</p>
+              <div className="text-2xl font-bold">{outOfStockCount}</div>
+              <p className="text-xs text-muted-foreground">Items unavailable</p>
             </CardContent>
           </Card>
         </div>
@@ -304,8 +237,8 @@ export default function Inventory() {
           onItemGroupChange={setItemGroupFilter}
           itemTypeFilter={itemTypeFilter}
           onItemTypeChange={setItemTypeFilter}
-          stockStatusFilter="all"
-          onStockStatusChange={() => {}}
+          stockStatusFilter={stockStatusFilter}
+          onStockStatusChange={setStockStatusFilter}
           itemGroups={itemGroups || []}
           itemTypes={itemTypes || []}
         />
@@ -317,24 +250,24 @@ export default function Inventory() {
               <div className="flex items-center justify-center p-8">
                 <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
-            ) : finishedGoods && finishedGoods.length > 0 ? (
-              finishedGoods.map(fg => (
+            ) : components && components.length > 0 ? (
+              components.map(component => (
                 <MobileInventoryCard
-                  key={fg.id}
-                  component={fg as any}
+                  key={component.id}
+                  component={component as any}
                   onAdjustStock={handleAdjustStock as any}
                   onDelete={handleDeleteClick}
                 />
               ))
             ) : (
               <div className="text-center p-8 text-muted-foreground">
-                No finished goods found
+                No inventory items found
               </div>
             )}
           </div>
         ) : (
           <InventoryTable
-            components={finishedGoods as any || []}
+            components={components as any || []}
             isLoading={isLoading}
             onRefetch={refetch}
             onAdjustStock={handleAdjustStock as any}
@@ -345,32 +278,48 @@ export default function Inventory() {
       {/* Mobile FAB */}
       {isMobile && (
         <FloatingActionButton
-          icon={RefreshCw}
+          icon={Plus}
           label="Quick Actions"
           actions={[
             {
+              icon: Plus,
+              label: "Add Item",
+              onClick: () => setAddDialogOpen(true)
+            },
+            {
               icon: RefreshCw,
-              label: "Sync to AutoCount",
-              onClick: handleSyncToAutoCount
+              label: "Pull from AutoCount",
+              onClick: () => setSyncDialogOpen(true)
             }
           ]}
         />
       )}
 
       {/* Stock Adjustment Dialog */}
-      {selectedFinishedGood && (
+      {selectedComponent && (
         <StockAdjustmentDialog
           open={adjustmentDialogOpen}
           onOpenChange={setAdjustmentDialogOpen}
-          itemType="finished_good"
-          itemId={selectedFinishedGood.id}
-          itemName={selectedFinishedGood.name}
-          itemSku={selectedFinishedGood.autocount_item_code}
-          currentStock={selectedFinishedGood.stock_quantity}
-          itemUnit={selectedFinishedGood.unit}
-          hasBatchNo={false}
+          itemType="component"
+          itemId={selectedComponent.id}
+          itemName={selectedComponent.name}
+          itemSku={selectedComponent.autocount_item_code || selectedComponent.sku}
+          currentStock={selectedComponent.stock_quantity}
+          itemUnit={selectedComponent.unit}
+          hasBatchNo={selectedComponent.has_batch_no}
         />
       )}
+
+      <SyncInventoryDialog
+        open={syncDialogOpen}
+        onOpenChange={setSyncDialogOpen}
+        onSyncComplete={handleSyncComplete}
+      />
+
+      <AddInventoryDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+      />
 
       <DeleteInventoryDialog
         open={deleteDialogOpen}
