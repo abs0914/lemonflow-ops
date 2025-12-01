@@ -63,17 +63,37 @@ export function LogProductionDialog({
     },
   });
 
-  // Fetch finished goods (components)
-  const { data: components } = useQuery({
-    queryKey: ["components-for-production"],
+  // Fetch products that have BOMs
+  const { data: products } = useQuery({
+    queryKey: ["products-with-bom"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("components")
-        .select("id, name, sku")
+      // First get all product IDs that have BOM items
+      const { data: bomProducts, error: bomError } = await supabase
+        .from("bom_items")
+        .select("product_id");
+
+      if (bomError) throw bomError;
+
+      const productIds = [...new Set(bomProducts?.map(b => b.product_id) || [])];
+
+      if (productIds.length === 0) return [];
+
+      // Then fetch those products with their component details
+      const { data: productData, error: productError } = await supabase
+        .from("products")
+        .select(`
+          id,
+          name,
+          sku,
+          component_id,
+          components(id, name, sku)
+        `)
+        .in("id", productIds)
         .order("name");
 
-      if (error) throw error;
-      return data;
+      if (productError) throw productError;
+
+      return productData;
     },
   });
 
@@ -115,11 +135,20 @@ export function LogProductionDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {components?.map((component) => (
-                        <SelectItem key={component.id} value={component.id}>
-                          {component.name} ({component.sku})
-                        </SelectItem>
-                      ))}
+                      {products?.length === 0 ? (
+                        <div className="p-2 text-sm text-muted-foreground text-center">
+                          No products with BOM found
+                        </div>
+                      ) : (
+                        products?.map((product) => (
+                          <SelectItem 
+                            key={product.id} 
+                            value={product.component_id || product.id}
+                          >
+                            {product.name} ({product.sku})
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
