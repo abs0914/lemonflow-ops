@@ -20,10 +20,10 @@ interface BomEditorProps {
 
 interface BomItem {
   id: string;
-  component_id: string;
+  raw_material_id: string;
   quantity: number;
   notes: string | null;
-  components: {
+  raw_materials: {
     name: string;
     sku: string;
     unit: string;
@@ -31,7 +31,7 @@ interface BomItem {
   };
 }
 
-interface Component {
+interface RawMaterial {
   id: string;
   name: string;
   sku: string;
@@ -40,7 +40,7 @@ interface Component {
 }
 
 export function BomEditor({ productId, productName }: BomEditorProps) {
-  const [selectedComponentId, setSelectedComponentId] = useState("");
+  const [selectedRawMaterialId, setSelectedRawMaterialId] = useState("");
   const [quantity, setQuantity] = useState("");
   const [notes, setNotes] = useState("");
   const [open, setOpen] = useState(false);
@@ -53,7 +53,7 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
       if (!productId) return [];
       const { data, error } = await supabase
         .from("bom_items")
-        .select("*, components(*)")
+        .select("*, raw_materials(*)")
         .eq("product_id", productId);
       
       if (error) throw error;
@@ -62,26 +62,26 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
     enabled: !!productId,
   });
 
-  const { data: components = [] } = useQuery({
-    queryKey: ["components"],
+  const { data: rawMaterials = [] } = useQuery({
+    queryKey: ["raw-materials"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("components")
+        .from("raw_materials")
         .select("*")
         .order("name");
       
       if (error) throw error;
-      return data as Component[];
+      return data as RawMaterial[];
     },
   });
 
   const addMutation = useMutation({
     mutationFn: async () => {
-      if (!productId || !selectedComponentId || !quantity) return;
+      if (!productId || !selectedRawMaterialId || !quantity) return;
       
       const { error } = await supabase.from("bom_items").insert([{
         product_id: productId,
-        component_id: selectedComponentId,
+        raw_material_id: selectedRawMaterialId,
         quantity: parseFloat(quantity),
         notes: notes || null,
       }]);
@@ -90,14 +90,14 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bom-items", productId] });
-      toast({ title: "Component added to BOM" });
-      setSelectedComponentId("");
+      toast({ title: "Raw material added to BOM" });
+      setSelectedRawMaterialId("");
       setQuantity("");
       setNotes("");
     },
     onError: (error: Error) => {
       toast({
-        title: "Error adding component",
+        title: "Error adding raw material",
         description: error.message,
         variant: "destructive",
       });
@@ -111,11 +111,11 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bom-items", productId] });
-      toast({ title: "Component removed from BOM" });
+      toast({ title: "Raw material removed from BOM" });
     },
     onError: (error: Error) => {
       toast({
-        title: "Error removing component",
+        title: "Error removing raw material",
         description: error.message,
         variant: "destructive",
       });
@@ -123,7 +123,7 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
   });
 
   const totalCost = bomItems.reduce((sum, item) => {
-    const cost = item.components.cost_per_unit || 0;
+    const cost = item.raw_materials.cost_per_unit || 0;
     return sum + (cost * item.quantity);
   }, 0);
 
@@ -144,10 +144,10 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="border rounded-md p-4 space-y-4">
-          <h3 className="font-semibold">Add Component</h3>
+          <h3 className="font-semibold">Add Raw Material</h3>
           <div className="grid gap-4">
             <div>
-              <Label>Component</Label>
+              <Label>Raw Material</Label>
               <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -156,10 +156,10 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
                     aria-expanded={open}
                     className="w-full justify-between"
                   >
-                    {selectedComponentId
-                      ? components.find((comp) => comp.id === selectedComponentId)?.sku + " - " + 
-                        components.find((comp) => comp.id === selectedComponentId)?.name
-                      : "Select component..."}
+                    {selectedRawMaterialId
+                      ? rawMaterials.find((rm) => rm.id === selectedRawMaterialId)?.sku + " - " + 
+                        rawMaterials.find((rm) => rm.id === selectedRawMaterialId)?.name
+                      : "Select raw material..."}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
@@ -167,27 +167,27 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
                   <Command>
                     <CommandInput placeholder="Search by SKU or name..." />
                     <CommandList>
-                      <CommandEmpty>No component found.</CommandEmpty>
+                      <CommandEmpty>No raw material found.</CommandEmpty>
                       <CommandGroup>
-                        {components.map((comp) => (
+                        {rawMaterials.map((rm) => (
                           <CommandItem
-                            key={comp.id}
-                            value={`${comp.sku} ${comp.name} ${comp.id}`}
+                            key={rm.id}
+                            value={`${rm.sku} ${rm.name} ${rm.id}`}
                             onSelect={() => {
-                              setSelectedComponentId(comp.id);
+                              setSelectedRawMaterialId(rm.id);
                               setOpen(false);
                             }}
                           >
                             <Check
                               className={cn(
                                 "mr-2 h-4 w-4",
-                                selectedComponentId === comp.id ? "opacity-100" : "opacity-0"
+                                selectedRawMaterialId === rm.id ? "opacity-100" : "opacity-0"
                               )}
                             />
                             <div className="flex flex-col">
-                              <span className="font-medium">{comp.sku} - {comp.name}</span>
+                              <span className="font-medium">{rm.sku} - {rm.name}</span>
                               <span className="text-xs text-muted-foreground">
-                                Unit: {comp.unit} {comp.cost_per_unit && `• Cost: RM ${comp.cost_per_unit}`}
+                                Unit: {rm.unit} {rm.cost_per_unit && `• Cost: RM ${rm.cost_per_unit}`}
                               </span>
                             </div>
                           </CommandItem>
@@ -221,7 +221,7 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
 
             <Button
               onClick={() => addMutation.mutate()}
-              disabled={!selectedComponentId || !quantity || addMutation.isPending}
+              disabled={!selectedRawMaterialId || !quantity || addMutation.isPending}
             >
               <Plus className="h-4 w-4 mr-2" />
               Add to BOM
@@ -234,7 +234,7 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
             <TableHeader>
               <TableRow>
                 <TableHead>SKU</TableHead>
-                <TableHead>Component</TableHead>
+                <TableHead>Raw Material</TableHead>
                 <TableHead>Quantity</TableHead>
                 <TableHead>Unit</TableHead>
                 <TableHead>Cost/Unit</TableHead>
@@ -246,26 +246,26 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
               {bomItems.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-muted-foreground">
-                    No components in BOM
+                    No raw materials in BOM
                   </TableCell>
                 </TableRow>
               ) : (
                 <>
                   {bomItems.map((item) => {
-                    const itemCost = (item.components.cost_per_unit || 0) * item.quantity;
+                    const itemCost = (item.raw_materials.cost_per_unit || 0) * item.quantity;
                     return (
                       <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.components.sku}</TableCell>
-                        <TableCell>{item.components.name}</TableCell>
+                        <TableCell className="font-medium">{item.raw_materials.sku}</TableCell>
+                        <TableCell>{item.raw_materials.name}</TableCell>
                         <TableCell>{item.quantity}</TableCell>
-                        <TableCell>{item.components.unit}</TableCell>
+                        <TableCell>{item.raw_materials.unit}</TableCell>
                         <TableCell>
-                          {item.components.cost_per_unit 
-                            ? formatCurrency(item.components.cost_per_unit)
+                          {item.raw_materials.cost_per_unit 
+                            ? formatCurrency(item.raw_materials.cost_per_unit)
                             : "-"}
                         </TableCell>
                         <TableCell>
-                          {item.components.cost_per_unit 
+                          {item.raw_materials.cost_per_unit 
                             ? formatCurrency(itemCost)
                             : "-"}
                         </TableCell>
@@ -274,7 +274,7 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
                             variant="ghost"
                             size="icon"
                             onClick={() => {
-                              if (confirm("Remove this component from BOM?")) {
+                              if (confirm("Remove this raw material from BOM?")) {
                                 deleteMutation.mutate(item.id);
                               }
                             }}
