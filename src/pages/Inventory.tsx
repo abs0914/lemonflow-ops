@@ -136,6 +136,72 @@ export default function Inventory() {
       queryKey: ["inventory"]
     });
   };
+
+  const handleSyncToAutoCount = async () => {
+    if (!components || components.length === 0) {
+      toast({
+        title: "No Items",
+        description: "No inventory items to sync",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    toast({
+      title: "Syncing to AutoCount",
+      description: `Syncing ${components.length} items to AutoCount...`
+    });
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const component of components) {
+      try {
+        const itemCode = component.autocount_item_code || component.sku;
+        
+        const itemData = {
+          itemCode,
+          description: component.name,
+          itemGroup: component.item_group,
+          itemType: component.item_type,
+          baseUom: component.unit,
+          stockControl: component.stock_control,
+          hasBatchNo: component.has_batch_no,
+          standardCost: component.cost_per_unit,
+          price: component.price,
+        };
+
+        // Try to create the item first
+        const { data: createData, error: createError } = await supabase.functions.invoke(
+          'create-autocount-item',
+          { body: itemData }
+        );
+
+        if (createError) throw createError;
+
+        // If item already exists, update it
+        if (createData?.alreadyExists === true) {
+          const { error: updateError } = await supabase.functions.invoke(
+            'update-autocount-item',
+            { body: itemData }
+          );
+
+          if (updateError) throw updateError;
+        }
+
+        successCount++;
+      } catch (error: any) {
+        console.error(`Failed to sync ${component.sku}:`, error);
+        errorCount++;
+      }
+    }
+
+    toast({
+      title: "Sync Complete",
+      description: `Successfully synced ${successCount} items. ${errorCount > 0 ? `${errorCount} failed.` : ''}`,
+      variant: errorCount > 0 ? "destructive" : "default"
+    });
+  };
   const deleteMutation = useMutation({
     mutationFn: async (componentId: string) => {
       // First, get the component to find its AutoCount item code
@@ -226,6 +292,10 @@ export default function Inventory() {
               <Button variant="outline" onClick={() => setSyncDialogOpen(true)}>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Sync from AutoCount
+              </Button>
+              <Button variant="outline" onClick={handleSyncToAutoCount}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Sync to AutoCount
               </Button>
             </div>}
         </div>

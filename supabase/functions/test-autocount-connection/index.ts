@@ -48,8 +48,7 @@ Deno.serve(async (req) => {
     const testResponse = await fetch(`${apiUrl}/autocount/test-connection`, {
       method: 'GET',
       headers: {
-        // Backend returns PascalCase: AccessToken
-        'Authorization': `Bearer ${authData.AccessToken}`,
+        'Authorization': `Bearer ${authData.accessToken}`,
         'Content-Type': 'application/json',
       },
     });
