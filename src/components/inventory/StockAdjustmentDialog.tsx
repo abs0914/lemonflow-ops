@@ -62,7 +62,7 @@ export function StockAdjustmentDialog({
       reason: "Stock Count",
       location: "MAIN",
       batch_number: "",
-      sync_to_autocount: true,
+      sync_to_autocount: itemType !== "raw_material",
     },
   });
 
@@ -78,10 +78,10 @@ export function StockAdjustmentDialog({
         reason: "Stock Count",
         location: "MAIN",
         batch_number: "",
-        sync_to_autocount: true,
+        sync_to_autocount: itemType !== "raw_material",
       });
     }
-  }, [open, reset]);
+  }, [open, reset, itemType]);
 
   const mutation = useMutation({
     mutationFn: async (data: StockAdjustmentFormData) => {
@@ -167,6 +167,7 @@ export function StockAdjustmentDialog({
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["components"] });
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["raw-materials"] });
       queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
       toast({ 
         title: "Stock updated successfully",
@@ -283,18 +284,20 @@ export function StockAdjustmentDialog({
         />
       </div>
 
-      <div className="flex items-center space-x-2 pt-2">
-        <Checkbox
-          id="sync_to_autocount"
-          checked={watch("sync_to_autocount")}
-          onCheckedChange={(checked) =>
-            setValue("sync_to_autocount", checked as boolean)
-          }
-        />
-        <Label htmlFor="sync_to_autocount" className="font-normal cursor-pointer">
-          Sync to AutoCount
-        </Label>
-      </div>
+      {itemType !== "raw_material" && (
+        <div className="flex items-center space-x-2 pt-2">
+          <Checkbox
+            id="sync_to_autocount"
+            checked={watch("sync_to_autocount")}
+            onCheckedChange={(checked) =>
+              setValue("sync_to_autocount", checked as boolean)
+            }
+          />
+          <Label htmlFor="sync_to_autocount" className="font-normal cursor-pointer">
+            Sync to AutoCount
+          </Label>
+        </div>
+      )}
 
       <div className="flex justify-end gap-2">
         <Button 
