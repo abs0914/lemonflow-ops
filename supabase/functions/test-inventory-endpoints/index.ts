@@ -21,12 +21,12 @@ Deno.serve(async (req) => {
       throw new Error('Missing LemonCo API credentials');
     }
 
-    // Authenticate
+    // Authenticate using /api/auth/login with email
     console.log('[test-inventory-endpoints] Authenticating');
-    const authResponse = await fetch(`${apiUrl}/auth/login`, {
+    const authResponse = await fetch(`${apiUrl}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ email: username, password }),
     });
 
     if (!authResponse.ok) {
@@ -50,12 +50,13 @@ Deno.serve(async (req) => {
 
     for (const endpoint of endpointsToTest) {
       console.log(`[test-inventory-endpoints] Testing: ${endpoint}`);
-      
+
       try {
         const response = await fetch(`${apiUrl}${endpoint}`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${authData.token}`,
+            // Backend returns PascalCase: AccessToken
+            'Authorization': `Bearer ${authData.AccessToken}`,
             'Content-Type': 'application/json',
           },
         });

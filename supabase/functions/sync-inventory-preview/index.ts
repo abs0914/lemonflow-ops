@@ -47,53 +47,44 @@ Deno.serve(async (req) => {
       throw new Error('Missing LemonCo API credentials');
     }
 
-    // Authenticate
-    console.log('[sync-inventory-preview] Authenticating');
-    const authResponse = await fetch(`${apiUrl}/auth/login`, {
+    // Authenticate using /api/auth/login with email
+    console.log('[sync-inventory-preview] Authenticating to', apiUrl);
+
+    const authResponse = await fetch(`${apiUrl}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ email: username, password }),
     });
 
     if (!authResponse.ok) {
-      throw new Error(`Authentication failed: ${authResponse.status}`);
+      const authError = await authResponse.text();
+      console.error('[sync-inventory-preview] Auth error:', authError);
+      throw new Error(`Authentication failed: ${authResponse.status} - ${authError}`);
     }
 
     const authData = await authResponse.json();
 
     // Get AutoCount stock items
-    // Try with limit parameter in case API uses pagination
     const itemsUrl = `${apiUrl}/autocount/items?limit=1000`;
     console.log('[sync-inventory-preview] Fetching AutoCount stock items');
-    console.log('[sync-inventory-preview] API URL:', apiUrl);
-    console.log('[sync-inventory-preview] Full URL:', itemsUrl);
-    console.log('[sync-inventory-preview] Token present:', !!authData.token);
-    
+
     const acResponse = await fetch(itemsUrl, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${authData.token}`,
+        // Backend returns PascalCase: AccessToken
+        'Authorization': `Bearer ${authData.AccessToken}`,
         'Content-Type': 'application/json',
       },
     });
 
-    console.log('[sync-inventory-preview] Response status:', acResponse.status);
-    console.log('[sync-inventory-preview] Response headers:', JSON.stringify([...acResponse.headers]));
-
     if (!acResponse.ok) {
       const errorText = await acResponse.text();
-      console.error('[sync-inventory-preview] API Error Response:', errorText);
-      console.error('[sync-inventory-preview] Full error details:', {
-        status: acResponse.status,
-        statusText: acResponse.statusText,
-        url: `${apiUrl}/autocount/items`,
-      });
+      console.error('[sync-inventory-preview] API Error:', errorText);
       throw new Error(`Failed to fetch AutoCount stock items: ${acResponse.status} - ${errorText}`);
     }
 
     const responseData = await acResponse.json();
-    console.log('[sync-inventory-preview] Raw API response:', JSON.stringify(responseData));
-    
+
     // Handle different response structures
     let autoCountItems: AutoCountStockItem[] = [];
     if (Array.isArray(responseData)) {
@@ -103,7 +94,7 @@ Deno.serve(async (req) => {
     } else if (responseData.data && Array.isArray(responseData.data)) {
       autoCountItems = responseData.data;
     }
-    
+
     console.log(`[sync-inventory-preview] Found ${autoCountItems.length} AutoCount items`);
 
     // Get local components

@@ -39,12 +39,12 @@ Deno.serve(async (req) => {
       // No body provided, use defaults
     }
 
-    // Authenticate with AutoCount API
+    // Authenticate with AutoCount API using /api/auth/login with email
     console.log('[push-supplier-to-autocount] Authenticating');
-    const authResponse = await fetch(`${apiUrl}/auth/login`, {
+    const authResponse = await fetch(`${apiUrl}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ email: username, password }),
     });
 
     if (!authResponse.ok) {
@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
 
     // Fetch suppliers to push
     let query = supabaseClient.from('suppliers').select('*');
-    
+
     if (requestBody.supplierIds && requestBody.supplierIds.length > 0) {
       query = query.in('id', requestBody.supplierIds);
     } else if (!requestBody.forceUpdate) {
@@ -81,7 +81,8 @@ Deno.serve(async (req) => {
     const acSuppliersResponse = await fetch(`${apiUrl}/autocount/suppliers`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${authData.token}`,
+        // Backend returns PascalCase: AccessToken
+        'Authorization': `Bearer ${authData.AccessToken}`,
         'Content-Type': 'application/json',
       },
     });
@@ -114,7 +115,8 @@ Deno.serve(async (req) => {
             response = await fetch(`${apiUrl}/autocount/suppliers/${encodeURIComponent(supplier.supplier_code)}`, {
               method: 'PUT',
               headers: {
-                'Authorization': `Bearer ${authData.token}`,
+                // Backend returns PascalCase: AccessToken
+                'Authorization': `Bearer ${authData.AccessToken}`,
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify(supplierPayload),
@@ -138,7 +140,8 @@ Deno.serve(async (req) => {
           response = await fetch(`${apiUrl}/autocount/suppliers`, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${authData.token}`,
+              // Backend returns PascalCase: AccessToken
+              'Authorization': `Bearer ${authData.AccessToken}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(supplierPayload),

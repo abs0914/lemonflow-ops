@@ -39,7 +39,6 @@ export default function Inventory() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [selectedComponent, setSelectedComponent] = useState<Component | null>(null);
-  const [isSyncingToAutoCount, setIsSyncingToAutoCount] = useState(false);
 
   // Redirect if not authenticated or not authorized
   if (!user) {
@@ -139,34 +138,44 @@ export default function Inventory() {
   };
   const deleteMutation = useMutation({
     mutationFn: async (componentId: string) => {
-      // Get component details for AutoCount sync
-      const { data: component } = await supabase
+      // First, get the component to find its AutoCount item code
+      const { data: component, error: fetchError } = await supabase
         .from("components")
-        .select("*")
+        .select("autocount_item_code, sku")
         .eq("id", componentId)
         .single();
 
-      if (!component) throw new Error("Component not found");
+      if (fetchError) throw fetchError;
 
-      // Sync deletion to AutoCount first
-      const { error: syncError } = await supabase.functions.invoke('delete-autocount-item', {
-        body: {
-          itemCode: component.autocount_item_code || component.sku,
-        },
-      });
+      const itemCode = component?.autocount_item_code || component?.sku;
 
-      if (syncError) {
-        console.error("Failed to sync deletion to AutoCount:", syncError);
-        // Continue with local deletion even if AutoCount sync fails
+      // Delete from AutoCount if we have an item code
+      if (itemCode) {
+        try {
+          const { data: deleteResult, error: deleteError } = await supabase.functions.invoke(
+            'delete-autocount-item',
+            { body: { itemCode } }
+          );
+
+          if (deleteError) {
+            console.error('AutoCount delete error:', deleteError);
+            // Continue with local delete even if AutoCount delete fails
+          } else {
+            console.log('AutoCount delete result:', deleteResult);
+          }
+        } catch (acError) {
+          console.error('Failed to delete from AutoCount:', acError);
+          // Continue with local delete even if AutoCount delete fails
+        }
       }
 
-      // Delete associated stock movements
+      // Delete associated stock movements first
       const {
         error: movementError
       } = await supabase.from("stock_movements").delete().eq("item_id", componentId).eq("item_type", "component");
       if (movementError) throw movementError;
 
-      // Delete component from local database
+      // Delete component from Supabase
       const {
         error: componentError
       } = await supabase.from("components").delete().eq("id", componentId);
@@ -175,7 +184,7 @@ export default function Inventory() {
     onSuccess: () => {
       toast({
         title: "Item Deleted",
-        description: "Successfully deleted the inventory item"
+        description: "Successfully deleted the inventory item from both local database and AutoCount"
       });
       setDeleteDialogOpen(false);
       setItemToDelete(null);
@@ -200,84 +209,6 @@ export default function Inventory() {
       deleteMutation.mutate(itemToDelete);
     }
   };
-
-  const handleSyncToAutoCount = async () => {
-    setIsSyncingToAutoCount(true);
-    try {
-      // Get all components that need to be synced
-      const { data: localComponents, error } = await supabase
-        .from("components")
-        .select("*");
-
-      if (error) throw error;
-
-      let successCount = 0;
-      let errorCount = 0;
-      let skippedCount = 0;
-
-      // Sync each component to AutoCount
-      for (const component of localComponents || []) {
-        try {
-          const itemPayload = {
-            itemCode: component.autocount_item_code || component.sku,
-            description: component.name,
-            itemGroup: component.item_group || '',
-            itemType: component.item_type || 'CONSUMABLE',
-            baseUom: component.unit,
-            stockControl: component.stock_control,
-            hasBatchNo: component.has_batch_no,
-            standardCost: component.cost_per_unit || 0,
-            price: component.price || 0,
-          };
-
-          // Try to create the item first
-          const { data: createData, error: createError } = await supabase.functions.invoke('create-autocount-item', {
-            body: itemPayload,
-          });
-
-          // Check if item already exists using the alreadyExists flag
-          const is409 = createData?.alreadyExists === true;
-          
-          if (is409) {
-            console.log(`Item ${component.sku} already exists, attempting update...`);
-            
-            const { error: updateError } = await supabase.functions.invoke('update-autocount-item', {
-              body: itemPayload,
-            });
-
-            if (updateError) {
-              console.error(`Failed to update ${component.sku}:`, updateError);
-              errorCount++;
-            } else {
-              successCount++;
-            }
-          } else if (createError) {
-            console.error(`Failed to sync ${component.sku}:`, createError);
-            errorCount++;
-          } else {
-            successCount++;
-          }
-        } catch (err) {
-          console.error(`Error syncing ${component.sku}:`, err);
-          errorCount++;
-        }
-      }
-
-      toast({
-        title: "Sync Complete",
-        description: `Synced ${successCount} items to AutoCount${errorCount > 0 ? ` (${errorCount} errors)` : ''}`,
-        variant: errorCount > 0 ? "destructive" : "default",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Sync Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsSyncingToAutoCount(false);
-    }
-  };
   return <DashboardLayout>
       <div className="space-y-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between px-[30px] py-[21px]">
@@ -295,14 +226,6 @@ export default function Inventory() {
               <Button variant="outline" onClick={() => setSyncDialogOpen(true)}>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Sync from AutoCount
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={handleSyncToAutoCount}
-                disabled={isSyncingToAutoCount}
-              >
-                <Database className="mr-2 h-4 w-4" />
-                {isSyncingToAutoCount ? "Syncing..." : "Sync to AutoCount"}
               </Button>
             </div>}
         </div>
@@ -365,10 +288,6 @@ export default function Inventory() {
       icon: RefreshCw,
       label: "Sync from AutoCount",
       onClick: () => setSyncDialogOpen(true)
-    }, {
-      icon: Database,
-      label: isSyncingToAutoCount ? "Syncing..." : "Sync to AutoCount",
-      onClick: handleSyncToAutoCount
     }]} />}
 
       {/* Stock Adjustment Dialog */}

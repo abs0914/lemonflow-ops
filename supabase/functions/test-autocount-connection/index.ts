@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 interface LemonCoAuthResponse {
-  token: string;
+  accessToken: string;
   expiresAt: string;
 }
 
@@ -26,12 +26,12 @@ Deno.serve(async (req) => {
       throw new Error('Missing LemonCo API credentials');
     }
 
-    // Step 1: Authenticate with LemonCo API
+    // Step 1: Authenticate with LemonCo API using /api/auth/login with email
     console.log('[test-autocount-connection] Authenticating with LemonCo API');
-    const authResponse = await fetch(`${apiUrl}/auth/login`, {
+    const authResponse = await fetch(`${apiUrl}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ email: username, password }),
     });
 
     if (!authResponse.ok) {
@@ -48,7 +48,8 @@ Deno.serve(async (req) => {
     const testResponse = await fetch(`${apiUrl}/autocount/test-connection`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${authData.token}`,
+        // Backend returns PascalCase: AccessToken
+        'Authorization': `Bearer ${authData.AccessToken}`,
         'Content-Type': 'application/json',
       },
     });

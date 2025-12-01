@@ -55,12 +55,12 @@ Deno.serve(async (req) => {
       throw new Error("AutoCount configuration is incomplete. Please check LEMONCO_API_URL, LEMONCO_USERNAME, and LEMONCO_PASSWORD secrets.");
     }
 
-    // Authenticate to get Bearer token
+    // Authenticate to get Bearer token using /api/auth/login with email
     console.log("Authenticating with AutoCount API");
-    const authResponse = await fetch(`${apiUrl}/auth/login`, {
+    const authResponse = await fetch(`${apiUrl}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ email: username, password }),
     });
 
     if (!authResponse.ok) {
@@ -72,24 +72,25 @@ Deno.serve(async (req) => {
 
     // Create stock adjustment in AutoCount
     const adjustmentPayload = {
-      ItemCode: requestData.itemCode,
-      Location: requestData.location,
-      AdjustmentType: requestData.adjustmentType,
-      Quantity: requestData.quantity,
-      UOM: requestData.uom,
-      Description: requestData.description,
-      BatchNumber: requestData.batchNumber || null,
-      Reason: requestData.reason || "Manual Adjustment",
-      DocDate: new Date().toISOString().split('T')[0],
+      itemCode: requestData.itemCode,
+      location: requestData.location,
+      adjustmentType: requestData.adjustmentType,
+      quantity: requestData.quantity,
+      uom: requestData.uom,
+      description: requestData.description,
+      batchNumber: requestData.batchNumber || null,
+      reason: requestData.reason || "Manual Adjustment",
+      docDate: new Date().toISOString().split('T')[0],
     };
 
     console.log("Calling AutoCount API for stock adjustment:", adjustmentPayload);
 
-    const response = await fetch(`${apiUrl}/stock-adjustments`, {
+    const response = await fetch(`${apiUrl}/autocount/stock-adjustments`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${authData.token}`,
+        // Backend returns PascalCase: AccessToken
+        Authorization: `Bearer ${authData.AccessToken}`,
       },
       body: JSON.stringify(adjustmentPayload),
     });

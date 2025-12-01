@@ -39,12 +39,12 @@ Deno.serve(async (req) => {
       // No body provided, use defaults
     }
 
-    // Authenticate with AutoCount API
+    // Authenticate with AutoCount API using /api/auth/login with email
     console.log('[push-stock-to-autocount] Authenticating');
-    const authResponse = await fetch(`${apiUrl}/auth/login`, {
+    const authResponse = await fetch(`${apiUrl}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ email: username, password }),
     });
 
     if (!authResponse.ok) {
@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
 
     // Fetch components to push
     let query = supabaseClient.from('components').select('*');
-    
+
     if (requestBody.componentIds && requestBody.componentIds.length > 0) {
       query = query.in('id', requestBody.componentIds);
     } else if (!requestBody.forceUpdate) {
@@ -80,10 +80,11 @@ Deno.serve(async (req) => {
     for (const component of components || []) {
       try {
         // Check if item already exists in AutoCount
-        const checkResponse = await fetch(`${apiUrl}/items/${encodeURIComponent(component.sku)}`, {
+        const checkResponse = await fetch(`${apiUrl}/autocount/items/${encodeURIComponent(component.sku)}`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${authData.token}`,
+            // Backend returns PascalCase: AccessToken
+            'Authorization': `Bearer ${authData.AccessToken}`,
             'Content-Type': 'application/json',
           },
         });
@@ -106,20 +107,22 @@ Deno.serve(async (req) => {
         let response: Response;
         if (itemExists && requestBody.forceUpdate) {
           // Update existing item
-          response = await fetch(`${apiUrl}/api/stock/update-item`, {
+          response = await fetch(`${apiUrl}/autocount/items`, {
             method: 'PUT',
             headers: {
-              'Authorization': `Basic ${btoa(`${username}:${password}`)}`,
+              // Backend returns PascalCase: AccessToken
+              'Authorization': `Bearer ${authData.AccessToken}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(itemPayload),
           });
         } else if (!itemExists) {
           // Create new item
-          response = await fetch(`${apiUrl}/items`, {
+          response = await fetch(`${apiUrl}/autocount/items`, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${authData.token}`,
+              // Backend returns PascalCase: AccessToken
+              'Authorization': `Bearer ${authData.AccessToken}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(itemPayload),

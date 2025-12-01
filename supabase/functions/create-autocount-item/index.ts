@@ -42,12 +42,12 @@ Deno.serve(async (req) => {
       throw new Error('Item code and description are required');
     }
 
-    // Authenticate
+    // Authenticate using /api/auth/login with email
     console.log('[create-autocount-item] Authenticating');
-    const authResponse = await fetch(`${apiUrl}/auth/login`, {
+    const authResponse = await fetch(`${apiUrl}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ email: username, password }),
     });
 
     if (!authResponse.ok) {
@@ -78,7 +78,8 @@ Deno.serve(async (req) => {
     const createResponse = await fetch(`${apiUrl}/autocount/items`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${authData.token}`,
+        // Backend returns PascalCase: AccessToken
+        'Authorization': `Bearer ${authData.AccessToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(itemPayload),
