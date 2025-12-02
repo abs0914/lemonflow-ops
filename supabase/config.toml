@@ -1,5 +1,11 @@
 project_id = "pukezienbcenozlqmunf"
 
+[functions.pull-po-from-autocount]
+verify_jwt = false
+
+[functions.pull-po-execute]
+verify_jwt = false
+
 [functions.setup-demo-users]
 verify_jwt = false
 

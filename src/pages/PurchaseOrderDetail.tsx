@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Edit, Trash2, FileText, CheckCircle, X, Upload, PackageCheck } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, FileText, CheckCircle, X, Upload, PackageCheck, Printer } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +16,8 @@ import { dateFormatters } from "@/lib/datetime";
 import { formatCurrency } from "@/lib/currency";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ReceiveFromCashPO } from "@/components/warehouse/ReceiveFromCashPO";
+import { POPrintView } from "@/components/purchasing/POPrintView";
+import { PurchaseOrderApprovalHistory } from "@/components/PurchaseOrderApprovalHistory";
 
 export default function PurchaseOrderDetail() {
   const { id } = useParams<{ id: string }>();
@@ -24,6 +26,7 @@ export default function PurchaseOrderDetail() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showReceiveDialog, setShowReceiveDialog] = useState(false);
+  const [showPrintView, setShowPrintView] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
   const { data: purchaseOrder, isLoading: loadingPO } = usePurchaseOrder(id);
@@ -61,6 +64,11 @@ export default function PurchaseOrderDetail() {
     mutationFn: async () => {
       if (!purchaseOrder || !lines) throw new Error("PO data not loaded");
       
+      // Cash Purchase POs with raw materials should not sync to AutoCount
+      if (purchaseOrder.is_cash_purchase) {
+        throw new Error("Cash Purchase POs cannot be synced to AutoCount. Raw materials are local-only.");
+      }
+      
       setIsSyncing(true);
       
       const { data, error } = await supabase.functions.invoke("sync-po-create", {
@@ -70,14 +78,17 @@ export default function PurchaseOrderDetail() {
           docDate: purchaseOrder.doc_date,
           deliveryDate: purchaseOrder.delivery_date,
           remarks: purchaseOrder.remarks,
-          lines: lines.map((line) => ({
-            itemCode: line.components?.autocount_item_code || line.components?.sku || "",
-            description: line.components?.name || "",
-            quantity: line.quantity,
-            unitPrice: line.unit_price,
-            uom: line.uom,
-            lineRemarks: line.line_remarks,
-          })),
+          lines: lines.map((line) => {
+            const item = line.item_type === 'raw_material' ? line.raw_materials : line.components;
+            return {
+              itemCode: item?.autocount_item_code || item?.sku || "",
+              description: item?.name || "",
+              quantity: line.quantity,
+              unitPrice: line.unit_price,
+              uom: line.uom,
+              lineRemarks: line.line_remarks,
+            };
+          }),
         },
       });
 
@@ -110,16 +121,93 @@ export default function PurchaseOrderDetail() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async (status: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const updateData: any = { status };
+      const now = new Date().toISOString();
+      
+      // If approving, record who approved and when
+      if (status === "approved") {
+        updateData.approved_by = user.id;
+        updateData.approved_at = now;
+      }
+
       const { error } = await supabase
         .from("purchase_orders")
-        .update({ status })
+        .update(updateData)
         .eq("id", id);
       if (error) throw error;
+
+      // Log action to audit_logs
+      const actionMap: Record<string, string> = {
+        "submitted": "submitted",
+        "approved": "approved",
+        "cancelled": "cancelled",
+      };
+
+      if (actionMap[status]) {
+        await supabase
+          .from("audit_logs")
+          .insert({
+            entity_type: "purchase_order",
+            entity_id: id,
+            action: actionMap[status],
+            user_id: user.id,
+            details: {
+              status,
+              timestamp: now,
+            }
+          });
+      }
+
+      // Auto-sync to AutoCount when approved (non-cash purchases only)
+      if (status === "approved" && !purchaseOrder?.is_cash_purchase && !purchaseOrder?.autocount_synced) {
+        setIsSyncing(true);
+        
+        const { data: syncData, error: syncError } = await supabase.functions.invoke("sync-po-create", {
+          body: {
+            poNumber: purchaseOrder.po_number,
+            supplierId: purchaseOrder.supplier_id,
+            docDate: purchaseOrder.doc_date,
+            deliveryDate: purchaseOrder.delivery_date,
+            remarks: purchaseOrder.remarks,
+            lines: lines?.map((line) => {
+              const item = line.item_type === 'raw_material' ? line.raw_materials : line.components;
+              return {
+                itemCode: item?.autocount_item_code || item?.sku || "",
+                description: item?.name || "",
+                quantity: line.quantity,
+                unitPrice: line.unit_price,
+                uom: line.uom,
+                lineRemarks: line.line_remarks,
+              };
+            }) || [],
+          },
+        });
+
+        if (!syncError && syncData) {
+          // Update PO with AutoCount doc number
+          await supabase
+            .from("purchase_orders")
+            .update({
+              autocount_synced: true,
+              autocount_doc_no: syncData.docNo,
+            })
+            .eq("id", id);
+        } else {
+          console.error("AutoCount sync failed:", syncError);
+          toast.error("PO approved but failed to sync to AutoCount. You can retry manually.");
+        }
+
+        setIsSyncing(false);
+      }
     },
     onSuccess: () => {
       toast.success("Status updated successfully");
       queryClient.invalidateQueries({ queryKey: ["purchase-order", id] });
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["po-approval-history", id] });
     },
     onError: () => {
       toast.error("Failed to update status");
@@ -128,6 +216,11 @@ export default function PurchaseOrderDetail() {
 
   const cancelPOMutation = useMutation({
     mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const now = new Date().toISOString();
+
       // Update local status
       const { error: statusError } = await supabase
         .from("purchase_orders")
@@ -135,6 +228,20 @@ export default function PurchaseOrderDetail() {
         .eq("id", id);
 
       if (statusError) throw statusError;
+
+      // Log cancellation to audit_logs
+      await supabase
+        .from("audit_logs")
+        .insert({
+          entity_type: "purchase_order",
+          entity_id: id,
+          action: "cancelled",
+          user_id: user.id,
+          details: {
+            cancelled_at: now,
+            status_change: `${purchaseOrder?.status} -> cancelled`
+          }
+        });
 
       // Sync to AutoCount if it was synced
       if (purchaseOrder?.autocount_synced) {
@@ -159,6 +266,7 @@ export default function PurchaseOrderDetail() {
       toast.success("Purchase order cancelled");
       queryClient.invalidateQueries({ queryKey: ["purchase-order", id] });
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["po-approval-history", id] });
       setShowCancelDialog(false);
     },
     onError: (error) => {
@@ -168,6 +276,27 @@ export default function PurchaseOrderDetail() {
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // If PO was synced to AutoCount, cancel it there first
+      if (purchaseOrder?.autocount_synced && purchaseOrder?.autocount_doc_no && !purchaseOrder?.is_cash_purchase) {
+        try {
+          const { error: cancelError } = await supabase.functions.invoke("sync-po-cancel", {
+            body: { 
+              poNumber: purchaseOrder.po_number,
+              autocountDocNo: purchaseOrder.autocount_doc_no 
+            },
+          });
+          if (cancelError) {
+            console.error("Failed to cancel in AutoCount:", cancelError);
+            toast.warning("PO will be deleted locally, but AutoCount cancellation failed");
+          }
+        } catch (err) {
+          console.error("AutoCount cancel error:", err);
+        }
+      }
+      
       // Delete lines first
       const { error: linesError } = await supabase
         .from("purchase_order_lines")
@@ -181,6 +310,18 @@ export default function PurchaseOrderDetail() {
         .delete()
         .eq("id", id);
       if (poError) throw poError;
+
+      // Log deletion to audit_logs
+      await supabase.from("audit_logs").insert({
+        user_id: user.id,
+        action: "deleted",
+        entity_type: "purchase_order",
+        entity_id: id,
+        details: { 
+          po_number: purchaseOrder?.po_number,
+          autocount_cancelled: purchaseOrder?.autocount_synced && purchaseOrder?.autocount_doc_no ? true : false
+        },
+      });
     },
     onSuccess: () => {
       toast.success("Purchase order deleted");
@@ -264,16 +405,6 @@ export default function PurchaseOrderDetail() {
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Submit
                 </Button>
-                {!purchaseOrder.autocount_synced && (
-                  <Button
-                    variant="outline"
-                    onClick={() => syncToAutocountMutation.mutate()}
-                    disabled={isSyncing || syncToAutocountMutation.isPending}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    {isSyncing ? "Syncing..." : "Sync to AutoCount"}
-                  </Button>
-                )}
                 <Button
                   variant="destructive"
                   onClick={() => setShowDeleteDialog(true)}
@@ -287,21 +418,11 @@ export default function PurchaseOrderDetail() {
               <>
                 <Button
                   onClick={() => updateStatusMutation.mutate("approved")}
-                  disabled={updateStatusMutation.isPending}
+                  disabled={updateStatusMutation.isPending || isSyncing}
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  Approve
+                  {isSyncing ? "Approving & Syncing..." : "Approve"}
                 </Button>
-                {!purchaseOrder.autocount_synced && (
-                  <Button
-                    variant="outline"
-                    onClick={() => syncToAutocountMutation.mutate()}
-                    disabled={isSyncing || syncToAutocountMutation.isPending}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    {isSyncing ? "Syncing..." : "Sync to AutoCount"}
-                  </Button>
-                )}
                 <Button
                   variant="outline"
                   onClick={() => setShowCancelDialog(true)}
@@ -313,7 +434,15 @@ export default function PurchaseOrderDetail() {
             )}
             {purchaseOrder.status === "approved" && (
               <>
-                {!purchaseOrder.autocount_synced && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowPrintView(true)}
+                  className="bg-primary/10"
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Print PO (2 Copies)
+                </Button>
+                {!purchaseOrder.autocount_synced && !purchaseOrder.is_cash_purchase && (
                   <Button
                     variant="outline"
                     onClick={() => syncToAutocountMutation.mutate()}
@@ -369,6 +498,17 @@ export default function PurchaseOrderDetail() {
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Remarks</p>
                     <p className="text-sm">{purchaseOrder.remarks}</p>
+                  </div>
+                </>
+              )}
+              {purchaseOrder.approved_at && (
+                <>
+                  <Separator />
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">CEO Approval</p>
+                    <p className="text-sm font-medium text-green-600">
+                      Approved on {dateFormatters.medium(purchaseOrder.approved_at)}
+                    </p>
                   </div>
                 </>
               )}
@@ -484,19 +624,22 @@ export default function PurchaseOrderDetail() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {lines?.map((line) => (
-                  <TableRow key={line.id}>
-                    <TableCell className="font-medium">{line.line_number}</TableCell>
-                    <TableCell>{line.components?.name}</TableCell>
-                    <TableCell className="font-mono text-sm">{line.components?.sku}</TableCell>
-                    <TableCell className="text-right">{line.quantity}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(line.unit_price)}</TableCell>
-                    <TableCell>{line.uom}</TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(line.quantity * line.unit_price)}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {lines?.map((line) => {
+                  const item = line.item_type === 'raw_material' ? line.raw_materials : line.components;
+                  return (
+                    <TableRow key={line.id}>
+                      <TableCell className="font-medium">{line.line_number}</TableCell>
+                      <TableCell>{item?.name}</TableCell>
+                      <TableCell className="font-mono text-sm">{item?.sku}</TableCell>
+                      <TableCell className="text-right">{line.quantity}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(line.unit_price)}</TableCell>
+                      <TableCell>{line.uom}</TableCell>
+                      <TableCell className="text-right font-medium">
+                        {formatCurrency(line.quantity * line.unit_price)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
             <Separator className="my-4" />
@@ -508,6 +651,9 @@ export default function PurchaseOrderDetail() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Approval History */}
+        <PurchaseOrderApprovalHistory purchaseOrderId={purchaseOrder.id} />
 
         <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
           <AlertDialogContent>
@@ -527,9 +673,17 @@ export default function PurchaseOrderDetail() {
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
-        </AlertDialog>
+      </AlertDialog>
 
-        {purchaseOrder.is_cash_purchase && lines && (
+      {showPrintView && purchaseOrder && lines && (
+        <POPrintView
+          purchaseOrder={purchaseOrder}
+          lines={lines}
+          onClose={() => setShowPrintView(false)}
+        />
+      )}
+
+      {purchaseOrder.is_cash_purchase && lines && (
           <ReceiveFromCashPO
             open={showReceiveDialog}
             onOpenChange={setShowReceiveDialog}

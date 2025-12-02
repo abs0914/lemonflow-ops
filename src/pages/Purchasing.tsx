@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, FileText, Trash2, Edit, RefreshCw, Upload } from "lucide-react";
+import { Plus, Search, FileText, Trash2, Edit, RefreshCw, Upload, Download } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,20 +42,53 @@ export default function Purchasing() {
   });
   
   const deleteMutation = useMutation({
-    mutationFn: async (poId: string) => {
+    mutationFn: async (po: PurchaseOrder) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // If PO was synced to AutoCount, cancel it there first
+      if (po.autocount_synced && po.autocount_doc_no && !po.is_cash_purchase) {
+        try {
+          const { error: cancelError } = await supabase.functions.invoke("sync-po-cancel", {
+            body: { 
+              poNumber: po.po_number,
+              autocountDocNo: po.autocount_doc_no 
+            },
+          });
+          if (cancelError) {
+            console.error("Failed to cancel in AutoCount:", cancelError);
+            toast.warning("PO will be deleted locally, but AutoCount cancellation failed");
+          }
+        } catch (err) {
+          console.error("AutoCount cancel error:", err);
+        }
+      }
+      
       // Delete lines first
       const { error: linesError } = await supabase
         .from("purchase_order_lines")
         .delete()
-        .eq("purchase_order_id", poId);
+        .eq("purchase_order_id", po.id);
       if (linesError) throw linesError;
 
       // Delete PO
       const { error: poError } = await supabase
         .from("purchase_orders")
         .delete()
-        .eq("id", poId);
+        .eq("id", po.id);
       if (poError) throw poError;
+
+      // Log deletion to audit_logs
+      await supabase.from("audit_logs").insert({
+        user_id: user.id,
+        action: "deleted",
+        entity_type: "purchase_order",
+        entity_id: po.id,
+        details: { 
+          po_number: po.po_number,
+          autocount_cancelled: po.autocount_synced && po.autocount_doc_no ? true : false
+        },
+      });
     },
     onSuccess: () => {
       toast.success("Purchase order deleted successfully");
@@ -121,6 +154,32 @@ export default function Purchasing() {
     }
   };
 
+  const handlePullFromAutoCount = async () => {
+    try {
+      toast.info("Pulling purchase orders from AutoCount...");
+      
+      const { data, error } = await supabase.functions.invoke("pull-po-from-autocount");
+      
+      if (error) throw error;
+      
+      if (data.summary.toCreate === 0 && data.summary.toUpdate === 0) {
+        toast.info("No new purchase orders to import from AutoCount");
+        return;
+      }
+      
+      // Execute the sync
+      const { data: execData, error: execError } = await supabase.functions.invoke("pull-po-execute");
+      
+      if (execError) throw execError;
+      
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      toast.success(`Imported ${execData.results.created} PO(s), updated ${execData.results.updated}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toast.error(`Failed to pull from AutoCount: ${errorMessage}`);
+    }
+  };
+
   const handleDeleteClick = (order: PurchaseOrder) => {
     setPoToDelete(order);
     setDeleteDialogOpen(true);
@@ -128,7 +187,7 @@ export default function Purchasing() {
 
   const handleConfirmDelete = () => {
     if (poToDelete && (poToDelete.status === "draft" || poToDelete.status === "submitted")) {
-      deleteMutation.mutate(poToDelete.id);
+      deleteMutation.mutate(poToDelete);
     }
   };
 
@@ -181,6 +240,13 @@ export default function Purchasing() {
               >
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Refresh
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handlePullFromAutoCount}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Pull from AutoCount
               </Button>
               <Button
                 variant="outline"

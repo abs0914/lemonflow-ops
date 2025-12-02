@@ -9,6 +9,8 @@ import {
   Users,
   UserCheck,
   ShoppingCart,
+  Settings as SettingsIcon,
+  CheckCircle,
   LogOut
 } from "lucide-react";
 import tlcLogo from "@/assets/tlc-logo.png";
@@ -41,7 +43,7 @@ export function AppSidebar() {
       title: "Dashboard",
       url: "/dashboard",
       icon: LayoutDashboard,
-      roles: ["Admin", "Production", "Warehouse"],
+      roles: ["Admin", "CEO", "Production", "Warehouse"],
     },
     {
       title: "BOM Manager",
@@ -83,7 +85,19 @@ export function AppSidebar() {
       title: "Purchasing",
       url: "/purchasing",
       icon: ShoppingCart,
-      roles: ["Admin", "Warehouse"],
+      roles: ["Admin", "CEO", "Warehouse"],
+    },
+    {
+      title: "CEO Approvals",
+      url: "/ceo-dashboard",
+      icon: CheckCircle,
+      roles: ["CEO"],
+    },
+    {
+      title: "Settings",
+      url: "/settings",
+      icon: SettingsIcon,
+      roles: ["Admin"],
     },
   ];
 

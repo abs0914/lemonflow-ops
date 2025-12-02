@@ -32,8 +32,10 @@ const poSchema = z.object({
 });
 type POFormData = z.infer<typeof poSchema>;
 interface POLine {
-  component_id: string;
-  component_name?: string;
+  component_id?: string;
+  raw_material_id?: string;
+  item_name?: string;
+  item_type: 'component' | 'raw_material';
   quantity: number;
   unit_price: number;
   uom: string;
@@ -65,6 +67,7 @@ export default function PurchasingCreate() {
       return data;
     }
   });
+
 
   const { data: users } = useQuery({
     queryKey: ["user-profiles"],
@@ -135,7 +138,9 @@ export default function PurchasingCreate() {
       
       const poLines = data.lines.map((line, index) => ({
         purchase_order_id: po.id,
-        component_id: line.component_id,
+        component_id: line.component_id || null,
+        raw_material_id: line.raw_material_id || null,
+        item_type: line.item_type,
         quantity: line.quantity,
         unit_price: line.unit_price,
         uom: line.uom,
@@ -177,17 +182,31 @@ export default function PurchasingCreate() {
       toast.error(isCashPurchase ? "Please select a raw material" : "Please select a component");
       return;
     }
-    const item = isCashPurchase 
-      ? rawMaterials?.find(r => r.id === selectedComponent)
-      : components?.find(c => c.id === selectedComponent);
-    if (!item) return;
-    setLines([...lines, {
-      component_id: selectedComponent,
-      component_name: item.name,
-      quantity: 1,
-      unit_price: item.cost_per_unit || 0,
-      uom: item.unit
-    }]);
+    
+    if (isCashPurchase) {
+      const rawMaterial = rawMaterials?.find(r => r.id === selectedComponent);
+      if (!rawMaterial) return;
+      setLines([...lines, {
+        raw_material_id: selectedComponent,
+        item_name: rawMaterial.name,
+        item_type: 'raw_material',
+        quantity: 1,
+        unit_price: rawMaterial.cost_per_unit || 0,
+        uom: rawMaterial.unit
+      }]);
+    } else {
+      const component = components?.find(c => c.id === selectedComponent);
+      if (!component) return;
+      setLines([...lines, {
+        component_id: selectedComponent,
+        item_name: component.name,
+        item_type: 'component',
+        quantity: 1,
+        unit_price: component.cost_per_unit || 0,
+        uom: component.unit
+      }]);
+    }
+    
     setSelectedComponent("");
   };
   const removeLine = (index: number) => {
@@ -232,8 +251,11 @@ export default function PurchasingCreate() {
                   }}
                 />
                 <Label htmlFor="is_cash_purchase" className="text-sm font-medium cursor-pointer">
-                  This is a Raw Material Cash Purchase
+                  This is a Cash Purchase (Market Day)
                 </Label>
+                <p className="text-xs text-muted-foreground ml-6">
+                  For raw material purchases made with cash advance at the market. Uses raw materials only.
+                </p>
               </div>
 
               {isCashPurchase && (
@@ -343,7 +365,7 @@ export default function PurchasingCreate() {
                     </TableHeader>
                     <TableBody>
                       {lines.map((line, index) => <TableRow key={index}>
-                          <TableCell className="font-medium">{line.component_name}</TableCell>
+                          <TableCell className="font-medium">{line.item_name}</TableCell>
                           <TableCell>
                             <Input type="number" min="0" step="0.01" value={line.quantity} onChange={e => updateLine(index, "quantity", parseFloat(e.target.value) || 0)} className="w-full" />
                           </TableCell>
