@@ -10,13 +10,18 @@ interface LemonCoAuthResponse {
 }
 
 interface AutoCountDebtor {
-  Code: string;
-  Name: string;
-  ContactPerson: string;
-  Email: string;
-  Phone: string;
-  Address: string;
-  IsActive: boolean;
+  code: string;
+  name: string;
+  contactPerson: string;
+  email: string;
+  phone: string;
+  address1: string;
+  address2: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  isActive: boolean;
 }
 
 Deno.serve(async (req) => {
@@ -99,15 +104,21 @@ Deno.serve(async (req) => {
     console.log(`Successfully fetched ${debtors.length} debtors from AutoCount`);
     console.log('Sample debtor data:', debtors[0]); // Log first debtor to see structure
 
-    const mappedDebtors = debtors.map(d => ({
-      debtor_code: d.Code,
-      company_name: d.Name,
-      contact_person: d.ContactPerson || null,
-      email: d.Email || null,
-      phone: d.Phone || null,
-      address: d.Address || null,
-      is_active: d.IsActive,
-    }));
+    const mappedDebtors = debtors.map(d => {
+      // Combine address fields
+      const addressParts = [d.address1, d.address2, d.city, d.state, d.postalCode, d.country].filter(Boolean);
+      const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : null;
+      
+      return {
+        debtor_code: d.code,
+        company_name: d.name,
+        contact_person: d.contactPerson || null,
+        email: d.email || null,
+        phone: d.phone || null,
+        address: fullAddress,
+        is_active: d.isActive,
+      };
+    });
 
     console.log('Sample mapped debtor:', mappedDebtors[0]); // Log mapped data
 
