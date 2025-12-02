@@ -61,6 +61,11 @@ export default function PurchaseOrderDetail() {
     mutationFn: async () => {
       if (!purchaseOrder || !lines) throw new Error("PO data not loaded");
       
+      // Cash Purchase POs with raw materials should not sync to AutoCount
+      if (purchaseOrder.is_cash_purchase) {
+        throw new Error("Cash Purchase POs cannot be synced to AutoCount. Raw materials are local-only.");
+      }
+      
       setIsSyncing(true);
       
       const { data, error } = await supabase.functions.invoke("sync-po-create", {
@@ -267,7 +272,7 @@ export default function PurchaseOrderDetail() {
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Submit
                 </Button>
-                {!purchaseOrder.autocount_synced && (
+                {!purchaseOrder.autocount_synced && !purchaseOrder.is_cash_purchase && (
                   <Button
                     variant="outline"
                     onClick={() => syncToAutocountMutation.mutate()}
@@ -295,7 +300,7 @@ export default function PurchaseOrderDetail() {
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Approve
                 </Button>
-                {!purchaseOrder.autocount_synced && (
+                {!purchaseOrder.autocount_synced && !purchaseOrder.is_cash_purchase && (
                   <Button
                     variant="outline"
                     onClick={() => syncToAutocountMutation.mutate()}
@@ -316,7 +321,7 @@ export default function PurchaseOrderDetail() {
             )}
             {purchaseOrder.status === "approved" && (
               <>
-                {!purchaseOrder.autocount_synced && (
+                {!purchaseOrder.autocount_synced && !purchaseOrder.is_cash_purchase && (
                   <Button
                     variant="outline"
                     onClick={() => syncToAutocountMutation.mutate()}

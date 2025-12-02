@@ -99,6 +99,14 @@ export interface PurchaseOrder {
   autocount_doc_no: string | null;
   autocount_synced: boolean;
   sync_error_message: string | null;
+  is_cash_purchase: boolean | null;
+  cash_advance: number | null;
+  cash_given_by: string | null;
+  cash_returned: number | null;
+  cash_returned_to: string | null;
+  goods_received: boolean | null;
+  received_by: string | null;
+  received_at: string | null;
   created_at: string;
   updated_at: string;
   suppliers?: Supplier;
