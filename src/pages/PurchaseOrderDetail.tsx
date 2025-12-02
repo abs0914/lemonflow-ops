@@ -276,6 +276,27 @@ export default function PurchaseOrderDetail() {
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // If PO was synced to AutoCount, cancel it there first
+      if (purchaseOrder?.autocount_synced && purchaseOrder?.autocount_doc_no && !purchaseOrder?.is_cash_purchase) {
+        try {
+          const { error: cancelError } = await supabase.functions.invoke("sync-po-cancel", {
+            body: { 
+              poNumber: purchaseOrder.po_number,
+              autocountDocNo: purchaseOrder.autocount_doc_no 
+            },
+          });
+          if (cancelError) {
+            console.error("Failed to cancel in AutoCount:", cancelError);
+            toast.warning("PO will be deleted locally, but AutoCount cancellation failed");
+          }
+        } catch (err) {
+          console.error("AutoCount cancel error:", err);
+        }
+      }
+      
       // Delete lines first
       const { error: linesError } = await supabase
         .from("purchase_order_lines")
@@ -289,6 +310,18 @@ export default function PurchaseOrderDetail() {
         .delete()
         .eq("id", id);
       if (poError) throw poError;
+
+      // Log deletion to audit_logs
+      await supabase.from("audit_logs").insert({
+        user_id: user.id,
+        action: "deleted",
+        entity_type: "purchase_order",
+        entity_id: id,
+        details: { 
+          po_number: purchaseOrder?.po_number,
+          autocount_cancelled: purchaseOrder?.autocount_synced && purchaseOrder?.autocount_doc_no ? true : false
+        },
+      });
     },
     onSuccess: () => {
       toast.success("Purchase order deleted");
