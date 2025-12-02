@@ -53,3 +53,6 @@ verify_jwt = true
 
 [functions.delete-autocount-item]
 verify_jwt = false
+
+[functions.push-po-to-autocount]
+verify_jwt = true
