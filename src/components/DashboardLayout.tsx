@@ -28,7 +28,7 @@ function DashboardLayoutInner({ children }: DashboardLayoutProps) {
       <div className="min-h-screen flex w-full">
         <AppSidebar />
         <main 
-          className="flex-1 overflow-auto relative z-10"
+          className="flex-1 overflow-auto relative z-10 p-6"
           onClick={handleMainContentClick}
         >
           {children}
