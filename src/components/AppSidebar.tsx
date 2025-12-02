@@ -12,7 +12,8 @@ import {
   Settings as SettingsIcon,
   CheckCircle,
   LogOut,
-  ShoppingBag
+  ShoppingBag,
+  BarChart3
 } from "lucide-react";
 import tlcLogo from "@/assets/tlc-logo.png";
 import {
@@ -99,6 +100,12 @@ export function AppSidebar() {
       url: "/ceo-dashboard",
       icon: CheckCircle,
       roles: ["CEO"],
+    },
+    {
+      title: "Reports",
+      url: "/reports",
+      icon: BarChart3,
+      roles: ["Admin", "CEO", "Production", "Warehouse", "Store"],
     },
     {
       title: "Settings",
