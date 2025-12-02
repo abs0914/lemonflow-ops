@@ -136,6 +136,7 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
                   <SelectItem value="CEO">CEO</SelectItem>
                   <SelectItem value="Production">Production</SelectItem>
                   <SelectItem value="Warehouse">Warehouse</SelectItem>
+                  <SelectItem value="Store">Store</SelectItem>
                 </SelectContent>
               </Select>
             </div>
