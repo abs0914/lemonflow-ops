@@ -49,8 +49,12 @@ export function ImportDebtorsDialog({ open, onOpenChange }: ImportDebtorsDialogP
 
       console.log('Received debtors:', response.data.debtors);
       console.log('First debtor:', response.data.debtors[0]);
-      setDebtors(response.data.debtors);
-      toast.success(`Found ${response.data.debtors.length} debtors from AutoCount`);
+      
+      // Filter out debtors without valid codes or names
+      const validDebtors = response.data.debtors.filter((d: Debtor) => d.debtor_code && d.company_name);
+      
+      setDebtors(validDebtors);
+      toast.success(`Found ${validDebtors.length} valid debtors from AutoCount`);
     } catch (error: any) {
       console.error('Error fetching debtors:', error);
       toast.error(`Failed to fetch debtors: ${error.message}`);
@@ -68,6 +72,14 @@ export function ImportDebtorsDialog({ open, onOpenChange }: ImportDebtorsDialogP
     setImporting(true);
     try {
       const debtorsToImport = debtors.filter(d => selectedDebtors.has(d.debtor_code));
+      
+      // Validate all debtors have required fields
+      const invalidDebtors = debtorsToImport.filter(d => !d.debtor_code || !d.company_name);
+      if (invalidDebtors.length > 0) {
+        toast.error('Some selected debtors are missing required information');
+        setImporting(false);
+        return;
+      }
       
       const storesToInsert = debtorsToImport.map(debtor => ({
         store_code: debtor.debtor_code,
