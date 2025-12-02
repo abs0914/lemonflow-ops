@@ -5,6 +5,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface LemonCoAuthResponse {
+  accessToken: string;
+  expiresAt: string;
+}
+
 interface AutoCountDebtor {
   Code: string;
   Name: string;
@@ -58,12 +63,29 @@ Deno.serve(async (req) => {
       throw new Error('AutoCount API credentials not configured');
     }
 
-    // Call AutoCount API to get debtors
+    // Step 1: Authenticate with LemonCo API
+    console.log('Authenticating with LemonCo API...');
+    const authResponse = await fetch(`${apiUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: username, password }),
+    });
+
+    if (!authResponse.ok) {
+      const errorText = await authResponse.text();
+      console.error('Authentication failed:', errorText);
+      throw new Error(`Authentication failed: ${authResponse.status} ${errorText}`);
+    }
+
+    const authData: LemonCoAuthResponse = await authResponse.json();
+    console.log('Authentication successful');
+
+    // Step 2: Fetch debtors from AutoCount
     console.log('Fetching debtors from AutoCount API...');
     const response = await fetch(`${apiUrl}/autocount/debtors`, {
       method: 'GET',
       headers: {
-        'Authorization': 'Basic ' + btoa(`${username}:${password}`),
+        'Authorization': `Bearer ${authData.accessToken}`,
         'Content-Type': 'application/json',
       },
     });
