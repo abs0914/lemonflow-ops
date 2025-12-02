@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Edit, Trash2, FileText, CheckCircle, X, Upload, PackageCheck } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, FileText, CheckCircle, X, Upload, PackageCheck, Printer } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +16,7 @@ import { dateFormatters } from "@/lib/datetime";
 import { formatCurrency } from "@/lib/currency";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ReceiveFromCashPO } from "@/components/warehouse/ReceiveFromCashPO";
+import { POPrintView } from "@/components/purchasing/POPrintView";
 
 export default function PurchaseOrderDetail() {
   const { id } = useParams<{ id: string }>();
@@ -24,6 +25,7 @@ export default function PurchaseOrderDetail() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showReceiveDialog, setShowReceiveDialog] = useState(false);
+  const [showPrintView, setShowPrintView] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
   const { data: purchaseOrder, isLoading: loadingPO } = usePurchaseOrder(id);
@@ -118,9 +120,20 @@ export default function PurchaseOrderDetail() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async (status: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const updateData: any = { status };
+      
+      // If approving, record who approved and when
+      if (status === "approved") {
+        updateData.approved_by = user.id;
+        updateData.approved_at = new Date().toISOString();
+      }
+
       const { error } = await supabase
         .from("purchase_orders")
-        .update({ status })
+        .update(updateData)
         .eq("id", id);
       if (error) throw error;
     },
@@ -321,6 +334,14 @@ export default function PurchaseOrderDetail() {
             )}
             {purchaseOrder.status === "approved" && (
               <>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowPrintView(true)}
+                  className="bg-primary/10"
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Print PO (2 Copies)
+                </Button>
                 {!purchaseOrder.autocount_synced && !purchaseOrder.is_cash_purchase && (
                   <Button
                     variant="outline"
@@ -377,6 +398,17 @@ export default function PurchaseOrderDetail() {
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Remarks</p>
                     <p className="text-sm">{purchaseOrder.remarks}</p>
+                  </div>
+                </>
+              )}
+              {purchaseOrder.approved_at && (
+                <>
+                  <Separator />
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">CEO Approval</p>
+                    <p className="text-sm font-medium text-green-600">
+                      Approved on {dateFormatters.medium(purchaseOrder.approved_at)}
+                    </p>
                   </div>
                 </>
               )}
@@ -538,9 +570,17 @@ export default function PurchaseOrderDetail() {
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
-        </AlertDialog>
+      </AlertDialog>
 
-        {purchaseOrder.is_cash_purchase && lines && (
+      {showPrintView && purchaseOrder && lines && (
+        <POPrintView
+          purchaseOrder={purchaseOrder}
+          lines={lines}
+          onClose={() => setShowPrintView(false)}
+        />
+      )}
+
+      {purchaseOrder.is_cash_purchase && lines && (
           <ReceiveFromCashPO
             open={showReceiveDialog}
             onOpenChange={setShowReceiveDialog}
