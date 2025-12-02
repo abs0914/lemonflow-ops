@@ -2,7 +2,7 @@ import { Component } from "@/types/inventory";
 import { MobileDataCard, MobileDataRow } from "@/components/ui/mobile-data-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Package, Trash2 } from "lucide-react";
+import { Edit, Package, Trash2, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { formatCurrency } from "@/lib/currency";
 
@@ -22,6 +22,36 @@ export function MobileInventoryCard({ component, onAdjustStock, onDelete }: Mobi
       return <Badge className="bg-yellow-500 hover:bg-yellow-600">Low Stock</Badge>;
     }
     return <Badge variant="secondary">In Stock</Badge>;
+  };
+
+  const getSyncStatusBadge = (lastSyncedAt: string | null) => {
+    if (!lastSyncedAt) {
+      return (
+        <Badge variant="outline" className="gap-1">
+          <XCircle className="h-3 w-3" />
+          Not Synced
+        </Badge>
+      );
+    }
+
+    const syncDate = new Date(lastSyncedAt);
+    const hoursSinceSync = (Date.now() - syncDate.getTime()) / (1000 * 60 * 60);
+
+    if (hoursSinceSync < 24) {
+      return (
+        <Badge variant="default" className="gap-1 bg-green-600 hover:bg-green-700">
+          <CheckCircle2 className="h-3 w-3" />
+          Synced
+        </Badge>
+      );
+    } else {
+      return (
+        <Badge variant="secondary" className="gap-1">
+          <Clock className="h-3 w-3" />
+          Synced
+        </Badge>
+      );
+    }
   };
 
   const actions = (
@@ -108,7 +138,10 @@ export function MobileInventoryCard({ component, onAdjustStock, onDelete }: Mobi
             </div>
             <h3 className="font-semibold mt-1">{component.name}</h3>
           </div>
-          {getStockStatusBadge(available)}
+          <div className="flex flex-col gap-2 items-end">
+            {getStockStatusBadge(available)}
+            {getSyncStatusBadge(component.last_synced_at)}
+          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-4">

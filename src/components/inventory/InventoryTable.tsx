@@ -17,7 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DeleteInventoryDialog } from "./DeleteInventoryDialog";
 import { EditInventoryDialog } from "./EditInventoryDialog";
 import { StockAdjustmentDialog } from "./StockAdjustmentDialog";
-import { Pencil, RefreshCw, Trash2, Package } from "lucide-react";
+import { Pencil, RefreshCw, Trash2, Package, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Component } from "@/types/inventory";
 import { formatCurrency } from "@/lib/currency";
@@ -136,6 +136,36 @@ export function InventoryTable({ components, isLoading, onRefetch, onAdjustStock
     return <Badge variant="secondary">In Stock</Badge>;
   };
 
+  const getSyncStatusBadge = (lastSyncedAt: string | null) => {
+    if (!lastSyncedAt) {
+      return (
+        <Badge variant="outline" className="gap-1">
+          <XCircle className="h-3 w-3" />
+          Not Synced
+        </Badge>
+      );
+    }
+
+    const syncDate = new Date(lastSyncedAt);
+    const hoursSinceSync = (Date.now() - syncDate.getTime()) / (1000 * 60 * 60);
+
+    if (hoursSinceSync < 24) {
+      return (
+        <Badge variant="default" className="gap-1 bg-green-600 hover:bg-green-700">
+          <CheckCircle2 className="h-3 w-3" />
+          Synced
+        </Badge>
+      );
+    } else {
+      return (
+        <Badge variant="secondary" className="gap-1">
+          <Clock className="h-3 w-3" />
+          Synced
+        </Badge>
+      );
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -251,13 +281,14 @@ export function InventoryTable({ components, isLoading, onRefetch, onAdjustStock
                   </div>
                 </TableCell>
                 <TableCell>
-                  {component.last_synced_at ? (
-                    <span className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(component.last_synced_at), { addSuffix: true })}
-                    </span>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">Never</span>
-                  )}
+                  <div className="space-y-1">
+                    {getSyncStatusBadge(component.last_synced_at)}
+                    {component.last_synced_at && (
+                      <div className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(component.last_synced_at), { addSuffix: true })}
+                      </div>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex gap-1 justify-end">

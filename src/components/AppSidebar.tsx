@@ -56,12 +56,6 @@ export function AppSidebar() {
       roles: ["Admin", "Production"],
     },
     {
-      title: "Labels",
-      url: "/labels",
-      icon: Barcode,
-      roles: ["Admin", "Production", "Warehouse"],
-    },
-    {
       title: "Commissary",
       url: "/warehouse",
       icon: Warehouse,

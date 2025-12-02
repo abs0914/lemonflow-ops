@@ -57,6 +57,15 @@ export default function PurchasingCreate() {
     }
   });
 
+  const { data: rawMaterials } = useQuery({
+    queryKey: ["raw-materials"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("raw_materials").select("*").order("name");
+      if (error) throw error;
+      return data;
+    }
+  });
+
   const { data: users } = useQuery({
     queryKey: ["user-profiles"],
     queryFn: async () => {
@@ -165,17 +174,19 @@ export default function PurchasingCreate() {
   };
   const addLine = () => {
     if (!selectedComponent) {
-      toast.error("Please select a component");
+      toast.error(isCashPurchase ? "Please select a raw material" : "Please select a component");
       return;
     }
-    const component = components?.find(c => c.id === selectedComponent);
-    if (!component) return;
+    const item = isCashPurchase 
+      ? rawMaterials?.find(r => r.id === selectedComponent)
+      : components?.find(c => c.id === selectedComponent);
+    if (!item) return;
     setLines([...lines, {
       component_id: selectedComponent,
-      component_name: component.name,
+      component_name: item.name,
       quantity: 1,
-      unit_price: component.cost_per_unit || 0,
-      uom: component.unit
+      unit_price: item.cost_per_unit || 0,
+      uom: item.unit
     }]);
     setSelectedComponent("");
   };
@@ -216,10 +227,12 @@ export default function PurchasingCreate() {
                   onCheckedChange={(checked) => {
                     setIsCashPurchase(checked as boolean);
                     setValue("is_cash_purchase", checked as boolean);
+                    setLines([]);
+                    setSelectedComponent("");
                   }}
                 />
                 <Label htmlFor="is_cash_purchase" className="text-sm font-medium cursor-pointer">
-                  This is a Cash Purchase
+                  This is a Raw Material Cash Purchase
                 </Label>
               </div>
 
@@ -297,12 +310,17 @@ export default function PurchasingCreate() {
               <div className="flex gap-2">
                 <Select value={selectedComponent} onValueChange={setSelectedComponent}>
                   <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Select component to add" />
+                    <SelectValue placeholder={isCashPurchase ? "Select raw material to add" : "Select component to add"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {components?.map(component => <SelectItem key={component.id} value={component.id}>
-                        {component.name} ({component.sku})
-                      </SelectItem>)}
+                    {isCashPurchase 
+                      ? rawMaterials?.map(material => <SelectItem key={material.id} value={material.id}>
+                          {material.name} ({material.sku})
+                        </SelectItem>)
+                      : components?.map(component => <SelectItem key={component.id} value={component.id}>
+                          {component.name} ({component.sku})
+                        </SelectItem>)
+                    }
                   </SelectContent>
                 </Select>
                 <Button type="button" onClick={addLine}>
@@ -315,7 +333,7 @@ export default function PurchasingCreate() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Component</TableHead>
+                        <TableHead>{isCashPurchase ? "Raw Material" : "Component"}</TableHead>
                         <TableHead className="w-24">Quantity</TableHead>
                         <TableHead className="w-32">Unit Price</TableHead>
                         <TableHead className="w-20">UOM</TableHead>

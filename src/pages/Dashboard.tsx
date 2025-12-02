@@ -135,13 +135,6 @@ export default function Dashboard() {
       roles: ["Admin", "Warehouse"],
     },
     {
-      title: "Generate Labels",
-      description: "Generate product labels",
-      icon: Barcode,
-      path: "/labels",
-      roles: ["Admin", "Production", "Warehouse"],
-    },
-    {
       title: "Manage BOM",
       description: "Manage bills of materials",
       icon: FileText,
