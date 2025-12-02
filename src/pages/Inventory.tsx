@@ -9,6 +9,7 @@ import { InventoryFilters } from "@/components/inventory/InventoryFilters";
 import { MobileInventoryCard } from "@/components/inventory/MobileInventoryCard";
 import { StockAdjustmentDialog } from "@/components/inventory/StockAdjustmentDialog";
 import { SyncInventoryDialog } from "@/components/inventory/SyncInventoryDialog";
+import { PushInventoryDialog } from "@/components/inventory/PushInventoryDialog";
 import { DeleteInventoryDialog } from "@/components/inventory/DeleteInventoryDialog";
 import { AddInventoryDialog } from "@/components/inventory/AddInventoryDialog";
 import { FloatingActionButton } from "@/components/ui/floating-action-button";
@@ -36,6 +37,7 @@ export default function Inventory() {
   const [stockStatusFilter, setStockStatusFilter] = useState<string>("all");
   const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false);
   const [syncDialogOpen, setSyncDialogOpen] = useState(false);
+  const [pushDialogOpen, setPushDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
@@ -189,6 +191,10 @@ export default function Inventory() {
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Pull from AutoCount
               </Button>
+              <Button variant="outline" onClick={() => setPushDialogOpen(true)}>
+                <Database className="mr-2 h-4 w-4" />
+                Sync to AutoCount
+              </Button>
             </div>
           )}
         </div>
@@ -290,6 +296,11 @@ export default function Inventory() {
               icon: RefreshCw,
               label: "Pull from AutoCount",
               onClick: () => setSyncDialogOpen(true)
+            },
+            {
+              icon: Database,
+              label: "Sync to AutoCount",
+              onClick: () => setPushDialogOpen(true)
             }
           ]}
         />
@@ -314,6 +325,12 @@ export default function Inventory() {
         open={syncDialogOpen}
         onOpenChange={setSyncDialogOpen}
         onSyncComplete={handleSyncComplete}
+      />
+
+      <PushInventoryDialog
+        open={pushDialogOpen}
+        onOpenChange={setPushDialogOpen}
+        onPushComplete={handleSyncComplete}
       />
 
       <AddInventoryDialog
