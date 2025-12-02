@@ -116,10 +116,13 @@ export function ImportDebtorsDialog({ open, onOpenChange }: ImportDebtorsDialogP
     }
   };
 
-  const filteredDebtors = debtors.filter(debtor =>
-    debtor.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    debtor.debtor_code.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredDebtors = debtors.filter(debtor => {
+    const search = searchTerm.toLowerCase();
+    return (
+      (debtor.company_name?.toLowerCase() || '').includes(search) ||
+      (debtor.debtor_code?.toLowerCase() || '').includes(search)
+    );
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

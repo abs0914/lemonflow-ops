@@ -39,11 +39,14 @@ export default function StoresManagement() {
   const { data: stores, isLoading } = useStores();
   const deleteMutation = useDeleteStore();
 
-  const filteredStores = stores?.filter((store) =>
-    store.store_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    store.store_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    store.debtor_code.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredStores = stores?.filter((store) => {
+    const search = searchTerm.toLowerCase();
+    return (
+      (store.store_name?.toLowerCase() || '').includes(search) ||
+      (store.store_code?.toLowerCase() || '').includes(search) ||
+      (store.debtor_code?.toLowerCase() || '').includes(search)
+    );
+  });
 
   const handleEdit = (store: Store) => {
     setSelectedStore(store);
