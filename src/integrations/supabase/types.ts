@@ -706,6 +706,136 @@ export type Database = {
         }
         Relationships: []
       }
+      sales_order_lines: {
+        Row: {
+          created_at: string | null
+          discount: string | null
+          id: string
+          item_code: string
+          item_name: string
+          line_number: number
+          line_remarks: string | null
+          quantity: number
+          sales_order_id: string
+          sub_total: number | null
+          tax_code: string | null
+          unit_price: number | null
+          uom: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          discount?: string | null
+          id?: string
+          item_code: string
+          item_name: string
+          line_number: number
+          line_remarks?: string | null
+          quantity: number
+          sales_order_id: string
+          sub_total?: number | null
+          tax_code?: string | null
+          unit_price?: number | null
+          uom?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          discount?: string | null
+          id?: string
+          item_code?: string
+          item_name?: string
+          line_number?: number
+          line_remarks?: string | null
+          quantity?: number
+          sales_order_id?: string
+          sub_total?: number | null
+          tax_code?: string | null
+          unit_price?: number | null
+          uom?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_order_lines_sales_order_id_fkey"
+            columns: ["sales_order_id"]
+            isOneToOne: false
+            referencedRelation: "sales_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_orders: {
+        Row: {
+          autocount_doc_no: string | null
+          autocount_synced: boolean | null
+          created_at: string | null
+          created_by: string | null
+          debtor_code: string
+          delivery_date: string | null
+          description: string | null
+          doc_date: string
+          id: string
+          order_number: string
+          status: string | null
+          store_id: string | null
+          submitted_at: string | null
+          submitted_by: string | null
+          sync_error_message: string | null
+          synced_at: string | null
+          total_amount: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          autocount_doc_no?: string | null
+          autocount_synced?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          debtor_code: string
+          delivery_date?: string | null
+          description?: string | null
+          doc_date?: string
+          id?: string
+          order_number: string
+          status?: string | null
+          store_id?: string | null
+          submitted_at?: string | null
+          submitted_by?: string | null
+          sync_error_message?: string | null
+          synced_at?: string | null
+          total_amount?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          autocount_doc_no?: string | null
+          autocount_synced?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          debtor_code?: string
+          delivery_date?: string | null
+          description?: string | null
+          doc_date?: string
+          id?: string
+          order_number?: string
+          status?: string | null
+          store_id?: string | null
+          submitted_at?: string | null
+          submitted_by?: string | null
+          sync_error_message?: string | null
+          synced_at?: string | null
+          total_amount?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_orders_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_movements: {
         Row: {
           autocount_doc_no: string | null
@@ -801,6 +931,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      stores: {
+        Row: {
+          address: string | null
+          contact_person: string | null
+          created_at: string | null
+          debtor_code: string
+          email: string | null
+          id: string
+          is_active: boolean | null
+          phone: string | null
+          store_code: string
+          store_name: string
+          store_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          contact_person?: string | null
+          created_at?: string | null
+          debtor_code: string
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          phone?: string | null
+          store_code: string
+          store_name: string
+          store_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          contact_person?: string | null
+          created_at?: string | null
+          debtor_code?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          phone?: string | null
+          store_code?: string
+          store_name?: string
+          store_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       suppliers: {
         Row: {
@@ -898,11 +1073,47 @@ export type Database = {
         }
         Relationships: []
       }
+      user_store_assignments: {
+        Row: {
+          can_place_orders: boolean | null
+          created_at: string | null
+          id: string
+          is_primary: boolean | null
+          store_id: string
+          user_id: string
+        }
+        Insert: {
+          can_place_orders?: boolean | null
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          store_id: string
+          user_id: string
+        }
+        Update: {
+          can_place_orders?: boolean | null
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          store_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_store_assignments_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      generate_sales_order_number: { Args: never; Returns: string }
       get_next_item_code: { Args: never; Returns: string }
       get_next_raw_material_code: { Args: never; Returns: string }
       get_next_supplier_code: { Args: never; Returns: string }
