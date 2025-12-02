@@ -107,6 +107,8 @@ export interface PurchaseOrder {
   goods_received: boolean | null;
   received_by: string | null;
   received_at: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
   created_at: string;
   updated_at: string;
   suppliers?: Supplier;

@@ -531,6 +531,8 @@ export type Database = {
       }
       purchase_orders: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           autocount_doc_no: string | null
           autocount_synced: boolean
           cash_advance: number | null
@@ -555,6 +557,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           autocount_doc_no?: string | null
           autocount_synced?: boolean
           cash_advance?: number | null
@@ -579,6 +583,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           autocount_doc_no?: string | null
           autocount_synced?: boolean
           cash_advance?: number | null
@@ -603,6 +609,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "purchase_orders_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "purchase_orders_cash_given_by_fkey"
             columns: ["cash_given_by"]
@@ -894,6 +907,7 @@ export type Database = {
       get_next_raw_material_code: { Args: never; Returns: string }
       get_next_supplier_code: { Args: never; Returns: string }
       is_admin: { Args: { user_id: string }; Returns: boolean }
+      is_ceo: { Args: { user_id: string }; Returns: boolean }
       release_stock_reservation: {
         Args: {
           p_assembly_order_id: string
