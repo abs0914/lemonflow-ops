@@ -6,8 +6,7 @@ const corsHeaders = {
 };
 
 interface LemonCoAuthResponse {
-  accessToken: string;
-  expiresAt: string;
+  token: string;
 }
 
 interface AutoCountDebtor {
@@ -65,10 +64,10 @@ Deno.serve(async (req) => {
 
     // Step 1: Authenticate with LemonCo API
     console.log('Authenticating with LemonCo API...');
-    const authResponse = await fetch(`${apiUrl}/api/auth/login`, {
+    const authResponse = await fetch(`${apiUrl}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: username, password }),
+      body: JSON.stringify({ username, password }),
     });
 
     if (!authResponse.ok) {
@@ -85,7 +84,7 @@ Deno.serve(async (req) => {
     const response = await fetch(`${apiUrl}/autocount/debtors`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${authData.accessToken}`,
+        'Authorization': `Bearer ${authData.token}`,
         'Content-Type': 'application/json',
       },
     });
