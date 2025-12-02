@@ -112,6 +112,7 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
                   <SelectItem value="CEO">CEO</SelectItem>
                   <SelectItem value="Production">Production</SelectItem>
                   <SelectItem value="Warehouse">Warehouse</SelectItem>
+                  <SelectItem value="Store">Store</SelectItem>
                 </SelectContent>
               </Select>
             </div>

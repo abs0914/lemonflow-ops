@@ -95,6 +95,8 @@ export function UserManagement() {
         return "secondary";
       case "Warehouse":
         return "outline";
+      case "Store":
+        return "outline";
       default:
         return "outline";
     }
