@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 interface UserProfile {
   id: string;
   full_name: string;
-  role: "Admin" | "Production" | "Warehouse";
+  role: "Admin" | "Production" | "Warehouse" | "Store" | "CEO";
 }
 
 interface AuthContextType {

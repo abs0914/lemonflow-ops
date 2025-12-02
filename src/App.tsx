@@ -20,6 +20,9 @@ import PurchaseOrderDetail from "./pages/PurchaseOrderDetail";
 import RawMaterials from "./pages/RawMaterials";
 import CEODashboard from "./pages/CEODashboard";
 import Settings from "./pages/Settings";
+import StoreOrders from "./pages/StoreOrders";
+import StoreOrderCreate from "./pages/StoreOrderCreate";
+import StoreOrderDetail from "./pages/StoreOrderDetail";
 import NotFound from "./pages/NotFound";
 
 // Create QueryClient instance outside component to prevent recreation
@@ -55,6 +58,9 @@ const App = () => (
             <Route path="/raw-materials" element={<RawMaterials />} />
             <Route path="/ceo-dashboard" element={<CEODashboard />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/store/orders" element={<StoreOrders />} />
+            <Route path="/store/orders/create" element={<StoreOrderCreate />} />
+            <Route path="/store/orders/:id" element={<StoreOrderDetail />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
