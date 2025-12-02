@@ -97,19 +97,24 @@ Deno.serve(async (req) => {
 
     const debtors: AutoCountDebtor[] = await response.json();
     console.log(`Successfully fetched ${debtors.length} debtors from AutoCount`);
+    console.log('Sample debtor data:', debtors[0]); // Log first debtor to see structure
+
+    const mappedDebtors = debtors.map(d => ({
+      debtor_code: d.Code,
+      company_name: d.Name,
+      contact_person: d.ContactPerson || null,
+      email: d.Email || null,
+      phone: d.Phone || null,
+      address: d.Address || null,
+      is_active: d.IsActive,
+    }));
+
+    console.log('Sample mapped debtor:', mappedDebtors[0]); // Log mapped data
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        debtors: debtors.map(d => ({
-          debtor_code: d.Code,
-          company_name: d.Name,
-          contact_person: d.ContactPerson || null,
-          email: d.Email || null,
-          phone: d.Phone || null,
-          address: d.Address || null,
-          is_active: d.IsActive,
-        }))
+        debtors: mappedDebtors
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
