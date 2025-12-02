@@ -42,7 +42,7 @@ export function AppSidebar() {
       title: "Dashboard",
       url: "/dashboard",
       icon: LayoutDashboard,
-      roles: ["Admin", "Production", "Warehouse"],
+      roles: ["Admin", "CEO", "Production", "Warehouse"],
     },
     {
       title: "BOM Manager",
@@ -84,7 +84,7 @@ export function AppSidebar() {
       title: "Purchasing",
       url: "/purchasing",
       icon: ShoppingCart,
-      roles: ["Admin", "Warehouse"],
+      roles: ["Admin", "CEO", "Warehouse"],
     },
     {
       title: "Settings",
