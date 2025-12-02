@@ -57,14 +57,6 @@ export default function PurchasingCreate() {
     }
   });
 
-  const { data: rawMaterials } = useQuery({
-    queryKey: ["raw-materials"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("raw_materials").select("*").order("name");
-      if (error) throw error;
-      return data;
-    }
-  });
 
   const { data: users } = useQuery({
     queryKey: ["user-profiles"],
@@ -174,12 +166,10 @@ export default function PurchasingCreate() {
   };
   const addLine = () => {
     if (!selectedComponent) {
-      toast.error(isCashPurchase ? "Please select a raw material" : "Please select a component");
+      toast.error("Please select a component");
       return;
     }
-    const item = isCashPurchase 
-      ? rawMaterials?.find(r => r.id === selectedComponent)
-      : components?.find(c => c.id === selectedComponent);
+    const item = components?.find(c => c.id === selectedComponent);
     if (!item) return;
     setLines([...lines, {
       component_id: selectedComponent,
@@ -232,8 +222,11 @@ export default function PurchasingCreate() {
                   }}
                 />
                 <Label htmlFor="is_cash_purchase" className="text-sm font-medium cursor-pointer">
-                  This is a Raw Material Cash Purchase
+                  This is a Cash Purchase (Market Day)
                 </Label>
+                <p className="text-xs text-muted-foreground ml-6">
+                  For purchases made with cash advance at the market. Still uses regular inventory items.
+                </p>
               </div>
 
               {isCashPurchase && (
@@ -310,16 +303,12 @@ export default function PurchasingCreate() {
               <div className="flex gap-2">
                 <Select value={selectedComponent} onValueChange={setSelectedComponent}>
                   <SelectTrigger className="flex-1">
-                    <SelectValue placeholder={isCashPurchase ? "Select raw material to add" : "Select component to add"} />
+                    <SelectValue placeholder="Select component to add" />
                   </SelectTrigger>
                   <SelectContent>
-                    {isCashPurchase 
-                      ? rawMaterials?.map(material => <SelectItem key={material.id} value={material.id}>
-                          {material.name} ({material.sku})
-                        </SelectItem>)
-                      : components?.map(component => <SelectItem key={component.id} value={component.id}>
-                          {component.name} ({component.sku})
-                        </SelectItem>)
+                    {components?.map(component => <SelectItem key={component.id} value={component.id}>
+                        {component.name} ({component.sku})
+                      </SelectItem>)
                     }
                   </SelectContent>
                 </Select>
@@ -333,7 +322,7 @@ export default function PurchasingCreate() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>{isCashPurchase ? "Raw Material" : "Component"}</TableHead>
+                        <TableHead>Component</TableHead>
                         <TableHead className="w-24">Quantity</TableHead>
                         <TableHead className="w-32">Unit Price</TableHead>
                         <TableHead className="w-20">UOM</TableHead>
