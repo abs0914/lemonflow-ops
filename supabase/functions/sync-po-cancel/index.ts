@@ -48,19 +48,39 @@ Deno.serve(async (req) => {
       throw new Error("AutoCount configuration is incomplete");
     }
 
-    const credentials = btoa(`${username}:${password}`);
-    const basicAuth = `Basic ${credentials}`;
-
     const docNo = requestData.autocountDocNo || requestData.poNumber;
+
+    // First, get a JWT token from the backend auth endpoint
+    console.log("Getting JWT token from backend...");
+    const loginResponse = await fetch(`${apiUrl}/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        username: username,
+        password: password,
+      }),
+    });
+
+    if (!loginResponse.ok) {
+      const loginError = await loginResponse.text();
+      console.error("Failed to get JWT token:", loginError);
+      throw new Error(`Authentication failed: ${loginResponse.status} - ${loginError}`);
+    }
+
+    const loginResult = await loginResponse.json();
+    const jwtToken = loginResult.token;
+    console.log("Got JWT token successfully");
 
     // Cancel PO in AutoCount
     console.log(`Calling AutoCount API to cancel PO: ${docNo}`);
 
-    const response = await fetch(`${apiUrl}/api/purchase/cancel`, {
+    const response = await fetch(`${apiUrl}/autocount/purchase-orders/cancel`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: basicAuth,
+        Authorization: `Bearer ${jwtToken}`,
       },
       body: JSON.stringify({
         DocNo: docNo,

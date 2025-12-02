@@ -87,13 +87,35 @@ Deno.serve(async (req) => {
 
     console.log('[push-po-to-autocount] PO payload:', JSON.stringify(poPayload));
 
-    // Create PO in AutoCount using Basic Auth
-    const credentials = btoa(`${username}:${password}`);
-    const response = await fetch(`${apiUrl}/api/purchase/create`, {
+    // First, get a JWT token from the backend auth endpoint
+    console.log('[push-po-to-autocount] Getting JWT token from backend...');
+    const loginResponse = await fetch(`${apiUrl}/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${credentials}`,
+      },
+      body: JSON.stringify({
+        username: username,
+        password: password,
+      }),
+    });
+
+    if (!loginResponse.ok) {
+      const loginError = await loginResponse.text();
+      console.error('[push-po-to-autocount] Failed to get JWT token:', loginError);
+      throw new Error(`Authentication failed: ${loginResponse.status} - ${loginError}`);
+    }
+
+    const loginResult = await loginResponse.json();
+    const jwtToken = loginResult.token;
+    console.log('[push-po-to-autocount] Got JWT token successfully');
+
+    // Create PO in AutoCount using JWT Bearer Auth
+    const response = await fetch(`${apiUrl}/autocount/purchase-orders`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${jwtToken}`,
       },
       body: JSON.stringify(poPayload),
     });

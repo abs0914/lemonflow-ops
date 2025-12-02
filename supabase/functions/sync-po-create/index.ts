@@ -72,8 +72,28 @@ Deno.serve(async (req) => {
       throw new Error("Supplier not found");
     }
 
-    const credentials = btoa(`${username}:${password}`);
-    const basicAuth = `Basic ${credentials}`;
+    // First, get a JWT token from the backend auth endpoint
+    console.log("Getting JWT token from backend...");
+    const loginResponse = await fetch(`${apiUrl}/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        username: username,
+        password: password,
+      }),
+    });
+
+    if (!loginResponse.ok) {
+      const loginError = await loginResponse.text();
+      console.error("Failed to get JWT token:", loginError);
+      throw new Error(`Authentication failed: ${loginResponse.status} - ${loginError}`);
+    }
+
+    const loginResult = await loginResponse.json();
+    const jwtToken = loginResult.token;
+    console.log("Got JWT token successfully");
 
     // Create PO in AutoCount
     const poPayload = {
@@ -95,11 +115,11 @@ Deno.serve(async (req) => {
 
     console.log("Calling AutoCount API to create PO:", poPayload);
 
-    const response = await fetch(`${apiUrl}/api/purchase/create`, {
+    const response = await fetch(`${apiUrl}/autocount/purchase-orders`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: basicAuth,
+        Authorization: `Bearer ${jwtToken}`,
       },
       body: JSON.stringify(poPayload),
     });

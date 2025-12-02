@@ -128,13 +128,20 @@ namespace Backend.Infrastructure.AutoCount
                     }
 
                     // Header fields
-                    // Note: Purchase Orders in AutoCount may not require CreditorCode at header level.
-                    // The supplier association typically happens when converting to GRN or Purchase Invoice.
-                    // Storing SupplierCode in Description for reference if needed.
-
                     doc.DocDate = purchaseOrder.DocDate == default(DateTime)
                         ? DateTime.Today.Date
                         : purchaseOrder.DocDate.Date;
+
+                    // Set CreditorCode (supplier) - required for FK_PO_DisplayTerm constraint
+                    try
+                    {
+                        doc.CreditorCode = purchaseOrder.SupplierCode;
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new InvalidOperationException(
+                            "Failed to set CreditorCode '" + purchaseOrder.SupplierCode + "': " + ex.Message, ex);
+                    }
 
                     // Note: DeliveryDate is set on detail lines, not header
 
