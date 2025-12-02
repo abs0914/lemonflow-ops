@@ -160,6 +160,48 @@ export default function PurchaseOrderDetail() {
             }
           });
       }
+
+      // Auto-sync to AutoCount when approved (non-cash purchases only)
+      if (status === "approved" && !purchaseOrder?.is_cash_purchase && !purchaseOrder?.autocount_synced) {
+        setIsSyncing(true);
+        
+        const { data: syncData, error: syncError } = await supabase.functions.invoke("sync-po-create", {
+          body: {
+            poNumber: purchaseOrder.po_number,
+            supplierId: purchaseOrder.supplier_id,
+            docDate: purchaseOrder.doc_date,
+            deliveryDate: purchaseOrder.delivery_date,
+            remarks: purchaseOrder.remarks,
+            lines: lines?.map((line) => {
+              const item = line.item_type === 'raw_material' ? line.raw_materials : line.components;
+              return {
+                itemCode: item?.autocount_item_code || item?.sku || "",
+                description: item?.name || "",
+                quantity: line.quantity,
+                unitPrice: line.unit_price,
+                uom: line.uom,
+                lineRemarks: line.line_remarks,
+              };
+            }) || [],
+          },
+        });
+
+        if (!syncError && syncData) {
+          // Update PO with AutoCount doc number
+          await supabase
+            .from("purchase_orders")
+            .update({
+              autocount_synced: true,
+              autocount_doc_no: syncData.docNo,
+            })
+            .eq("id", id);
+        } else {
+          console.error("AutoCount sync failed:", syncError);
+          toast.error("PO approved but failed to sync to AutoCount. You can retry manually.");
+        }
+
+        setIsSyncing(false);
+      }
     },
     onSuccess: () => {
       toast.success("Status updated successfully");
@@ -330,16 +372,6 @@ export default function PurchaseOrderDetail() {
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Submit
                 </Button>
-                {!purchaseOrder.autocount_synced && !purchaseOrder.is_cash_purchase && (
-                  <Button
-                    variant="outline"
-                    onClick={() => syncToAutocountMutation.mutate()}
-                    disabled={isSyncing || syncToAutocountMutation.isPending}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    {isSyncing ? "Syncing..." : "Sync to AutoCount"}
-                  </Button>
-                )}
                 <Button
                   variant="destructive"
                   onClick={() => setShowDeleteDialog(true)}
@@ -353,21 +385,11 @@ export default function PurchaseOrderDetail() {
               <>
                 <Button
                   onClick={() => updateStatusMutation.mutate("approved")}
-                  disabled={updateStatusMutation.isPending}
+                  disabled={updateStatusMutation.isPending || isSyncing}
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  Approve
+                  {isSyncing ? "Approving & Syncing..." : "Approve"}
                 </Button>
-                {!purchaseOrder.autocount_synced && !purchaseOrder.is_cash_purchase && (
-                  <Button
-                    variant="outline"
-                    onClick={() => syncToAutocountMutation.mutate()}
-                    disabled={isSyncing || syncToAutocountMutation.isPending}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    {isSyncing ? "Syncing..." : "Sync to AutoCount"}
-                  </Button>
-                )}
                 <Button
                   variant="outline"
                   onClick={() => setShowCancelDialog(true)}
