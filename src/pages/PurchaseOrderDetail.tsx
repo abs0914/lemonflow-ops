@@ -17,6 +17,7 @@ import { formatCurrency } from "@/lib/currency";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ReceiveFromCashPO } from "@/components/warehouse/ReceiveFromCashPO";
 import { POPrintView } from "@/components/purchasing/POPrintView";
+import { PurchaseOrderApprovalHistory } from "@/components/PurchaseOrderApprovalHistory";
 
 export default function PurchaseOrderDetail() {
   const { id } = useParams<{ id: string }>();
@@ -124,11 +125,12 @@ export default function PurchaseOrderDetail() {
       if (!user) throw new Error("Not authenticated");
 
       const updateData: any = { status };
+      const now = new Date().toISOString();
       
       // If approving, record who approved and when
       if (status === "approved") {
         updateData.approved_by = user.id;
-        updateData.approved_at = new Date().toISOString();
+        updateData.approved_at = now;
       }
 
       const { error } = await supabase
@@ -136,11 +138,34 @@ export default function PurchaseOrderDetail() {
         .update(updateData)
         .eq("id", id);
       if (error) throw error;
+
+      // Log action to audit_logs
+      const actionMap: Record<string, string> = {
+        "submitted": "submitted",
+        "approved": "approved",
+        "cancelled": "cancelled",
+      };
+
+      if (actionMap[status]) {
+        await supabase
+          .from("audit_logs")
+          .insert({
+            entity_type: "purchase_order",
+            entity_id: id,
+            action: actionMap[status],
+            user_id: user.id,
+            details: {
+              status,
+              timestamp: now,
+            }
+          });
+      }
     },
     onSuccess: () => {
       toast.success("Status updated successfully");
       queryClient.invalidateQueries({ queryKey: ["purchase-order", id] });
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["po-approval-history", id] });
     },
     onError: () => {
       toast.error("Failed to update status");
@@ -149,6 +174,11 @@ export default function PurchaseOrderDetail() {
 
   const cancelPOMutation = useMutation({
     mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const now = new Date().toISOString();
+
       // Update local status
       const { error: statusError } = await supabase
         .from("purchase_orders")
@@ -156,6 +186,20 @@ export default function PurchaseOrderDetail() {
         .eq("id", id);
 
       if (statusError) throw statusError;
+
+      // Log cancellation to audit_logs
+      await supabase
+        .from("audit_logs")
+        .insert({
+          entity_type: "purchase_order",
+          entity_id: id,
+          action: "cancelled",
+          user_id: user.id,
+          details: {
+            cancelled_at: now,
+            status_change: `${purchaseOrder?.status} -> cancelled`
+          }
+        });
 
       // Sync to AutoCount if it was synced
       if (purchaseOrder?.autocount_synced) {
@@ -180,6 +224,7 @@ export default function PurchaseOrderDetail() {
       toast.success("Purchase order cancelled");
       queryClient.invalidateQueries({ queryKey: ["purchase-order", id] });
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["po-approval-history", id] });
       setShowCancelDialog(false);
     },
     onError: (error) => {
@@ -551,6 +596,9 @@ export default function PurchaseOrderDetail() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Approval History */}
+        <PurchaseOrderApprovalHistory purchaseOrderId={purchaseOrder.id} />
 
         <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
           <AlertDialogContent>
