@@ -56,8 +56,17 @@ export function UserManagement() {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      const { error } = await supabase.auth.admin.deleteUser(userId);
-      if (error) throw error;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const response = await supabase.functions.invoke("manage-users", {
+        body: {
+          action: "delete",
+          userId,
+        },
+      });
+
+      if (response.error) throw response.error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
