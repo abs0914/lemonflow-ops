@@ -85,6 +85,42 @@ export default function Purchasing() {
     },
   });
 
+  const handleSyncAllToAutoCount = async () => {
+    const unsyncedOrders = filteredOrders?.filter(o => !o.autocount_synced) || [];
+    
+    if (unsyncedOrders.length === 0) {
+      toast.info("All purchase orders are already synced to AutoCount");
+      return;
+    }
+
+    toast.info(`Syncing ${unsyncedOrders.length} purchase order(s) to AutoCount...`);
+    
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const order of unsyncedOrders) {
+      try {
+        await supabase.functions.invoke("push-po-to-autocount", {
+          body: { purchaseOrderId: order.id },
+        });
+        successCount++;
+      } catch (error) {
+        failCount++;
+        console.error(`Failed to sync PO ${order.po_number}:`, error);
+      }
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+
+    if (successCount > 0 && failCount === 0) {
+      toast.success(`Successfully synced ${successCount} PO(s) to AutoCount`);
+    } else if (successCount > 0 && failCount > 0) {
+      toast.warning(`Synced ${successCount} PO(s), ${failCount} failed`);
+    } else {
+      toast.error(`Failed to sync all POs`);
+    }
+  };
+
   const handleDeleteClick = (order: PurchaseOrder) => {
     setPoToDelete(order);
     setDeleteDialogOpen(true);
@@ -145,6 +181,13 @@ export default function Purchasing() {
               >
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Refresh
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleSyncAllToAutoCount}
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Sync to AutoCount
               </Button>
               <Button onClick={() => navigate("/purchasing/create")}>
                 <Plus className="mr-2 h-4 w-4" />
@@ -221,9 +264,9 @@ export default function Purchasing() {
                               size="sm"
                               onClick={() => syncPOMutation.mutate(order.id)}
                               disabled={syncPOMutation.isPending}
-                              title="Sync to AutoCount"
                             >
-                              <Upload className="h-4 w-4" />
+                              <Upload className="h-4 w-4 mr-1" />
+                              Sync
                             </Button>
                           )}
                           {(order.status === "draft" || order.status === "submitted") && (
