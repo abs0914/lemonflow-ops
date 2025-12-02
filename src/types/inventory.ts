@@ -108,7 +108,9 @@ export interface PurchaseOrder {
 export interface PurchaseOrderLine {
   id: string;
   purchase_order_id: string;
-  component_id: string;
+  component_id: string | null;
+  raw_material_id: string | null;
+  item_type: 'component' | 'raw_material';
   quantity: number;
   unit_price: number;
   uom: string;
@@ -116,5 +118,6 @@ export interface PurchaseOrderLine {
   line_number: number;
   created_at: string;
   updated_at: string;
-  components?: Component;
+  components?: { id: string; sku: string; name: string; unit: string; autocount_item_code: string | null } | null;
+  raw_materials?: { id: string; sku: string; name: string; unit: string; autocount_item_code: string | null } | null;
 }
