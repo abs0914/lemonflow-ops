@@ -70,14 +70,17 @@ export default function PurchaseOrderDetail() {
           docDate: purchaseOrder.doc_date,
           deliveryDate: purchaseOrder.delivery_date,
           remarks: purchaseOrder.remarks,
-          lines: lines.map((line) => ({
-            itemCode: line.components?.autocount_item_code || line.components?.sku || "",
-            description: line.components?.name || "",
-            quantity: line.quantity,
-            unitPrice: line.unit_price,
-            uom: line.uom,
-            lineRemarks: line.line_remarks,
-          })),
+          lines: lines.map((line) => {
+            const item = line.item_type === 'raw_material' ? line.raw_materials : line.components;
+            return {
+              itemCode: item?.autocount_item_code || item?.sku || "",
+              description: item?.name || "",
+              quantity: line.quantity,
+              unitPrice: line.unit_price,
+              uom: line.uom,
+              lineRemarks: line.line_remarks,
+            };
+          }),
         },
       });
 
@@ -484,19 +487,22 @@ export default function PurchaseOrderDetail() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {lines?.map((line) => (
-                  <TableRow key={line.id}>
-                    <TableCell className="font-medium">{line.line_number}</TableCell>
-                    <TableCell>{line.components?.name}</TableCell>
-                    <TableCell className="font-mono text-sm">{line.components?.sku}</TableCell>
-                    <TableCell className="text-right">{line.quantity}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(line.unit_price)}</TableCell>
-                    <TableCell>{line.uom}</TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(line.quantity * line.unit_price)}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {lines?.map((line) => {
+                  const item = line.item_type === 'raw_material' ? line.raw_materials : line.components;
+                  return (
+                    <TableRow key={line.id}>
+                      <TableCell className="font-medium">{line.line_number}</TableCell>
+                      <TableCell>{item?.name}</TableCell>
+                      <TableCell className="font-mono text-sm">{item?.sku}</TableCell>
+                      <TableCell className="text-right">{line.quantity}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(line.unit_price)}</TableCell>
+                      <TableCell>{line.uom}</TableCell>
+                      <TableCell className="text-right font-medium">
+                        {formatCurrency(line.quantity * line.unit_price)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
             <Separator className="my-4" />

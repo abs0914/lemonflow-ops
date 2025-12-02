@@ -82,7 +82,8 @@ export function usePurchaseOrderLines(purchaseOrderId?: string) {
         .from("purchase_order_lines")
         .select(`
           *,
-          components(id, sku, name, unit)
+          components(id, sku, name, unit, autocount_item_code),
+          raw_materials(id, sku, name, unit, autocount_item_code)
         `)
         .eq("purchase_order_id", purchaseOrderId)
         .order("line_number", { ascending: true });

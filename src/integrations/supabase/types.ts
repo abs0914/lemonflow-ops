@@ -464,37 +464,43 @@ export type Database = {
       }
       purchase_order_lines: {
         Row: {
-          component_id: string
+          component_id: string | null
           created_at: string
           id: string
+          item_type: string
           line_number: number
           line_remarks: string | null
           purchase_order_id: string
           quantity: number
+          raw_material_id: string | null
           unit_price: number
           uom: string
           updated_at: string
         }
         Insert: {
-          component_id: string
+          component_id?: string | null
           created_at?: string
           id?: string
+          item_type?: string
           line_number: number
           line_remarks?: string | null
           purchase_order_id: string
           quantity: number
+          raw_material_id?: string | null
           unit_price: number
           uom: string
           updated_at?: string
         }
         Update: {
-          component_id?: string
+          component_id?: string | null
           created_at?: string
           id?: string
+          item_type?: string
           line_number?: number
           line_remarks?: string | null
           purchase_order_id?: string
           quantity?: number
+          raw_material_id?: string | null
           unit_price?: number
           uom?: string
           updated_at?: string
@@ -512,6 +518,13 @@ export type Database = {
             columns: ["purchase_order_id"]
             isOneToOne: false
             referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_lines_raw_material_id_fkey"
+            columns: ["raw_material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
             referencedColumns: ["id"]
           },
         ]

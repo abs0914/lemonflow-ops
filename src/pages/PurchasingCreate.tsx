@@ -32,8 +32,10 @@ const poSchema = z.object({
 });
 type POFormData = z.infer<typeof poSchema>;
 interface POLine {
-  component_id: string;
-  component_name?: string;
+  component_id?: string;
+  raw_material_id?: string;
+  item_name?: string;
+  item_type: 'component' | 'raw_material';
   quantity: number;
   unit_price: number;
   uom: string;
@@ -52,6 +54,15 @@ export default function PurchasingCreate() {
     queryKey: ["components"],
     queryFn: async () => {
       const { data, error } = await supabase.from("components").select("*").order("name");
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const { data: rawMaterials } = useQuery({
+    queryKey: ["raw-materials"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("raw_materials").select("*").order("name");
       if (error) throw error;
       return data;
     }
@@ -127,7 +138,9 @@ export default function PurchasingCreate() {
       
       const poLines = data.lines.map((line, index) => ({
         purchase_order_id: po.id,
-        component_id: line.component_id,
+        component_id: line.component_id || null,
+        raw_material_id: line.raw_material_id || null,
+        item_type: line.item_type,
         quantity: line.quantity,
         unit_price: line.unit_price,
         uom: line.uom,
@@ -166,18 +179,34 @@ export default function PurchasingCreate() {
   };
   const addLine = () => {
     if (!selectedComponent) {
-      toast.error("Please select a component");
+      toast.error(isCashPurchase ? "Please select a raw material" : "Please select a component");
       return;
     }
-    const item = components?.find(c => c.id === selectedComponent);
-    if (!item) return;
-    setLines([...lines, {
-      component_id: selectedComponent,
-      component_name: item.name,
-      quantity: 1,
-      unit_price: item.cost_per_unit || 0,
-      uom: item.unit
-    }]);
+    
+    if (isCashPurchase) {
+      const rawMaterial = rawMaterials?.find(r => r.id === selectedComponent);
+      if (!rawMaterial) return;
+      setLines([...lines, {
+        raw_material_id: selectedComponent,
+        item_name: rawMaterial.name,
+        item_type: 'raw_material',
+        quantity: 1,
+        unit_price: rawMaterial.cost_per_unit || 0,
+        uom: rawMaterial.unit
+      }]);
+    } else {
+      const component = components?.find(c => c.id === selectedComponent);
+      if (!component) return;
+      setLines([...lines, {
+        component_id: selectedComponent,
+        item_name: component.name,
+        item_type: 'component',
+        quantity: 1,
+        unit_price: component.cost_per_unit || 0,
+        uom: component.unit
+      }]);
+    }
+    
     setSelectedComponent("");
   };
   const removeLine = (index: number) => {
@@ -225,7 +254,7 @@ export default function PurchasingCreate() {
                   This is a Cash Purchase (Market Day)
                 </Label>
                 <p className="text-xs text-muted-foreground ml-6">
-                  For purchases made with cash advance at the market. Still uses regular inventory items.
+                  For raw material purchases made with cash advance at the market. Uses raw materials only.
                 </p>
               </div>
 
@@ -303,12 +332,16 @@ export default function PurchasingCreate() {
               <div className="flex gap-2">
                 <Select value={selectedComponent} onValueChange={setSelectedComponent}>
                   <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Select component to add" />
+                    <SelectValue placeholder={isCashPurchase ? "Select raw material to add" : "Select component to add"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {components?.map(component => <SelectItem key={component.id} value={component.id}>
-                        {component.name} ({component.sku})
-                      </SelectItem>)
+                    {isCashPurchase 
+                      ? rawMaterials?.map(material => <SelectItem key={material.id} value={material.id}>
+                          {material.name} ({material.sku})
+                        </SelectItem>)
+                      : components?.map(component => <SelectItem key={component.id} value={component.id}>
+                          {component.name} ({component.sku})
+                        </SelectItem>)
                     }
                   </SelectContent>
                 </Select>
@@ -322,7 +355,7 @@ export default function PurchasingCreate() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Component</TableHead>
+                        <TableHead>{isCashPurchase ? "Raw Material" : "Component"}</TableHead>
                         <TableHead className="w-24">Quantity</TableHead>
                         <TableHead className="w-32">Unit Price</TableHead>
                         <TableHead className="w-20">UOM</TableHead>
@@ -332,7 +365,7 @@ export default function PurchasingCreate() {
                     </TableHeader>
                     <TableBody>
                       {lines.map((line, index) => <TableRow key={index}>
-                          <TableCell className="font-medium">{line.component_name}</TableCell>
+                          <TableCell className="font-medium">{line.item_name}</TableCell>
                           <TableCell>
                             <Input type="number" min="0" step="0.01" value={line.quantity} onChange={e => updateLine(index, "quantity", parseFloat(e.target.value) || 0)} className="w-full" />
                           </TableCell>
