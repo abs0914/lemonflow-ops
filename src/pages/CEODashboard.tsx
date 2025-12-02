@@ -54,6 +54,15 @@ export default function CEODashboard() {
 
       const now = new Date().toISOString();
 
+      // Fetch PO details to check if it's cash purchase
+      const { data: poData, error: fetchError } = await supabase
+        .from("purchase_orders")
+        .select("*, suppliers(supplier_code, company_name)")
+        .eq("id", poId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
       // Update PO status
       const { error: updateError } = await supabase
         .from("purchase_orders")
@@ -81,11 +90,68 @@ export default function CEODashboard() {
         });
 
       if (auditError) throw auditError;
+
+      // Auto-sync to AutoCount if not cash purchase and not already synced
+      if (!poData.is_cash_purchase && !poData.autocount_synced) {
+        // Fetch PO lines
+        const { data: linesData, error: linesError } = await supabase
+          .from("purchase_order_lines")
+          .select(`
+            *,
+            components(id, sku, name, unit, autocount_item_code),
+            raw_materials(id, sku, name, unit, autocount_item_code)
+          `)
+          .eq("purchase_order_id", poId)
+          .order("line_number", { ascending: true });
+
+        if (linesError) throw linesError;
+
+        // Sync to AutoCount
+        const { data: syncData, error: syncError } = await supabase.functions.invoke("sync-po-create", {
+          body: {
+            poNumber: poData.po_number,
+            supplierId: poData.supplier_id,
+            docDate: poData.doc_date,
+            deliveryDate: poData.delivery_date,
+            remarks: poData.remarks,
+            lines: linesData.map((line: any) => {
+              const item = line.item_type === 'raw_material' ? line.raw_materials : line.components;
+              return {
+                itemCode: item?.autocount_item_code || item?.sku || "",
+                description: item?.name || "",
+                quantity: line.quantity,
+                unitPrice: line.unit_price,
+                uom: line.uom,
+                lineRemarks: line.line_remarks,
+              };
+            }),
+          },
+        });
+
+        if (!syncError && syncData) {
+          // Update PO with AutoCount doc number
+          await supabase
+            .from("purchase_orders")
+            .update({
+              autocount_synced: true,
+              autocount_doc_no: syncData.docNo,
+            })
+            .eq("id", poId);
+        } else {
+          console.error("AutoCount sync failed:", syncError);
+          // Don't throw error - PO is approved even if sync fails
+        }
+      }
+
+      return poData;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      const syncMessage = !data.is_cash_purchase && !data.autocount_synced 
+        ? " and synced to AutoCount" 
+        : "";
       toast({
         title: "Purchase Order Approved",
-        description: "The purchase order has been approved successfully.",
+        description: `The purchase order has been approved successfully${syncMessage}.`,
       });
       queryClient.invalidateQueries({ queryKey: ["pending-pos-for-ceo"] });
       setPOToAction(null);
