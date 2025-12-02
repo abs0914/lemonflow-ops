@@ -41,11 +41,7 @@ Deno.serve(async (req) => {
       .from('purchase_orders')
       .select(`
         *,
-        suppliers (*),
-        purchase_order_lines (
-          *,
-          components (sku, name, unit)
-        )
+        suppliers (*)
       `)
       .eq('id', requestBody.purchaseOrderId)
       .single();
@@ -53,6 +49,33 @@ Deno.serve(async (req) => {
     if (poError || !po) {
       throw new Error(`Failed to fetch PO: ${poError?.message || 'PO not found'}`);
     }
+
+    // Fetch lines separately to handle both components and raw_materials
+    const { data: lines, error: linesError } = await supabaseClient
+      .from('purchase_order_lines')
+      .select('*')
+      .eq('purchase_order_id', po.id);
+
+    if (linesError) {
+      throw new Error(`Failed to fetch PO lines: ${linesError.message}`);
+    }
+
+    // Fetch item details based on whether it's a cash purchase (raw materials) or not (components)
+    const linesWithItems = await Promise.all(
+      (lines || []).map(async (line: any) => {
+        const tableName = po.is_cash_purchase ? 'raw_materials' : 'components';
+        const { data: item } = await supabaseClient
+          .from(tableName)
+          .select('sku, name, unit')
+          .eq('id', line.component_id)
+          .single();
+        
+        return {
+          ...line,
+          item: item || { sku: '', name: 'Unknown', unit: 'unit' }
+        };
+      })
+    );
 
     if (po.autocount_synced && po.autocount_doc_no) {
       return new Response(
@@ -74,13 +97,13 @@ Deno.serve(async (req) => {
       DocDate: po.doc_date,
       DeliveryDate: po.delivery_date || po.doc_date,
       Description: po.remarks || '',
-      Details: (po.purchase_order_lines || []).map((line: any) => ({
+      Details: linesWithItems.map((line: any) => ({
         LineNumber: line.line_number,
-        ItemCode: line.components?.sku || '',
-        Description: line.components?.name || '',
+        ItemCode: line.item?.sku || '',
+        Description: line.item?.name || '',
         Quantity: line.quantity,
         UnitPrice: line.unit_price,
-        UOM: line.uom || line.components?.unit || 'unit',
+        UOM: line.uom || line.item?.unit || 'unit',
         LineRemarks: line.line_remarks || '',
       })),
     };
@@ -130,6 +153,17 @@ Deno.serve(async (req) => {
           sync_error_message: `AutoCount error: ${response.status} - ${errorText}`,
         })
         .eq('id', po.id);
+
+      // Log sync failure
+      await supabaseClient
+        .from('autocount_sync_log')
+        .insert({
+          reference_id: po.id,
+          reference_type: 'purchase_order',
+          sync_type: 'create',
+          sync_status: 'failed',
+          error_message: `AutoCount error: ${response.status} - ${errorText}`,
+        });
       
       throw new Error(`AutoCount API error: ${response.status} - ${errorText}`);
     }
@@ -146,6 +180,18 @@ Deno.serve(async (req) => {
         sync_error_message: null,
       })
       .eq('id', po.id);
+
+    // Log sync to autocount_sync_log
+    await supabaseClient
+      .from('autocount_sync_log')
+      .insert({
+        reference_id: po.id,
+        reference_type: 'purchase_order',
+        sync_type: 'create',
+        sync_status: 'success',
+        autocount_doc_no: result.docNo || po.po_number,
+        synced_at: new Date().toISOString(),
+      });
 
     return new Response(
       JSON.stringify({
