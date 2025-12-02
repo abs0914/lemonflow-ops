@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, FileText, Trash2, Edit, RefreshCw, Upload } from "lucide-react";
+import { Plus, Search, FileText, Trash2, Edit, RefreshCw, Upload, Download } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -121,6 +121,32 @@ export default function Purchasing() {
     }
   };
 
+  const handlePullFromAutoCount = async () => {
+    try {
+      toast.info("Pulling purchase orders from AutoCount...");
+      
+      const { data, error } = await supabase.functions.invoke("pull-po-from-autocount");
+      
+      if (error) throw error;
+      
+      if (data.summary.toCreate === 0 && data.summary.toUpdate === 0) {
+        toast.info("No new purchase orders to import from AutoCount");
+        return;
+      }
+      
+      // Execute the sync
+      const { data: execData, error: execError } = await supabase.functions.invoke("pull-po-execute");
+      
+      if (execError) throw execError;
+      
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      toast.success(`Imported ${execData.results.created} PO(s), updated ${execData.results.updated}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toast.error(`Failed to pull from AutoCount: ${errorMessage}`);
+    }
+  };
+
   const handleDeleteClick = (order: PurchaseOrder) => {
     setPoToDelete(order);
     setDeleteDialogOpen(true);
@@ -181,6 +207,13 @@ export default function Purchasing() {
               >
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Refresh
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handlePullFromAutoCount}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Pull from AutoCount
               </Button>
               <Button
                 variant="outline"
