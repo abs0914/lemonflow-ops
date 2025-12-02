@@ -25,6 +25,7 @@ import StoreOrderCreate from "./pages/StoreOrderCreate";
 import StoreOrderDetail from "./pages/StoreOrderDetail";
 import StoresManagement from "./pages/StoresManagement";
 import StoreAssignmentsManagement from "./pages/StoreAssignmentsManagement";
+import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
 
 // Create QueryClient instance outside component to prevent recreation
@@ -65,6 +66,7 @@ const App = () => (
             <Route path="/store/orders/:id" element={<StoreOrderDetail />} />
             <Route path="/settings/stores" element={<StoresManagement />} />
             <Route path="/settings/store-assignments" element={<StoreAssignmentsManagement />} />
+            <Route path="/reports" element={<Reports />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
