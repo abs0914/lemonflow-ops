@@ -36,18 +36,21 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
 
   const createUserMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true,
-        user_metadata: {
-          full_name: fullName,
-          role: role,
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const response = await supabase.functions.invoke("manage-users", {
+        body: {
+          action: "create",
+          email,
+          password,
+          fullName,
+          role,
         },
       });
 
-      if (error) throw error;
-      return data;
+      if (response.error) throw response.error;
+      return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
