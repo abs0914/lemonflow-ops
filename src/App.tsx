@@ -18,6 +18,7 @@ import PurchasingCreate from "./pages/PurchasingCreate";
 import PurchasingEdit from "./pages/PurchasingEdit";
 import PurchaseOrderDetail from "./pages/PurchaseOrderDetail";
 import RawMaterials from "./pages/RawMaterials";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 // Create QueryClient instance outside component to prevent recreation
@@ -51,6 +52,7 @@ const App = () => (
             <Route path="/purchasing/:id" element={<PurchaseOrderDetail />} />
             <Route path="/purchasing/:id/edit" element={<PurchasingEdit />} />
             <Route path="/raw-materials" element={<RawMaterials />} />
+            <Route path="/settings" element={<Settings />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
