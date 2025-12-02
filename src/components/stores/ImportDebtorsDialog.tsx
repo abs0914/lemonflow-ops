@@ -47,6 +47,8 @@ export function ImportDebtorsDialog({ open, onOpenChange }: ImportDebtorsDialogP
       if (response.error) throw response.error;
       if (!response.data.success) throw new Error(response.data.error);
 
+      console.log('Received debtors:', response.data.debtors);
+      console.log('First debtor:', response.data.debtors[0]);
       setDebtors(response.data.debtors);
       toast.success(`Found ${response.data.debtors.length} debtors from AutoCount`);
     } catch (error: any) {
