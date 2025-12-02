@@ -89,10 +89,17 @@ Deno.serve(async (req) => {
 
     if (!createResponse.ok) {
       const errorText = await createResponse.text();
-      console.error('[create-autocount-item] Create failed:', errorText);
-      
-      // Check if item already exists - return 200 with alreadyExists flag instead of 409
-      if (createResponse.status === 409 || errorText.includes('already exists')) {
+      console.error('[create-autocount-item] Create failed:', createResponse.status, errorText);
+
+      // Check if item already exists - return 200 with alreadyExists flag
+      // Backend returns 409 for duplicates, or error may contain UNIQUE KEY or Primary Key message
+      const isDuplicate = createResponse.status === 409 ||
+        errorText.includes('already exists') ||
+        errorText.includes('UNIQUE KEY') ||
+        errorText.includes('Primary Key');
+
+      if (isDuplicate) {
+        console.log('[create-autocount-item] Item already exists, returning alreadyExists flag');
         return new Response(
           JSON.stringify({
             success: false,
@@ -106,7 +113,7 @@ Deno.serve(async (req) => {
           }
         );
       }
-      
+
       throw new Error(`Failed to create item in AutoCount: ${createResponse.status} - ${errorText}`);
     }
 
