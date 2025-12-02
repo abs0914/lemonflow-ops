@@ -1,9 +1,12 @@
 using System;
+using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using AutoCount;
 using AutoCount.Invoicing.Purchase.PurchaseOrder;
 using Backend.Domain;
 using DomainPurchaseOrder = Backend.Domain.PurchaseOrder;
+using DomainPurchaseOrderLine = Backend.Domain.PurchaseOrderLine;
 using AutoCountPurchaseOrderDocument = AutoCount.Invoicing.Purchase.PurchaseOrder.PurchaseOrder;
 
 namespace Backend.Infrastructure.AutoCount
@@ -25,6 +28,130 @@ namespace Backend.Infrastructure.AutoCount
             if (sessionProvider == null)
                 throw new ArgumentNullException("sessionProvider");
             _sessionProvider = sessionProvider;
+        }
+
+        /// <inheritdoc />
+        public List<DomainPurchaseOrder> GetPurchaseOrders(int? limit = null)
+        {
+            lock (_lockObject)
+            {
+                try
+                {
+                    var userSession = _sessionProvider.GetUserSession();
+                    var dbSetting = userSession.DBSetting;
+
+                    // Query PO table for document numbers
+                    string sql = @"
+                        SELECT TOP {0}
+                            p.DocNo, p.DocDate, p.CreditorCode, p.Description, p.Cancelled
+                        FROM PO p
+                        ORDER BY p.DocDate DESC, p.DocNo DESC";
+
+                    int maxRows = limit.HasValue && limit.Value > 0 ? limit.Value : 100;
+                    sql = string.Format(sql, maxRows);
+
+                    DataTable tbl = dbSetting.GetDataTable(sql, false);
+
+                    var result = new List<DomainPurchaseOrder>();
+                    foreach (DataRow row in tbl.Rows)
+                    {
+                        var po = new DomainPurchaseOrder
+                        {
+                            DocNo = GetString(row, "DocNo"),
+                            SupplierCode = GetString(row, "CreditorCode"),
+                            DocDate = GetDateTime(row, "DocDate") ?? DateTime.Today,
+                            Description = GetString(row, "Description"),
+                            IsCancelled = GetBool(row, "Cancelled", false)
+                        };
+                        result.Add(po);
+                    }
+
+                    return result;
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException("Failed to retrieve purchase orders from AutoCount.", ex);
+                }
+            }
+        }
+
+        /// <inheritdoc />
+        public DomainPurchaseOrder GetPurchaseOrder(string docNo)
+        {
+            if (string.IsNullOrWhiteSpace(docNo))
+                throw new ArgumentException("Document number is required.", "docNo");
+
+            lock (_lockObject)
+            {
+                try
+                {
+                    var userSession = _sessionProvider.GetUserSession();
+                    var dbSetting = userSession.DBSetting;
+
+                    // Query PO header
+                    string headerSql = @"
+                        SELECT p.DocNo, p.DocDate, p.CreditorCode, p.Description, p.Cancelled
+                        FROM PO p
+                        WHERE p.DocNo = @DocNo";
+
+                    var param = new System.Data.SqlClient.SqlParameter("@DocNo", docNo);
+                    DataTable headerTbl = dbSetting.GetDataTable(headerSql, false, new[] { param });
+
+                    if (headerTbl.Rows.Count == 0)
+                        return null;
+
+                    var headerRow = headerTbl.Rows[0];
+                    var po = new DomainPurchaseOrder
+                    {
+                        DocNo = GetString(headerRow, "DocNo"),
+                        SupplierCode = GetString(headerRow, "CreditorCode"),
+                        DocDate = GetDateTime(headerRow, "DocDate") ?? DateTime.Today,
+                        Description = GetString(headerRow, "Description"),
+                        IsCancelled = GetBool(headerRow, "Cancelled", false),
+                        Details = new List<DomainPurchaseOrderLine>()
+                    };
+
+                    // Query PO details
+                    string detailSql = @"
+                        SELECT d.Seq, d.ItemCode, d.Description, d.Qty, d.UnitPrice, d.UOM, d.DeliveryDate, d.Remark
+                        FROM PODtl d
+                        WHERE d.DocNo = @DocNo
+                        ORDER BY d.Seq";
+
+                    var detailParam = new System.Data.SqlClient.SqlParameter("@DocNo", docNo);
+                    DataTable detailTbl = dbSetting.GetDataTable(detailSql, false, new[] { detailParam });
+
+                    int lineNumber = 0;
+                    foreach (DataRow detailRow in detailTbl.Rows)
+                    {
+                        lineNumber++;
+                        var detail = new DomainPurchaseOrderLine
+                        {
+                            LineNumber = lineNumber,
+                            ItemCode = GetString(detailRow, "ItemCode"),
+                            Description = GetString(detailRow, "Description"),
+                            Quantity = GetDecimal(detailRow, "Qty") ?? 0,
+                            UnitPrice = GetDecimal(detailRow, "UnitPrice") ?? 0,
+                            UOM = GetString(detailRow, "UOM"),
+                            LineRemarks = GetString(detailRow, "Remark")
+                        };
+
+                        // Set delivery date from first detail line
+                        if (!po.DeliveryDate.HasValue)
+                        {
+                            po.DeliveryDate = GetDateTime(detailRow, "DeliveryDate");
+                        }
+
+                        po.Details.Add(detail);
+                    }
+
+                    return po;
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException("Failed to retrieve purchase order '" + docNo + "' from AutoCount.", ex);
+                }
+            }
         }
 
         /// <inheritdoc />
@@ -286,5 +413,51 @@ namespace Backend.Infrastructure.AutoCount
                 }
             }
         }
+
+        #region Helper Methods
+
+        private static string GetString(DataRow row, string columnName)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
+                return null;
+
+            return row[columnName] as string;
+        }
+
+        private static DateTime? GetDateTime(DataRow row, string columnName)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
+                return null;
+
+            return Convert.ToDateTime(row[columnName]);
+        }
+
+        private static decimal? GetDecimal(DataRow row, string columnName)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
+                return null;
+
+            return Convert.ToDecimal(row[columnName]);
+        }
+
+        private static bool GetBool(DataRow row, string columnName, bool defaultValue)
+        {
+            if (row == null || row.Table == null || !row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
+                return defaultValue;
+
+            var value = row[columnName];
+
+            // Handle AutoCount's 'T'/'F' boolean representation
+            if (value is string strVal)
+            {
+                return strVal.Equals("T", StringComparison.OrdinalIgnoreCase) ||
+                       strVal.Equals("True", StringComparison.OrdinalIgnoreCase) ||
+                       strVal.Equals("1", StringComparison.Ordinal);
+            }
+
+            return Convert.ToBoolean(value);
+        }
+
+        #endregion
     }
 }

@@ -45,6 +45,62 @@ namespace Backend.Api.Controllers
         }
 
         /// <summary>
+        /// GET /autocount/purchase-orders
+        /// Returns a list of purchase orders from AutoCount.
+        /// Requires a valid Bearer JWT in the Authorization header.
+        /// </summary>
+        [HttpGet]
+        [Route("")]
+        public IHttpActionResult GetPurchaseOrders([FromUri] int? limit = null)
+        {
+            try
+            {
+                ClaimsPrincipal principal;
+                IHttpActionResult authError;
+                if (!TryAuthorizeRequest(out principal, out authError))
+                    return authError;
+
+                var purchaseOrders = _purchaseOrderService.GetPurchaseOrders(limit);
+                return Ok(purchaseOrders);
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(ex);
+            }
+        }
+
+        /// <summary>
+        /// GET /autocount/purchase-orders/{docNo}
+        /// Returns a single purchase order by document number.
+        /// Requires a valid Bearer JWT in the Authorization header.
+        /// </summary>
+        [HttpGet]
+        [Route("{docNo}")]
+        public IHttpActionResult GetPurchaseOrder(string docNo)
+        {
+            try
+            {
+                ClaimsPrincipal principal;
+                IHttpActionResult authError;
+                if (!TryAuthorizeRequest(out principal, out authError))
+                    return authError;
+
+                if (string.IsNullOrWhiteSpace(docNo))
+                    return BadRequest("Document number is required");
+
+                var purchaseOrder = _purchaseOrderService.GetPurchaseOrder(docNo);
+                if (purchaseOrder == null)
+                    return NotFound();
+
+                return Ok(purchaseOrder);
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(ex);
+            }
+        }
+
+        /// <summary>
         /// POST /autocount/purchase-orders
         /// Creates a purchase order in AutoCount.
         /// Requires a valid Bearer JWT in the Authorization header.

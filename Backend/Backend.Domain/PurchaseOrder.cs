@@ -20,6 +20,8 @@ namespace Backend.Domain
 
         public string Description { get; set; }
 
+        public bool IsCancelled { get; set; }
+
         public List<PurchaseOrderLine> Details { get; set; }
     }
 
