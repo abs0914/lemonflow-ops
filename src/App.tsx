@@ -25,6 +25,8 @@ import StoreOrderCreate from "./pages/StoreOrderCreate";
 import StoreOrderDetail from "./pages/StoreOrderDetail";
 import StoresManagement from "./pages/StoresManagement";
 import StoreAssignmentsManagement from "./pages/StoreAssignmentsManagement";
+import FulfillmentDashboard from "./pages/FulfillmentDashboard";
+import FulfillmentOrderDetail from "./pages/FulfillmentOrderDetail";
 import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
 
@@ -66,6 +68,8 @@ const App = () => (
             <Route path="/store/orders/:id" element={<StoreOrderDetail />} />
             <Route path="/settings/stores" element={<StoresManagement />} />
             <Route path="/settings/store-assignments" element={<StoreAssignmentsManagement />} />
+            <Route path="/fulfillment" element={<FulfillmentDashboard />} />
+            <Route path="/fulfillment/orders/:id" element={<FulfillmentOrderDetail />} />
             <Route path="/reports" element={<Reports />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
