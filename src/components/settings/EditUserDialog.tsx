@@ -19,7 +19,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
+import { ChevronDown, ChevronUp, KeyRound } from "lucide-react";
 
 interface UserProfile {
   id: string;
@@ -36,12 +42,18 @@ interface EditUserDialogProps {
 export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps) {
   const [fullName, setFullName] = useState(user.full_name);
   const [role, setRole] = useState(user.role);
+  const [isPasswordOpen, setIsPasswordOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   useEffect(() => {
     setFullName(user.full_name);
     setRole(user.role);
+    setNewPassword("");
+    setConfirmPassword("");
+    setIsPasswordOpen(false);
   }, [user]);
 
   const updateUserMutation = useMutation({
@@ -73,14 +85,59 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
     },
   });
 
+  const resetPasswordMutation = useMutation({
+    mutationFn: async () => {
+      if (newPassword.length < 6) {
+        throw new Error("Password must be at least 6 characters");
+      }
+      if (newPassword !== confirmPassword) {
+        throw new Error("Passwords do not match");
+      }
+
+      const { data, error } = await supabase.functions.invoke("manage-users", {
+        body: {
+          action: "reset-password",
+          userId: user.id,
+          newPassword: newPassword,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Password reset",
+        description: "User password has been successfully updated",
+      });
+      setNewPassword("");
+      setConfirmPassword("");
+      setIsPasswordOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reset password",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateUserMutation.mutate();
   };
 
+  const handlePasswordReset = () => {
+    resetPasswordMutation.mutate();
+  };
+
+  const passwordsMatch = newPassword === confirmPassword;
+  const passwordValid = newPassword.length >= 6;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-md">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
@@ -116,6 +173,75 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
                 </SelectContent>
               </Select>
             </div>
+
+            <Collapsible open={isPasswordOpen} onOpenChange={setIsPasswordOpen}>
+              <CollapsibleTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full justify-between"
+                >
+                  <span className="flex items-center gap-2">
+                    <KeyRound className="h-4 w-4" />
+                    Change Password
+                  </span>
+                  {isPasswordOpen ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword">New Password</Label>
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password"
+                  />
+                  {newPassword && !passwordValid && (
+                    <p className="text-sm text-destructive">
+                      Password must be at least 6 characters
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm new password"
+                  />
+                  {confirmPassword && !passwordsMatch && (
+                    <p className="text-sm text-destructive">
+                      Passwords do not match
+                    </p>
+                  )}
+                </div>
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full"
+                  onClick={handlePasswordReset}
+                  disabled={
+                    !passwordValid ||
+                    !passwordsMatch ||
+                    resetPasswordMutation.isPending
+                  }
+                >
+                  {resetPasswordMutation.isPending
+                    ? "Resetting..."
+                    : "Reset Password"}
+                </Button>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
 
           <DialogFooter>
