@@ -84,6 +84,28 @@ serve(async (req) => {
         });
       }
 
+      case "reset-password": {
+        const { userId, newPassword } = data;
+        
+        if (!newPassword || newPassword.length < 6) {
+          return new Response(JSON.stringify({ error: "Password must be at least 6 characters" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const { error } = await supabaseAdmin.auth.admin.updateUserById(
+          userId,
+          { password: newPassword }
+        );
+
+        if (error) throw error;
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       default:
         return new Response(JSON.stringify({ error: "Invalid action" }), {
           status: 400,
