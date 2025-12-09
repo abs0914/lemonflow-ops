@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCreateStoreAssignment, useUpdateStoreAssignment } from "@/hooks/useStoreAssignments";
 import { useStores } from "@/hooks/useStores";
+import { Session } from "@supabase/supabase-js";
 
 const assignmentSchema = z.object({
   user_id: z.string().uuid("Invalid user selected"),
@@ -37,27 +39,40 @@ interface StoreAssignmentDialogProps {
 }
 
 export function StoreAssignmentDialog({ open, onOpenChange, assignment }: StoreAssignmentDialogProps) {
+  const [session, setSession] = useState<Session | null>(null);
   const createMutation = useCreateStoreAssignment();
   const updateMutation = useUpdateStoreAssignment();
   const { data: stores } = useStores();
 
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   const { data: users } = useQuery({
-    queryKey: ["users-for-assignment"],
+    queryKey: ["users-for-assignment", session?.user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("user_profiles")
         .select("*")
-        .in("role", ["Store", "Admin"])
         .order("full_name", { ascending: true });
       
       if (error) throw error;
       return data;
     },
+    enabled: !!session?.user,
   });
 
   const form = useForm<AssignmentFormData>({
     resolver: zodResolver(assignmentSchema),
-    defaultValues: assignment || {
+    defaultValues: {
       user_id: "",
       store_id: "",
       is_primary: false,
@@ -65,12 +80,36 @@ export function StoreAssignmentDialog({ open, onOpenChange, assignment }: StoreA
     },
   });
 
+  // Reset form when assignment changes or dialog opens
+  useEffect(() => {
+    if (open) {
+      if (assignment) {
+        form.reset({
+          user_id: assignment.user_id || "",
+          store_id: assignment.store_id || "",
+          is_primary: assignment.is_primary ?? false,
+          can_place_orders: assignment.can_place_orders ?? true,
+        });
+      } else {
+        form.reset({
+          user_id: "",
+          store_id: "",
+          is_primary: false,
+          can_place_orders: true,
+        });
+      }
+    }
+  }, [assignment, open, form]);
+
   const onSubmit = async (data: AssignmentFormData) => {
     try {
       if (assignment) {
         await updateMutation.mutateAsync({
           id: assignment.id,
-          updates: data as any,
+          updates: {
+            is_primary: data.is_primary,
+            can_place_orders: data.can_place_orders,
+          },
         });
       } else {
         await createMutation.mutateAsync({
