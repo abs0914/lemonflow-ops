@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Session } from "@supabase/supabase-js";
 
 interface UserProfile {
   id: string;
@@ -38,11 +39,24 @@ export function UserManagement() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   const { data: users, isLoading } = useQuery({
-    queryKey: ["users"],
+    queryKey: ["users", session?.user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("user_profiles")
@@ -52,6 +66,7 @@ export function UserManagement() {
       if (error) throw error;
       return data as UserProfile[];
     },
+    enabled: !!session?.user,
   });
 
   const deleteUserMutation = useMutation({
