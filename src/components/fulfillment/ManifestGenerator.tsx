@@ -10,6 +10,7 @@ import { Printer } from "lucide-react";
 import { useFulfillmentOrdersByIds, useFulfillmentOrderLines } from "@/hooks/useFulfillment";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
+import tlcLogo from "@/assets/tlc-logo.png";
 
 interface ManifestGeneratorProps {
   orderIds: string[];
@@ -89,7 +90,8 @@ export function ManifestGenerator({ orderIds, open, onOpenChange }: ManifestGene
           </div>
         ) : (
           <div ref={printRef}>
-            <div className="header">
+            <div className="header" style={{ textAlign: "center", marginBottom: "20px" }}>
+              <img src={tlcLogo} alt="The Lemon Co" style={{ height: "60px", marginBottom: "10px" }} />
               <h1 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "5px" }}>
                 THE LEMON CO
               </h1>

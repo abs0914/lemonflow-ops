@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 import { format } from "date-fns";
+import tlcLogo from "@/assets/tlc-logo.png";
 
 interface DeliveryOrderDocumentProps {
   order: {
@@ -110,9 +111,10 @@ export function DeliveryOrderDocument({
         </DialogHeader>
 
         <div ref={printRef} className="container">
-          <div className="header">
-            <div className="company-name">THE LEMON CO</div>
-            <div className="document-title">DELIVERY ORDER</div>
+          <div className="header" style={{ textAlign: "center", borderBottom: "2px solid #000", paddingBottom: "10px", marginBottom: "20px" }}>
+            <img src={tlcLogo} alt="The Lemon Co" style={{ height: "60px", marginBottom: "10px" }} />
+            <div className="company-name" style={{ fontSize: "24px", fontWeight: "bold" }}>THE LEMON CO</div>
+            <div className="document-title" style={{ fontSize: "18px", marginTop: "5px" }}>DELIVERY ORDER</div>
           </div>
 
           <div className="info-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" }}>

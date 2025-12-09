@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { formatCurrency } from "@/lib/currency";
 import { dateFormatters } from "@/lib/datetime";
+import tlcLogo from "@/assets/tlc-logo.png";
 
 interface POPrintViewProps {
   purchaseOrder: any;
@@ -54,11 +55,14 @@ export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps)
           <div className="p-8">
             {/* Header */}
             <div className="flex justify-between items-start mb-8 border-b-2 border-gray-800 pb-4">
-              <div>
-                <h1 className="text-3xl font-bold">PURCHASE ORDER</h1>
-                <p className="text-sm text-gray-600 mt-1">
-                  Copy {copyNumber} of 2 - {copyNumber === 1 ? 'CEO Copy' : 'Accounting Copy'}
-                </p>
+              <div className="flex items-center gap-4">
+                <img src={tlcLogo} alt="The Lemon Co" className="h-16 w-auto" />
+                <div>
+                  <h1 className="text-3xl font-bold">PURCHASE ORDER</h1>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Copy {copyNumber} of 2 - {copyNumber === 1 ? 'CEO Copy' : 'Accounting Copy'}
+                  </p>
+                </div>
               </div>
               <div className="text-right">
                 <p className="text-lg font-semibold">PO #: {purchaseOrder.po_number}</p>
@@ -67,12 +71,6 @@ export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps)
                   <p className="text-sm font-semibold text-orange-600 mt-1">CASH PURCHASE</p>
                 )}
               </div>
-            </div>
-
-            {/* Company Info */}
-            <div className="mb-6">
-              <h2 className="text-xl font-bold mb-2">The Lemon Co</h2>
-              <p className="text-sm text-gray-600">Production System</p>
             </div>
 
             {/* Supplier Info */}
