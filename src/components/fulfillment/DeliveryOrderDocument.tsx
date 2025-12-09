@@ -8,7 +8,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 import { format } from "date-fns";
-import tlcLogo from "@/assets/tlc-logo.png";
+
+const logoUrl = `${window.location.origin}/tlc-logo.png`;
 
 interface DeliveryOrderDocumentProps {
   order: {
@@ -112,7 +113,7 @@ export function DeliveryOrderDocument({
 
         <div ref={printRef} className="container">
           <div className="header" style={{ textAlign: "center", borderBottom: "2px solid #000", paddingBottom: "10px", marginBottom: "20px" }}>
-            <img src={tlcLogo} alt="The Lemon Co" style={{ height: "60px", marginBottom: "10px" }} />
+            <img src={logoUrl} alt="The Lemon Co" style={{ height: "60px", marginBottom: "10px" }} />
             <div className="company-name" style={{ fontSize: "24px", fontWeight: "bold" }}>THE LEMON CO</div>
             <div className="document-title" style={{ fontSize: "18px", marginTop: "5px" }}>DELIVERY ORDER</div>
           </div>
