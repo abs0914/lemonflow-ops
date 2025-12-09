@@ -40,6 +40,12 @@ export interface SalesOrder {
   autocount_synced: boolean;
   sync_error_message?: string;
   synced_at?: string;
+  approved_by?: string;
+  approved_at?: string;
+  fulfilled_by?: string;
+  fulfilled_at?: string;
+  cancellation_reason?: string;
+  delivery_notes?: string;
   created_at: string;
   updated_at: string;
   stores?: Store;

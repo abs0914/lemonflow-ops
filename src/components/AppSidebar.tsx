@@ -13,6 +13,7 @@ import {
   CheckCircle,
   LogOut,
   ShoppingBag,
+  ClipboardList,
   BarChart3
 } from "lucide-react";
 import tlcLogo from "@/assets/tlc-logo.png";
@@ -94,6 +95,12 @@ export function AppSidebar() {
       url: "/store/orders",
       icon: ShoppingBag,
       roles: ["Admin", "Store"],
+    },
+    {
+      title: "Fulfillment",
+      url: "/fulfillment",
+      icon: ClipboardList,
+      roles: ["Admin", "Fulfillment"],
     },
     {
       title: "CEO Approvals",
