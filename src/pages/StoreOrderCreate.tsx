@@ -21,6 +21,7 @@ import { OrderLineForm } from "@/components/store-orders/OrderLineForm";
 import { SalesOrderLine } from "@/types/sales-order";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function StoreOrderCreate() {
   const navigate = useNavigate();
@@ -80,11 +81,47 @@ export default function StoreOrderCreate() {
       lines,
     });
 
-    // Update status to submitted
-    await updateMutation.mutateAsync({
-      id: order.id,
-      updates: { status: "submitted", submitted_at: new Date().toISOString() },
-    });
+    const isFranchisee = selectedStore?.stores?.store_type === "franchisee";
+
+    if (isFranchisee) {
+      // Franchisee: Reserve stock and send to Finance for payment confirmation
+      const { data: reserveResult, error: reserveError } = await supabase.rpc(
+        "reserve_stock_for_sales_order",
+        { p_sales_order_id: order.id }
+      );
+
+      if (reserveError) {
+        toast.error(`Stock reservation failed: ${reserveError.message}`);
+        return;
+      }
+
+      const result = reserveResult as { success: boolean; message?: string } | null;
+      if (!result?.success) {
+        toast.error(result?.message || "Failed to reserve stock");
+        return;
+      }
+
+      await updateMutation.mutateAsync({
+        id: order.id,
+        updates: { 
+          status: "pending_payment", 
+          submitted_at: new Date().toISOString() 
+        },
+      });
+
+      toast.success("Order submitted for payment confirmation");
+    } else {
+      // Own store: Go to submitted for Fulfillment approval
+      await updateMutation.mutateAsync({
+        id: order.id,
+        updates: { 
+          status: "submitted", 
+          submitted_at: new Date().toISOString() 
+        },
+      });
+
+      toast.success("Order submitted for fulfillment");
+    }
 
     navigate("/store/orders");
   };

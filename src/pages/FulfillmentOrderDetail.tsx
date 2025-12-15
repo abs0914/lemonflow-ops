@@ -42,61 +42,36 @@ export default function FulfillmentOrderDetail() {
   const handleApproveOrder = async () => {
     if (!order || !user) return;
 
+    // Franchisee orders should not be approved by fulfillment - they go through Finance
+    if (isFranchisee) {
+      toast.error("Franchisee orders require payment confirmation from Finance first");
+      return;
+    }
+
     try {
       setIsSyncing(true);
 
-      // For franchisee stores, reserve stock and set to pending_payment
-      if (isFranchisee) {
-        // Reserve stock first
-        const { data: reserveResult, error: reserveError } = await supabase.rpc(
-          "reserve_stock_for_sales_order",
-          { p_sales_order_id: order.id }
-        );
+      // For own stores, proceed with AutoCount sync directly
+      const { data, error } = await supabase.functions.invoke("sync-sales-order", {
+        body: { salesOrderId: order.id },
+      });
 
-        if (reserveError) throw reserveError;
-        
-        const result = reserveResult as { success: boolean; message?: string } | null;
-        if (!result?.success) {
-          toast.error(result?.message || "Failed to reserve stock");
-          setIsSyncing(false);
-          return;
-        }
+      if (error) throw error;
 
-        // Set status to pending_payment for Finance to confirm
-        await updateMutation.mutateAsync({
-          id: order.id,
-          updates: {
-            status: "pending_payment",
-            approved_by: user.id,
-            approved_at: new Date().toISOString(),
-          },
-        });
+      await updateMutation.mutateAsync({
+        id: order.id,
+        updates: {
+          status: "processing",
+          approved_by: user.id,
+          approved_at: new Date().toISOString(),
+          autocount_synced: data?.success ? true : order.autocount_synced,
+          autocount_doc_no: data?.documentNo || order.autocount_doc_no,
+          synced_at: data?.success ? new Date().toISOString() : order.synced_at,
+        },
+      });
 
-        toast.success("Order sent to Finance for payment confirmation");
-        refetch();
-      } else {
-        // For own stores, proceed with AutoCount sync directly
-        const { data, error } = await supabase.functions.invoke("sync-sales-order", {
-          body: { salesOrderId: order.id },
-        });
-
-        if (error) throw error;
-
-        await updateMutation.mutateAsync({
-          id: order.id,
-          updates: {
-            status: "processing",
-            approved_by: user.id,
-            approved_at: new Date().toISOString(),
-            autocount_synced: data?.success ? true : order.autocount_synced,
-            autocount_doc_no: data?.documentNo || order.autocount_doc_no,
-            synced_at: data?.success ? new Date().toISOString() : order.synced_at,
-          },
-        });
-
-        toast.success("Order approved and synced to AutoCount");
-        refetch();
-      }
+      toast.success("Order approved and synced to AutoCount");
+      refetch();
     } catch (error: any) {
       toast.error(`Failed to approve: ${error.message}`);
     } finally {

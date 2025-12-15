@@ -78,7 +78,7 @@ export function FulfillmentOrderActions({
           <CardTitle className="text-base">Actions</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {isSubmitted && (
+          {isSubmitted && !isFranchisee && (
             <>
               <Button
                 className="w-full"
@@ -90,7 +90,7 @@ export function FulfillmentOrderActions({
                 ) : (
                   <CheckCircle className="mr-2 h-4 w-4" />
                 )}
-                {isFranchisee ? "Approve & Send for Payment" : "Approve & Sync"}
+                Approve & Sync
               </Button>
               <Button
                 variant="outline"
@@ -102,6 +102,13 @@ export function FulfillmentOrderActions({
                 Reject Order
               </Button>
             </>
+          )}
+
+          {isSubmitted && isFranchisee && (
+            <div className="text-center py-4 text-muted-foreground">
+              <p className="text-sm">This franchisee order is awaiting payment confirmation.</p>
+              <p className="text-xs mt-1">Finance will process payment first.</p>
+            </div>
           )}
 
           {isPendingPayment && (
