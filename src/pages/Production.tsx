@@ -49,7 +49,7 @@ export default function Production() {
         .insert({
           item_id: data.component_id,
           item_type: "component",
-          movement_type: "PRODUCTION_COMPLETE",
+          movement_type: "assembly_produce",
           quantity: data.quantity,
           performed_by: user.id,
           notes: data.notes || null,
