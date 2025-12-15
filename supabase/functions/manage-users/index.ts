@@ -80,8 +80,19 @@ serve(async (req) => {
           },
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error("Create user error:", error);
+          // Handle duplicate email error gracefully
+          if (error.message?.includes("already been registered") || error.message?.includes("already exists")) {
+            return new Response(JSON.stringify({ error: "A user with this email already exists. Please use a different email address." }), {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          throw error;
+        }
 
+        console.log("User created successfully:", newUser.user?.id);
         return new Response(JSON.stringify({ user: newUser }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
