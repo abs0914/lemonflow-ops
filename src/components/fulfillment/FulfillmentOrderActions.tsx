@@ -19,6 +19,9 @@ interface FulfillmentOrderActionsProps {
     id: string;
     status: string;
     autocount_synced?: boolean;
+    stores?: {
+      store_type?: string;
+    };
   };
   onApprove: () => Promise<void>;
   onReject: (reason: string) => Promise<void>;
@@ -39,6 +42,8 @@ export function FulfillmentOrderActions({
 
   const isSubmitted = order.status === "submitted";
   const isProcessing = order.status === "processing";
+  const isPendingPayment = order.status === "pending_payment";
+  const isFranchisee = order.stores?.store_type === "franchisee";
 
   const handleRejectConfirm = async () => {
     await onReject(rejectReason);
@@ -85,7 +90,7 @@ export function FulfillmentOrderActions({
                 ) : (
                   <CheckCircle className="mr-2 h-4 w-4" />
                 )}
-                Approve & Sync
+                {isFranchisee ? "Approve & Send for Payment" : "Approve & Sync"}
               </Button>
               <Button
                 variant="outline"
@@ -97,6 +102,13 @@ export function FulfillmentOrderActions({
                 Reject Order
               </Button>
             </>
+          )}
+
+          {isPendingPayment && (
+            <div className="text-center py-4 text-muted-foreground">
+              <p className="text-sm">Awaiting payment confirmation from Finance.</p>
+              <p className="text-xs mt-1">Stock has been reserved for this order.</p>
+            </div>
           )}
 
           {isProcessing && (

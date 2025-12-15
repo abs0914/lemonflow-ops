@@ -14,7 +14,8 @@ import {
   LogOut,
   ShoppingBag,
   ClipboardList,
-  BarChart3
+  BarChart3,
+  DollarSign
 } from "lucide-react";
 import tlcLogo from "@/assets/tlc-logo.png";
 import {
@@ -101,6 +102,12 @@ export function AppSidebar() {
       url: "/fulfillment",
       icon: ClipboardList,
       roles: ["Admin", "Fulfillment"],
+    },
+    {
+      title: "Finance",
+      url: "/finance",
+      icon: DollarSign,
+      roles: ["Admin", "Finance"],
     },
     {
       title: "CEO Approvals",

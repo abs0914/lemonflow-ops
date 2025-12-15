@@ -30,7 +30,7 @@ export interface SalesOrder {
   debtor_code: string;
   doc_date: string;
   delivery_date?: string;
-  status: 'draft' | 'submitted' | 'processing' | 'completed' | 'cancelled';
+  status: 'draft' | 'submitted' | 'pending_payment' | 'processing' | 'completed' | 'cancelled';
   description?: string;
   total_amount: number;
   created_by: string;
@@ -46,6 +46,11 @@ export interface SalesOrder {
   fulfilled_at?: string;
   cancellation_reason?: string;
   delivery_notes?: string;
+  payment_amount?: number;
+  payment_confirmed_by?: string;
+  payment_confirmed_at?: string;
+  payment_reference?: string;
+  stock_reserved?: boolean;
   created_at: string;
   updated_at: string;
   stores?: Store;
