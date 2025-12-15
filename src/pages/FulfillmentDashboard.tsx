@@ -33,6 +33,12 @@ export default function FulfillmentDashboard() {
     const matchesSearch = 
       order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.stores?.store_name.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // For submitted tab, only show own store orders (franchisee orders go through Finance first)
+    if (activeTab === "submitted") {
+      return matchesSearch && order.status === "submitted" && order.stores?.store_type !== "franchisee";
+    }
+    
     const matchesTab = activeTab === "all" || order.status === activeTab;
     return matchesSearch && matchesTab;
   }) || [];
@@ -55,7 +61,8 @@ export default function FulfillmentDashboard() {
     );
   };
 
-  const pendingCount = orders?.filter((o) => o.status === "submitted").length || 0;
+  // Only count own store orders for pending (franchisee orders go to Finance first)
+  const pendingCount = orders?.filter((o) => o.status === "submitted" && o.stores?.store_type !== "franchisee").length || 0;
   const pendingPaymentCount = orders?.filter((o) => o.status === "pending_payment").length || 0;
   const processingCount = orders?.filter((o) => o.status === "processing").length || 0;
   const completedCount = orders?.filter((o) => o.status === "completed").length || 0;
@@ -140,7 +147,6 @@ export default function FulfillmentDashboard() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="submitted">Pending ({pendingCount})</TabsTrigger>
-            <TabsTrigger value="pending_payment">Awaiting Payment ({pendingPaymentCount})</TabsTrigger>
             <TabsTrigger value="processing">Processing ({processingCount})</TabsTrigger>
             <TabsTrigger value="completed">Completed</TabsTrigger>
             <TabsTrigger value="all">All Orders</TabsTrigger>

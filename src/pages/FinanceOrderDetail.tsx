@@ -67,12 +67,17 @@ export default function FinanceOrderDetail() {
     }
 
     try {
-      await confirmPayment.mutateAsync({
+      const result = await confirmPayment.mutateAsync({
         orderId: id,
         paymentAmount: amount,
         paymentReference: paymentReference || undefined,
       });
-      toast.success("Payment confirmed successfully");
+      
+      if (result?.syncSuccess) {
+        toast.success(`Payment confirmed and synced to AutoCount (${result.documentNo})`);
+      } else {
+        toast.success("Payment confirmed (AutoCount sync pending)");
+      }
       navigate("/finance");
     } catch (error) {
       toast.error("Failed to confirm payment");

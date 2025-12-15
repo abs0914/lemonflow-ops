@@ -37,6 +37,18 @@ export function useConfirmPayment() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
+      // Sync to AutoCount first
+      const { data: syncData, error: syncError } = await supabase.functions.invoke(
+        "sync-sales-order",
+        { body: { salesOrderId: orderId } }
+      );
+
+      if (syncError) {
+        console.error("AutoCount sync error:", syncError);
+        // Continue with payment confirmation even if sync fails
+      }
+
+      // Update order with payment confirmation and sync status
       const { error } = await supabase
         .from("sales_orders")
         .update({
@@ -45,10 +57,16 @@ export function useConfirmPayment() {
           payment_reference: paymentReference || null,
           payment_confirmed_by: user.id,
           payment_confirmed_at: new Date().toISOString(),
+          autocount_synced: syncData?.success || false,
+          autocount_doc_no: syncData?.documentNo || null,
+          synced_at: syncData?.success ? new Date().toISOString() : null,
+          sync_error_message: syncError?.message || syncData?.error || null,
         })
         .eq("id", orderId);
 
       if (error) throw error;
+
+      return { syncSuccess: syncData?.success, documentNo: syncData?.documentNo };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["finance-orders"] });
