@@ -33,6 +33,7 @@ interface UserProfile {
   full_name: string;
   role: string;
   created_at: string;
+  email?: string;
 }
 
 export function UserManagement() {
@@ -58,13 +59,35 @@ export function UserManagement() {
   const { data: users, isLoading } = useQuery({
     queryKey: ["users", session?.user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Fetch user profiles
+      const { data: profiles, error: profilesError } = await supabase
         .from("user_profiles")
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      return data as UserProfile[];
+      if (profilesError) throw profilesError;
+
+      // Fetch auth users to get emails
+      const { data: authData, error: authError } = await supabase.functions.invoke("manage-users", {
+        body: { action: "list" },
+      });
+
+      if (authError) {
+        console.error("Failed to fetch auth users:", authError);
+        // Return profiles without emails if auth fetch fails
+        return profiles as UserProfile[];
+      }
+
+      // Merge emails into profiles
+      const usersWithEmails = (profiles as UserProfile[]).map(profile => {
+        const authUser = authData?.users?.find((u: any) => u.id === profile.id);
+        return {
+          ...profile,
+          email: authUser?.email || undefined,
+        };
+      });
+
+      return usersWithEmails;
     },
     enabled: !!session?.user,
   });
@@ -150,6 +173,7 @@ export function UserManagement() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -159,6 +183,9 @@ export function UserManagement() {
               {users?.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.full_name}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {user.email || "—"}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={getRoleBadgeVariant(user.role)}>
                       {user.role}
