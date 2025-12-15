@@ -135,6 +135,10 @@ export function UserManagement() {
         return "outline";
       case "Store":
         return "outline";
+      case "Fulfillment":
+        return "secondary";
+      case "Finance":
+        return "default";
       default:
         return "outline";
     }
