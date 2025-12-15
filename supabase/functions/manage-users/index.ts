@@ -87,20 +87,27 @@ serve(async (req) => {
       case "reset-password": {
         const { userId, newPassword } = data;
         
+        console.log("Password reset requested for user:", userId);
+        
         if (!newPassword || newPassword.length < 6) {
+          console.log("Password validation failed: too short");
           return new Response(JSON.stringify({ error: "Password must be at least 6 characters" }), {
             status: 400,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
 
-        const { error } = await supabaseAdmin.auth.admin.updateUserById(
+        const { data: updateData, error } = await supabaseAdmin.auth.admin.updateUserById(
           userId,
           { password: newPassword }
         );
 
-        if (error) throw error;
+        if (error) {
+          console.error("Password reset error:", error);
+          throw error;
+        }
 
+        console.log("Password reset successful for user:", userId);
         return new Response(JSON.stringify({ success: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
