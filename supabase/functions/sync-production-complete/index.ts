@@ -47,24 +47,10 @@ Deno.serve(async (req) => {
       throw new Error("Component does not have an AutoCount item code");
     }
 
-    // Fetch AutoCount API credentials
-    const { data: apiUrl } = await supabase
-      .from("app_configs")
-      .select("value")
-      .eq("key", "LEMONCO_API_URL")
-      .single();
-
-    const { data: username } = await supabase
-      .from("app_configs")
-      .select("value")
-      .eq("key", "LEMONCO_USERNAME")
-      .single();
-
-    const { data: password } = await supabase
-      .from("app_configs")
-      .select("value")
-      .eq("key", "LEMONCO_PASSWORD")
-      .single();
+    // Get AutoCount API credentials from environment variables
+    const apiUrl = Deno.env.get("LEMONCO_API_URL");
+    const username = Deno.env.get("LEMONCO_USERNAME");
+    const password = Deno.env.get("LEMONCO_PASSWORD");
 
     if (!apiUrl || !username || !password) {
       throw new Error("AutoCount API credentials not configured");
@@ -85,12 +71,12 @@ Deno.serve(async (req) => {
 
     // Call AutoCount API
     const autoCountResponse = await fetch(
-      `${apiUrl.value}/api/stock-adjustment`,
+      `${apiUrl}/api/stock-adjustment`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Basic ${btoa(`${username.value}:${password.value}`)}`,
+          Authorization: `Basic ${btoa(`${username}:${password}`)}`,
         },
         body: JSON.stringify(autoCountPayload),
       }
