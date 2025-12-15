@@ -14,6 +14,7 @@ import { ManifestGenerator } from "@/components/fulfillment/ManifestGenerator";
 
 const statusColors: Record<string, string> = {
   submitted: "bg-blue-100 text-blue-800",
+  pending_payment: "bg-orange-100 text-orange-800",
   processing: "bg-yellow-100 text-yellow-800",
   completed: "bg-green-100 text-green-800",
   cancelled: "bg-red-100 text-red-800",
@@ -44,13 +45,18 @@ export default function FulfillmentDashboard() {
     );
   };
 
-  const getStatusBadge = (status: string) => (
-    <Badge className={statusColors[status] || "bg-gray-100 text-gray-800"}>
-      {status.charAt(0).toUpperCase() + status.slice(1)}
-    </Badge>
-  );
+  const getStatusBadge = (status: string) => {
+    const displayStatus = status === "pending_payment" ? "Awaiting Payment" : 
+      status.charAt(0).toUpperCase() + status.slice(1);
+    return (
+      <Badge className={statusColors[status] || "bg-gray-100 text-gray-800"}>
+        {displayStatus}
+      </Badge>
+    );
+  };
 
   const pendingCount = orders?.filter((o) => o.status === "submitted").length || 0;
+  const pendingPaymentCount = orders?.filter((o) => o.status === "pending_payment").length || 0;
   const processingCount = orders?.filter((o) => o.status === "processing").length || 0;
   const completedCount = orders?.filter((o) => o.status === "completed").length || 0;
 
@@ -74,7 +80,7 @@ export default function FulfillmentDashboard() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -83,6 +89,16 @@ export default function FulfillmentDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">{pendingCount}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Awaiting Payment
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-600">{pendingPaymentCount}</div>
             </CardContent>
           </Card>
           <Card>
@@ -124,6 +140,7 @@ export default function FulfillmentDashboard() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="submitted">Pending ({pendingCount})</TabsTrigger>
+            <TabsTrigger value="pending_payment">Awaiting Payment ({pendingPaymentCount})</TabsTrigger>
             <TabsTrigger value="processing">Processing ({processingCount})</TabsTrigger>
             <TabsTrigger value="completed">Completed</TabsTrigger>
             <TabsTrigger value="all">All Orders</TabsTrigger>
