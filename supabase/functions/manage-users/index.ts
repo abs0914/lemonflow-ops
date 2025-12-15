@@ -50,8 +50,23 @@ serve(async (req) => {
     }
 
     const { action, ...data } = await req.json();
+    console.log("Action received:", action, "Data:", JSON.stringify(data));
 
     switch (action) {
+      case "list": {
+        // Get all users from auth.users with their emails
+        const { data: authUsers, error } = await supabaseAdmin.auth.admin.listUsers();
+        
+        if (error) {
+          console.error("List users error:", error);
+          throw error;
+        }
+
+        console.log("Listed", authUsers.users.length, "users");
+        return new Response(JSON.stringify({ users: authUsers.users }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       case "create": {
         const { email, password, fullName, role } = data;
         
