@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, RefreshCw } from "lucide-react";
+import { Plus, Search, RefreshCw, ClipboardPaste } from "lucide-react";
 import { useSalesOrders } from "@/hooks/useSalesOrders";
 import { useUserStores } from "@/hooks/useUserStore";
 import { MobileOrderCard } from "@/components/store-orders/MobileOrderCard";
@@ -85,6 +85,10 @@ export default function StoreOrders() {
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
               Refresh
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/store/orders/quick-entry")}>
+              <ClipboardPaste className="mr-2 h-4 w-4" />
+              Quick Entry
             </Button>
             <Button onClick={() => navigate("/store/orders/create")}>
               <Plus className="mr-2 h-4 w-4" />
