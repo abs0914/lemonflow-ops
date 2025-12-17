@@ -1,12 +1,12 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useSalesAuth } from "@/contexts/SalesAuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   BarChart3,
   Store,
-  LogOut,
+  ArrowLeft,
   Citrus,
   Menu,
   X,
@@ -22,12 +22,11 @@ const navItems = [
 export function SalesDashboardLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useSalesAuth();
+  const { profile } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const handleLogout = () => {
-    logout();
-    navigate("/sales-login");
+  const handleBackToMain = () => {
+    navigate("/dashboard");
   };
 
   return (
@@ -62,6 +61,15 @@ export function SalesDashboardLayout({ children }: { children: React.ReactNode }
             <span className="font-bold text-xl text-primary-foreground">Lemon-co</span>
           </div>
 
+          {/* User Info */}
+          <div className="px-6 py-3 border-b border-primary-foreground/10">
+            <p className="text-sm text-primary-foreground/70">Logged in as</p>
+            <p className="font-medium text-primary-foreground truncate">
+              {profile?.full_name || "User"}
+            </p>
+            <p className="text-xs text-primary-foreground/60">{profile?.role}</p>
+          </div>
+
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-1">
             {navItems.map((item) => {
@@ -85,15 +93,15 @@ export function SalesDashboardLayout({ children }: { children: React.ReactNode }
             })}
           </nav>
 
-          {/* Logout */}
+          {/* Back to Main App */}
           <div className="p-4 border-t border-primary-foreground/10">
             <Button
               variant="ghost"
               className="w-full justify-start text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
-              onClick={handleLogout}
+              onClick={handleBackToMain}
             >
-              <LogOut className="h-5 w-5 mr-3" />
-              Logout
+              <ArrowLeft className="h-5 w-5 mr-3" />
+              Back to Main App
             </Button>
           </div>
         </div>
