@@ -64,13 +64,6 @@ export async function getPOSDailySales(
   return apiRequest<POSDailySalesResponse>('/api/pos/daily-sales', queryParams);
 }
 
-// Sales Orders API
-export async function getSalesOrders(limit?: number): Promise<SalesOrder[]> {
-  const params: Record<string, string> = {};
-  if (limit) params.limit = limit.toString();
-  return apiRequest<SalesOrder[]>('/autocount/sales-orders', params);
-}
-
-export async function getSalesOrderByDocNo(docNo: string): Promise<SalesOrder> {
-  return apiRequest<SalesOrder>(`/autocount/sales-orders/${docNo}`);
-}
+// NOTE: Sales Orders are now fetched from local Supabase database
+// See useSalesOrdersData hook in src/hooks/useSalesData.ts
+// The /autocount/sales-orders endpoint does not exist on the external API
