@@ -9,6 +9,7 @@ import { PurchaseOrderReport } from "@/components/reports/PurchaseOrderReport";
 import { StockMovementReport } from "@/components/reports/StockMovementReport";
 import { AssemblyOrderReport } from "@/components/reports/AssemblyOrderReport";
 import { SalesOrderReport } from "@/components/reports/SalesOrderReport";
+import { SalesDashboardReport } from "@/components/reports/SalesDashboardReport";
 import { BarChart3 } from "lucide-react";
 
 interface ReportConfig {
@@ -47,6 +48,13 @@ const reportConfigs: ReportConfig[] = [
     description: "Store orders summary and sales metrics",
     roles: ["Admin", "Store"],
     component: SalesOrderReport,
+  },
+  {
+    id: "sales-dashboard",
+    title: "Sales Dashboard",
+    description: "POS and order sales overview with trends and store performance",
+    roles: ["Admin", "CEO"],
+    component: SalesDashboardReport,
   },
 ];
 

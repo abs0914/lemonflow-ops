@@ -1,8 +1,5 @@
-import { useState, useMemo, useEffect } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useState, useMemo } from "react";
 import { useStoresData, usePOSSalesData, useSalesOrdersData } from "@/hooks/useSalesData";
-import { SalesDashboardLayout } from "@/components/sales-dashboard/SalesDashboardLayout";
 import { SummaryCard } from "@/components/sales-dashboard/SummaryCard";
 import { SalesTrendChart } from "@/components/sales-dashboard/SalesTrendChart";
 import { PaymentBreakdownChart } from "@/components/sales-dashboard/PaymentBreakdownChart";
@@ -10,11 +7,13 @@ import { SalesByStoreTable } from "@/components/sales-dashboard/SalesByStoreTabl
 import { TopProductsTable } from "@/components/sales-dashboard/TopProductsTable";
 import { DashboardFilters } from "@/components/sales-dashboard/DashboardFilters";
 import { DollarSign, CreditCard, ShoppingCart, Receipt } from "lucide-react";
-import { format, subDays, parseISO, isWithinInterval } from "date-fns";
+import { format, parseISO, isWithinInterval } from "date-fns";
 import { toast } from "sonner";
-import type { DateRange, SalesChannel, SalesOrder } from "@/lib/salesApi/types";
+import type { SalesChannel, SalesOrder } from "@/lib/salesApi/types";
 
-const ALLOWED_ROLES = ["Admin", "CEO"];
+interface SalesDashboardReportProps {
+  dateRange: { from: Date; to: Date };
+}
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat("en-PH", {
@@ -25,27 +24,9 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
-export default function SalesDashboard() {
-  const { session, profile, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
-  
-  const [dateRange, setDateRange] = useState<DateRange>({
-    from: subDays(new Date(), 29),
-    to: new Date(),
-  });
+export function SalesDashboardReport({ dateRange }: SalesDashboardReportProps) {
   const [channel, setChannel] = useState<SalesChannel>("all");
   const [selectedStore, setSelectedStore] = useState("all");
-
-  // Check role access
-  const hasAccess = profile && ALLOWED_ROLES.includes(profile.role);
-
-  // Redirect if not authorized
-  useEffect(() => {
-    if (!authLoading && session && profile && !hasAccess) {
-      toast.error("You don't have access to the Sales Dashboard");
-      navigate("/dashboard");
-    }
-  }, [authLoading, session, profile, hasAccess, navigate]);
 
   const { data: storesData, isLoading: storesLoading } = useStoresData();
   const { data: posData, isLoading: posLoading } = usePOSSalesData(dateRange);
@@ -280,87 +261,61 @@ export default function SalesDashboard() {
     toast.success("Report exported successfully");
   };
 
-  // Loading state
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
-      </div>
-    );
-  }
-
-  // Not logged in
-  if (!session) {
-    return <Navigate to="/login" replace />;
-  }
-
-  // No access
-  if (!hasAccess) {
-    return null; // Will redirect via useEffect
-  }
-
   return (
-    <SalesDashboardLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Sales Dashboard</h1>
-            <p className="text-muted-foreground">
-              Overview of sales performance across all channels
-            </p>
-          </div>
-          <DashboardFilters
-            dateRange={dateRange}
-            onDateRangeChange={setDateRange}
-            channel={channel}
-            onChannelChange={setChannel}
-            selectedStore={selectedStore}
-            onStoreChange={setSelectedStore}
-            stores={stores}
-            onExport={handleExport}
-            loading={isLoading}
-          />
-        </div>
-
-        {/* Summary Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <SummaryCard
-            title="Total Sales"
-            value={formatCurrency(metrics.totalSales)}
-            icon={DollarSign}
-            loading={isLoading}
-          />
-          <SummaryCard
-            title="POS Sales"
-            value={formatCurrency(metrics.posSalesTotal)}
-            icon={CreditCard}
-            loading={isLoading}
-          />
-          <SummaryCard
-            title="Order Sales"
-            value={formatCurrency(metrics.orderSalesTotal)}
-            icon={ShoppingCart}
-            loading={isLoading}
-          />
-          <SummaryCard
-            title="Transactions"
-            value={metrics.transactions.toLocaleString()}
-            icon={Receipt}
-            loading={isLoading}
-          />
-        </div>
-
-        {/* Charts Row */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          <SalesTrendChart data={trendData} loading={isLoading} />
-          <PaymentBreakdownChart data={paymentData} loading={isLoading} />
-        </div>
-
-        {/* Tables */}
-        <SalesByStoreTable data={storeData} loading={isLoading} />
-        <TopProductsTable data={topProducts} loading={isLoading} />
+    <div className="space-y-6">
+      {/* Filters */}
+      <div className="flex justify-end">
+        <DashboardFilters
+          dateRange={dateRange}
+          onDateRangeChange={() => {}} // Date range controlled by parent
+          channel={channel}
+          onChannelChange={setChannel}
+          selectedStore={selectedStore}
+          onStoreChange={setSelectedStore}
+          stores={stores}
+          onExport={handleExport}
+          loading={isLoading}
+          hideDateRange
+        />
       </div>
-    </SalesDashboardLayout>
+
+      {/* Summary Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <SummaryCard
+          title="Total Sales"
+          value={formatCurrency(metrics.totalSales)}
+          icon={DollarSign}
+          loading={isLoading}
+        />
+        <SummaryCard
+          title="POS Sales"
+          value={formatCurrency(metrics.posSalesTotal)}
+          icon={CreditCard}
+          loading={isLoading}
+        />
+        <SummaryCard
+          title="Order Sales"
+          value={formatCurrency(metrics.orderSalesTotal)}
+          icon={ShoppingCart}
+          loading={isLoading}
+        />
+        <SummaryCard
+          title="Transactions"
+          value={metrics.transactions.toLocaleString()}
+          icon={Receipt}
+          loading={isLoading}
+        />
+      </div>
+
+      {/* Charts Row */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <SalesTrendChart data={trendData} loading={isLoading} />
+        <PaymentBreakdownChart data={paymentData} loading={isLoading} />
+      </div>
+
+      {/* Tables */}
+      <SalesByStoreTable data={storeData} loading={isLoading} />
+      <TopProductsTable data={topProducts} loading={isLoading} />
+    </div>
   );
 }

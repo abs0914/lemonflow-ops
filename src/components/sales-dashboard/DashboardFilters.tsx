@@ -28,6 +28,7 @@ interface DashboardFiltersProps {
   stores: Store[];
   onExport: () => void;
   loading?: boolean;
+  hideDateRange?: boolean;
 }
 
 const datePresets = [
@@ -70,71 +71,74 @@ export function DashboardFilters({
   stores,
   onExport,
   loading,
+  hideDateRange,
 }: DashboardFiltersProps) {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   return (
     <div className="flex flex-wrap items-center gap-3">
       {/* Date Range */}
-      <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className={cn(
-              "justify-start text-left font-normal",
-              !dateRange && "text-muted-foreground"
-            )}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {dateRange.from ? (
-              dateRange.to ? (
-                <>
-                  {format(dateRange.from, "MMM d, yyyy")} -{" "}
-                  {format(dateRange.to, "MMM d, yyyy")}
-                </>
+      {!hideDateRange && (
+        <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                "justify-start text-left font-normal",
+                !dateRange && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {dateRange.from ? (
+                dateRange.to ? (
+                  <>
+                    {format(dateRange.from, "MMM d, yyyy")} -{" "}
+                    {format(dateRange.to, "MMM d, yyyy")}
+                  </>
+                ) : (
+                  format(dateRange.from, "MMM d, yyyy")
+                )
               ) : (
-                format(dateRange.from, "MMM d, yyyy")
-              )
-            ) : (
-              <span>Pick a date range</span>
-            )}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
-          <div className="p-3 border-b space-y-2">
-            <p className="text-sm font-medium">Quick Select</p>
-            <div className="flex flex-wrap gap-2">
-              {datePresets.map((preset) => (
-                <Button
-                  key={preset.label}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    onDateRangeChange(preset.getValue());
-                    setIsCalendarOpen(false);
-                  }}
-                >
-                  {preset.label}
-                </Button>
-              ))}
+                <span>Pick a date range</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <div className="p-3 border-b space-y-2">
+              <p className="text-sm font-medium">Quick Select</p>
+              <div className="flex flex-wrap gap-2">
+                {datePresets.map((preset) => (
+                  <Button
+                    key={preset.label}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      onDateRangeChange(preset.getValue());
+                      setIsCalendarOpen(false);
+                    }}
+                  >
+                    {preset.label}
+                  </Button>
+                ))}
+              </div>
             </div>
-          </div>
-          <Calendar
-            mode="range"
-            selected={{ from: dateRange.from, to: dateRange.to }}
-            onSelect={(range) => {
-              if (range?.from && range?.to) {
-                onDateRangeChange({ from: range.from, to: range.to });
-                setIsCalendarOpen(false);
-              } else if (range?.from) {
-                onDateRangeChange({ from: range.from, to: range.from });
-              }
-            }}
-            numberOfMonths={2}
-            initialFocus
-          />
-        </PopoverContent>
-      </Popover>
+            <Calendar
+              mode="range"
+              selected={{ from: dateRange.from, to: dateRange.to }}
+              onSelect={(range) => {
+                if (range?.from && range?.to) {
+                  onDateRangeChange({ from: range.from, to: range.to });
+                  setIsCalendarOpen(false);
+                } else if (range?.from) {
+                  onDateRangeChange({ from: range.from, to: range.from });
+                }
+              }}
+              numberOfMonths={2}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+      )}
 
       {/* Store Filter */}
       <Select value={selectedStore} onValueChange={onStoreChange}>
