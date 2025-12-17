@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-interface ComponentItem {
+export interface ComponentItem {
   sku: string;
   name: string;
   price: number | null;
+  unit: string;
 }
 
 export function useValidateItemCodes(itemCodes: string[]) {
@@ -15,10 +16,9 @@ export function useValidateItemCodes(itemCodes: string[]) {
         return { validCodes: new Set<string>(), itemDetails: new Map<string, ComponentItem>() };
       }
 
-      // Query components table for matching SKUs
       const { data, error } = await supabase
         .from("components")
-        .select("sku, name, price")
+        .select("sku, name, price, unit")
         .in("sku", itemCodes);
 
       if (error) throw error;

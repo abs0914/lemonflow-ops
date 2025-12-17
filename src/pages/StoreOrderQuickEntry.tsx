@@ -99,14 +99,15 @@ export default function StoreOrderQuickEntry() {
     return parsedItems.map((item, index) => {
       const componentInfo = validationData?.itemDetails.get(item.itemCode);
       const unitPrice = componentInfo?.price || 0;
+      const unit = componentInfo?.unit || 'unit';
       
       return {
         line_number: index + 1,
         item_code: item.itemCode,
-        item_name: componentInfo?.name || item.description || item.itemCode,
+        item_name: componentInfo?.name || item.itemCode,
         quantity: item.quantity,
         unit_price: unitPrice,
-        uom: item.unit.toUpperCase(),
+        uom: unit.toUpperCase(),
         sub_total: item.quantity * unitPrice,
         line_remarks: item.notes || undefined,
       };
