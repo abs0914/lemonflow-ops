@@ -22,6 +22,7 @@ import CEODashboard from "./pages/CEODashboard";
 import Settings from "./pages/Settings";
 import StoreOrders from "./pages/StoreOrders";
 import StoreOrderCreate from "./pages/StoreOrderCreate";
+import StoreOrderQuickEntry from "./pages/StoreOrderQuickEntry";
 import StoreOrderDetail from "./pages/StoreOrderDetail";
 import StoresManagement from "./pages/StoresManagement";
 import StoreAssignmentsManagement from "./pages/StoreAssignmentsManagement";
@@ -67,6 +68,7 @@ const App = () => (
             <Route path="/settings" element={<Settings />} />
             <Route path="/store/orders" element={<StoreOrders />} />
             <Route path="/store/orders/create" element={<StoreOrderCreate />} />
+            <Route path="/store/orders/quick-entry" element={<StoreOrderQuickEntry />} />
             <Route path="/store/orders/:id" element={<StoreOrderDetail />} />
             <Route path="/settings/stores" element={<StoresManagement />} />
             <Route path="/settings/store-assignments" element={<StoreAssignmentsManagement />} />
