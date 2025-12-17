@@ -1,0 +1,652 @@
+openapi: 3.0.3
+info:
+  title: Lemon-co POS Daily Sales API
+  description: |
+    REST API for POS (Point of Sale) frontend applications to submit daily sales data
+    from stores and franchisee stores to AutoCount Accounting.
+
+    ## Integration Method
+    This API posts daily sales as **Cash Book Entry (OR - Official Receipt)** to match
+    AutoCount POS native posting behavior:
+    > "This is to post the entries to AutoCount Accounting cash transaction (Cash Book Entry).
+    > The posting is daily based, which means one entry on each date.
+    > All cash sales will be posted as a lump sum in each specific date."
+
+    ## Authentication
+    All endpoints require JWT Bearer token authentication.
+    Obtain a token via `POST /auth/login` with valid credentials.
+
+    ## Idempotency
+    Use the `posReference` field to prevent duplicate submissions.
+    If a submission with the same `posReference` already exists, the API returns
+    the existing record with status `already_synced`.
+
+  version: 1.0.0
+  contact:
+    name: Lemon-co Development Team
+
+servers:
+  - url: https://api.thelemonco.online/api
+    description: Lemon-co Production Server
+  - url: http://localhost:44300/api
+    description: Local Development (IIS Express)
+
+security:
+  - bearerAuth: []
+
+paths:
+  /pos/daily-sales:
+    post:
+      summary: Submit Daily Sales
+      description: |
+        Submits daily sales data from a POS terminal.
+        Creates a Cash Book Entry (OR) in AutoCount with the aggregated sales data.
+
+        **Idempotency**: Use the same `posReference` to prevent duplicate submissions.
+      operationId: submitDailySales
+      tags:
+        - Daily Sales
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DailySales'
+            example:
+              storeCode: "STORE-SM-001"
+              cashRegisterId: "REG-01"
+              salesDate: "2024-12-16"
+              shift: "ALL_DAY"
+              posReference: "POS-SM001-20241216-001"
+              operatorId: "EMP001"
+              operatorName: "Juan Dela Cruz"
+              currencyCode: "PHP"
+              remarks: "End of day sales summary"
+              lines:
+                - lineNo: 1
+                  itemCode: "PROD-001"
+                  description: "Lemon Juice 500ml"
+                  quantity: 50
+                  unitOfMeasure: "PCS"
+                  unitPrice: 45.00
+                  lineAmount: 2250.00
+                  taxCode: "SR"
+                  taxRate: 12
+                  taxAmount: 270.00
+                - lineNo: 2
+                  itemCode: "PROD-002"
+                  description: "Lemon Tea 350ml"
+                  quantity: 30
+                  unitOfMeasure: "PCS"
+                  unitPrice: 35.00
+                  lineAmount: 1050.00
+                  taxCode: "SR"
+                  taxRate: 12
+                  taxAmount: 126.00
+              payments:
+                - paymentMethod: "CASH"
+                  amount: 2500.00
+                  transactionCount: 45
+                - paymentMethod: "GCASH"
+                  amount: 800.00
+                  referenceNo: "GCASH-BATCH-001"
+                  transactionCount: 20
+                - paymentMethod: "CREDIT_CARD"
+                  amount: 396.00
+                  referenceNo: "VISA-BATCH-001"
+                  transactionCount: 5
+      responses:
+        '201':
+          description: Daily sales submitted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailySalesResponse'
+        '200':
+          description: Daily sales already synced (idempotent response)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailySalesResponse'
+        '400':
+          description: Validation error
+          content:
+
+  /pos/daily-sales/{docNo}:
+    get:
+      summary: Get Daily Sales by Document Number
+      description: Retrieves a previously submitted daily sales record by AutoCount document number.
+      operationId: getDailySales
+      tags:
+        - Daily Sales
+      parameters:
+        - name: docNo
+          in: path
+          required: true
+          description: The AutoCount Cash Book Entry document number
+          schema:
+            type: string
+          example: "OR-20241216-STORESM0-001"
+      responses:
+        '200':
+          description: Daily sales record found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailySales'
+        '404':
+          description: Daily sales record not found
+        '401':
+          description: Unauthorized
+
+  /pos/daily-sales/by-reference/{posReference}:
+    get:
+      summary: Get Daily Sales by POS Reference
+      description: |
+        Retrieves a previously submitted daily sales record by POS reference.
+        Useful for checking if a submission was already processed.
+      operationId: getDailySalesByReference
+      tags:
+        - Daily Sales
+      parameters:
+        - name: posReference
+          in: path
+          required: true
+          description: The POS-generated reference number
+          schema:
+            type: string
+          example: "POS-SM001-20241216-001"
+      responses:
+        '200':
+          description: Daily sales record found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailySales'
+        '404':
+          description: Daily sales record not found
+        '401':
+          description: Unauthorized
+
+  /pos/daily-sales/validate:
+    post:
+      summary: Validate Daily Sales
+      description: |
+        Validates daily sales data without submitting.
+        Use this to check for errors before actual submission.
+      operationId: validateDailySales
+      tags:
+        - Daily Sales
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DailySales'
+      responses:
+        '200':
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResult'
+        '401':
+          description: Unauthorized
+
+  /auth/login:
+    post:
+      summary: Authenticate and Get JWT Token
+      description: |
+        Authenticates with username and password to obtain a JWT token.
+        Use this token in the Authorization header for all other API calls.
+      operationId: login
+      tags:
+        - Authentication
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                  example: "pos_user"
+                password:
+                  type: string
+                  format: password
+                  example: "your_password"
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: JWT token to use in Authorization header
+                  expiresAt:
+                    type: string
+                    format: date-time
+        '401':
+          description: Invalid credentials
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from /auth/login
+
+  schemas:
+    DailySales:
+      type: object
+      required:
+        - storeCode
+        - salesDate
+        - lines
+      properties:
+        documentType:
+          type: string
+          default: "OR"
+          description: "Document type: OR (Official Receipt) or PV (Payment Voucher)"
+        storeCode:
+          type: string
+          description: "Store identifier code (maps to AutoCount debtor code)"
+          example: "STORE-SM-001"
+        cashRegisterId:
+          type: string
+          description: "Cash register or terminal identifier"
+          example: "REG-01"
+        salesDate:
+          type: string
+          format: date
+          description: "Date of sales (business date, not submission date)"
+          example: "2024-12-16"
+        shift:
+          type: string
+          description: "Shift identifier"
+          enum: ["MORNING", "AFTERNOON", "EVENING", "ALL_DAY"]
+          example: "ALL_DAY"
+        posReference:
+          type: string
+          description: "POS-generated reference for idempotency"
+          example: "POS-SM001-20241216-001"
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/DailySalesLine'
+          minItems: 1
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentBreakdown'
+        operatorId:
+          type: string
+          description: "Operator/cashier ID who closed the shift"
+        operatorName:
+          type: string
+          description: "Operator name for reference"
+        remarks:
+          type: string
+          description: "Additional notes"
+        currencyCode:
+          type: string
+          default: "PHP"
+          description: "Currency code"
+        salesGLAccount:
+          type: string
+          description: "G/L Account for sales posting (optional)"
+          example: "400-0000"
+        cashBankGLAccount:
+          type: string
+          description: "G/L Account for cash/bank posting (optional)"
+          example: "100-0001"
+        locationCode:
+          type: string
+          description: "Location code for multi-location posting"
+        autoCountDocNo:
+          type: string
+          readOnly: true
+          description: "AutoCount document number (assigned after sync)"
+        subtotal:
+          type: number
+          format: decimal
+          readOnly: true
+        taxAmount:
+          type: number
+          format: decimal
+          readOnly: true
+        grandTotal:
+          type: number
+          format: decimal
+          readOnly: true
+        totalDiscount:
+          type: number
+          format: decimal
+          readOnly: true
+        status:
+          type: string
+          readOnly: true
+          enum: ["pending", "synced", "failed", "already_synced", "cancelled"]
+        errorMessage:
+          type: string
+          readOnly: true
+        syncedAt:
+          type: string
+          format: date-time
+          readOnly: true
+
+    DailySalesLine:
+      type: object
+      required:
+        - itemCode
+        - quantity
+        - unitPrice
+      properties:
+        lineNo:
+          type: integer
+          description: "Line sequence number"
+        itemCode:
+          type: string
+          description: "Product SKU/item code (must exist in AutoCount)"
+          example: "PROD-001"
+        description:
+          type: string
+          description: "Product description/name"
+          example: "Lemon Juice 500ml"
+        quantity:
+          type: number
+          format: decimal
+          description: "Quantity sold"
+          example: 50
+        unitOfMeasure:
+          type: string
+          default: "PCS"
+          description: "Unit of measure"
+        unitPrice:
+          type: number
+          format: decimal
+          description: "Unit selling price"
+          example: 45.00
+        discount:
+          type: string
+          description: "Discount amount or percentage (e.g., '10%' or '5.00')"
+        lineAmount:
+          type: number
+          format: decimal
+          description: "Line subtotal after discount"
+          example: 2250.00
+        taxCode:
+          type: string
+          description: "Tax code (e.g., 'SR' for standard rate)"
+          example: "SR"
+        taxRate:
+          type: number
+          format: decimal
+          description: "Tax rate percentage"
+          example: 12
+        taxAmount:
+          type: number
+          format: decimal
+          description: "Tax amount for this line"
+          example: 270.00
+        category:
+          type: string
+          description: "Product category for reporting"
+        remarks:
+          type: string
+          description: "Line remarks/notes"
+
+    PaymentBreakdown:
+      type: object
+      required:
+        - paymentMethod
+        - amount
+      properties:
+        paymentMethod:
+          type: string
+          description: "Payment method type"
+          enum: ["CASH", "CREDIT_CARD", "DEBIT_CARD", "GCASH", "MAYA", "GRAB_PAY", "FOOD_PANDA", "OTHER"]
+          example: "CASH"
+        amount:
+          type: number
+          format: decimal
+          description: "Amount received via this payment method"
+          example: 2500.00
+        referenceNo:
+          type: string
+          description: "Reference number (for card/e-wallet transactions)"
+        transactionCount:
+          type: integer
+          description: "Number of transactions using this payment method"
+          example: 45
+        notes:
+          type: string
+          description: "Additional details or notes"
+
+    DailySalesResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: ["synced", "already_synced", "failed"]
+        message:
+          type: string
+        autoCountDocNo:
+          type: string
+        data:
+          $ref: '#/components/schemas/DailySales'
+
+    ValidationResult:
+      type: object
+      properties:
+        isValid:
+          type: boolean
+        errors:
+          type: array
+          items:
+            type: string
+        warnings:
+          type: array
+          items:
+            type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        error:
+          type: string
+
+
+# =============================================================================
+# CURL AND POSTMAN EXAMPLES
+# =============================================================================
+#
+# ## 1. Authentication - Get JWT Token
+#
+# ### cURL:
+# ```bash
+# curl -X POST "https://api.thelemonco.online/auth/login" \
+#   -H "Content-Type: application/json" \
+#   -d '{
+#     "username": "pos_user",
+#     "password": "your_password"
+#   }'
+# ```
+#
+# ### Response:
+# ```json
+# {
+#   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+#   "expiresAt": "2024-12-17T00:00:00Z"
+# }
+# ```
+#
+# ## 2. Submit Daily Sales
+#
+# ### cURL:
+# ```bash
+# curl -X POST "https://api.thelemonco.online/api/pos/daily-sales" \
+#   -H "Content-Type: application/json" \
+#   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+#   -d '{
+#     "storeCode": "STORE-SM-001",
+#     "cashRegisterId": "REG-01",
+#     "salesDate": "2024-12-16",
+#     "shift": "ALL_DAY",
+#     "posReference": "POS-SM001-20241216-001",
+#     "operatorId": "EMP001",
+#     "operatorName": "Juan Dela Cruz",
+#     "currencyCode": "PHP",
+#     "remarks": "End of day sales summary",
+#     "lines": [
+#       {
+#         "lineNo": 1,
+#         "itemCode": "PROD-001",
+#         "description": "Lemon Juice 500ml",
+#         "quantity": 50,
+#         "unitOfMeasure": "PCS",
+#         "unitPrice": 45.00,
+#         "lineAmount": 2250.00,
+#         "taxCode": "SR",
+#         "taxRate": 12,
+#         "taxAmount": 270.00
+#       },
+#       {
+#         "lineNo": 2,
+#         "itemCode": "PROD-002",
+#         "description": "Lemon Tea 350ml",
+#         "quantity": 30,
+#         "unitOfMeasure": "PCS",
+#         "unitPrice": 35.00,
+#         "lineAmount": 1050.00,
+#         "taxCode": "SR",
+#         "taxRate": 12,
+#         "taxAmount": 126.00
+#       }
+#     ],
+#     "payments": [
+#       {
+#         "paymentMethod": "CASH",
+#         "amount": 2500.00,
+#         "transactionCount": 45
+#       },
+#       {
+#         "paymentMethod": "GCASH",
+#         "amount": 800.00,
+#         "referenceNo": "GCASH-BATCH-001",
+#         "transactionCount": 20
+#       },
+#       {
+#         "paymentMethod": "CREDIT_CARD",
+#         "amount": 396.00,
+#         "referenceNo": "VISA-BATCH-001",
+#         "transactionCount": 5
+#       }
+#     ]
+#   }'
+# ```
+#
+# ### Success Response (201 Created):
+# ```json
+# {
+#   "status": "synced",
+#   "message": "Daily sales submitted successfully to AutoCount",
+#   "autoCountDocNo": "OR-20241216-STORESM0-001",
+#   "data": {
+#     "storeCode": "STORE-SM-001",
+#     "autoCountDocNo": "OR-20241216-STORESM0-001",
+#     "salesDate": "2024-12-16",
+#     "subtotal": 3300.00,
+#     "taxAmount": 396.00,
+#     "grandTotal": 3696.00,
+#     "status": "synced",
+#     "syncedAt": "2024-12-16T15:30:00Z"
+#   }
+# }
+# ```
+#
+# ### Idempotent Response (200 OK - Already Synced):
+# ```json
+# {
+#   "status": "already_synced",
+#   "message": "This daily sales submission was already processed",
+#   "autoCountDocNo": "OR-20241216-STORESM0-001",
+#   "data": { ... }
+# }
+# ```
+#
+# ## 3. Validate Before Submitting
+#
+# ### cURL:
+# ```bash
+# curl -X POST "https://api.thelemonco.online/api/pos/daily-sales/validate" \
+#   -H "Content-Type: application/json" \
+#   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+#   -d '{
+#     "storeCode": "STORE-SM-001",
+#     "salesDate": "2024-12-16",
+#     "lines": [
+#       {
+#         "itemCode": "PROD-001",
+#         "quantity": 50,
+#         "unitPrice": 45.00
+#       }
+#     ]
+#   }'
+# ```
+#
+# ### Response:
+# ```json
+# {
+#   "isValid": true,
+#   "errors": [],
+#   "warnings": [
+#     "PosReference is recommended for idempotency",
+#     "CashRegisterId is recommended for audit purposes",
+#     "Payment breakdown is recommended for reconciliation"
+#   ]
+# }
+# ```
+#
+# ## 4. Get Daily Sales by Document Number
+#
+# ### cURL:
+# ```bash
+# curl -X GET "https://api.thelemonco.online/api/pos/daily-sales/OR-20241216-STORESM0-001" \
+#   -H "Authorization: Bearer YOUR_JWT_TOKEN"
+# ```
+#
+# ## 5. Get Daily Sales by POS Reference
+#
+# ### cURL:
+# ```bash
+# curl -X GET "https://api.thelemonco.online/api/pos/daily-sales/by-reference/POS-SM001-20241216-001" \
+#   -H "Authorization: Bearer YOUR_JWT_TOKEN"
+# ```
+#
+# =============================================================================
+# POSTMAN COLLECTION IMPORT
+# =============================================================================
+#
+# To import into Postman:
+# 1. Open Postman
+# 2. Click "Import" button
+# 3. Select this YAML file or paste the URL
+# 4. Postman will auto-generate the collection from OpenAPI spec
+#
+# Environment Variables to set in Postman:
+# - {{baseUrl}}: https://api.thelemonco.online/api
+# - {{token}}: Your JWT token from /auth/login
+#
+# =============================================================================

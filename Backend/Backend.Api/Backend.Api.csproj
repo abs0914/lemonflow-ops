@@ -82,6 +82,7 @@
 		    <Compile Include="Controllers\ItemsController.cs" />
 		    <Compile Include="Controllers\StockAdjustmentsController.cs" />
 		    <Compile Include="Controllers\PurchaseOrdersController.cs" />
+		    <Compile Include="Controllers\DailySalesController.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Global.asax" />

@@ -96,6 +96,8 @@
 	    <Compile Include="JwtAuthenticationHelper.cs" />
 	    <Compile Include="JwtConfig.cs" />
 	    <Compile Include="SupabaseConfig.cs" />
+	    <Compile Include="IAutoCountDailySalesService.cs" />
+	    <Compile Include="AutoCountDailySalesService.cs" />
 	  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

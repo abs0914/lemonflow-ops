@@ -41,6 +41,7 @@
 		    <Compile Include="StockItem.cs" />
 		    <Compile Include="StockAdjustment.cs" />
 		    <Compile Include="PurchaseOrder.cs" />
+		    <Compile Include="DailySales.cs" />
 	  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
