@@ -4,7 +4,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
-import { SalesAuthProvider } from "./contexts/SalesAuthContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -31,7 +30,6 @@ import FulfillmentOrderDetail from "./pages/FulfillmentOrderDetail";
 import FinanceDashboard from "./pages/FinanceDashboard";
 import FinanceOrderDetail from "./pages/FinanceOrderDetail";
 import Reports from "./pages/Reports";
-import SalesLogin from "./pages/SalesLogin";
 import SalesDashboard from "./pages/SalesDashboard";
 import NotFound from "./pages/NotFound";
 
@@ -51,41 +49,37 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <SalesAuthProvider>
-            <Routes>
-              <Route path="/" element={<Navigate to="/login" replace />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/bom" element={<BomManager />} />
-              <Route path="/production" element={<Production />} />
-              <Route path="/production/create" element={<ProductionCreate />} />
-              <Route path="/warehouse" element={<Warehouse />} />
-              <Route path="/inventory" element={<Inventory />} />
-              <Route path="/suppliers" element={<Suppliers />} />
-              <Route path="/purchasing" element={<Purchasing />} />
-              <Route path="/purchasing/create" element={<PurchasingCreate />} />
-              <Route path="/purchasing/:id" element={<PurchaseOrderDetail />} />
-              <Route path="/purchasing/:id/edit" element={<PurchasingEdit />} />
-              <Route path="/raw-materials" element={<RawMaterials />} />
-              <Route path="/ceo-dashboard" element={<CEODashboard />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/store/orders" element={<StoreOrders />} />
-              <Route path="/store/orders/create" element={<StoreOrderCreate />} />
-              <Route path="/store/orders/:id" element={<StoreOrderDetail />} />
-              <Route path="/settings/stores" element={<StoresManagement />} />
-              <Route path="/settings/store-assignments" element={<StoreAssignmentsManagement />} />
-              <Route path="/fulfillment" element={<FulfillmentDashboard />} />
-              <Route path="/fulfillment/orders/:id" element={<FulfillmentOrderDetail />} />
-              <Route path="/finance" element={<FinanceDashboard />} />
-              <Route path="/finance/orders/:id" element={<FinanceOrderDetail />} />
-              <Route path="/reports" element={<Reports />} />
-              {/* Sales Dashboard Routes */}
-              <Route path="/sales-login" element={<SalesLogin />} />
-              <Route path="/sales-dashboard" element={<SalesDashboard />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </SalesAuthProvider>
+          <Routes>
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/bom" element={<BomManager />} />
+            <Route path="/production" element={<Production />} />
+            <Route path="/production/create" element={<ProductionCreate />} />
+            <Route path="/warehouse" element={<Warehouse />} />
+            <Route path="/inventory" element={<Inventory />} />
+            <Route path="/suppliers" element={<Suppliers />} />
+            <Route path="/purchasing" element={<Purchasing />} />
+            <Route path="/purchasing/create" element={<PurchasingCreate />} />
+            <Route path="/purchasing/:id" element={<PurchaseOrderDetail />} />
+            <Route path="/purchasing/:id/edit" element={<PurchasingEdit />} />
+            <Route path="/raw-materials" element={<RawMaterials />} />
+            <Route path="/ceo-dashboard" element={<CEODashboard />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/store/orders" element={<StoreOrders />} />
+            <Route path="/store/orders/create" element={<StoreOrderCreate />} />
+            <Route path="/store/orders/:id" element={<StoreOrderDetail />} />
+            <Route path="/settings/stores" element={<StoresManagement />} />
+            <Route path="/settings/store-assignments" element={<StoreAssignmentsManagement />} />
+            <Route path="/fulfillment" element={<FulfillmentDashboard />} />
+            <Route path="/fulfillment/orders/:id" element={<FulfillmentOrderDetail />} />
+            <Route path="/finance" element={<FinanceDashboard />} />
+            <Route path="/finance/orders/:id" element={<FinanceOrderDetail />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/sales-dashboard" element={<SalesDashboard />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
-import { Navigate } from "react-router-dom";
-import { useSalesAuth } from "@/contexts/SalesAuthContext";
+import { useState, useMemo, useEffect } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { useStoresData, usePOSSalesData, useSalesOrdersData } from "@/hooks/useSalesData";
 import { SalesDashboardLayout } from "@/components/sales-dashboard/SalesDashboardLayout";
 import { SummaryCard } from "@/components/sales-dashboard/SummaryCard";
@@ -12,7 +12,9 @@ import { DashboardFilters } from "@/components/sales-dashboard/DashboardFilters"
 import { DollarSign, CreditCard, ShoppingCart, Receipt } from "lucide-react";
 import { format, subDays, parseISO, isWithinInterval } from "date-fns";
 import { toast } from "sonner";
-import type { DateRange, SalesChannel, POSDailySales, SalesOrder } from "@/lib/salesApi/types";
+import type { DateRange, SalesChannel, SalesOrder } from "@/lib/salesApi/types";
+
+const ALLOWED_ROLES = ["Admin", "CEO"];
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat("en-PH", {
@@ -24,7 +26,8 @@ const formatCurrency = (value: number) => {
 };
 
 export default function SalesDashboard() {
-  const { isAuthenticated, isLoading: authLoading } = useSalesAuth();
+  const { session, profile, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   
   const [dateRange, setDateRange] = useState<DateRange>({
     from: subDays(new Date(), 29),
@@ -32,6 +35,17 @@ export default function SalesDashboard() {
   });
   const [channel, setChannel] = useState<SalesChannel>("all");
   const [selectedStore, setSelectedStore] = useState("all");
+
+  // Check role access
+  const hasAccess = profile && ALLOWED_ROLES.includes(profile.role);
+
+  // Redirect if not authorized
+  useEffect(() => {
+    if (!authLoading && session && profile && !hasAccess) {
+      toast.error("You don't have access to the Sales Dashboard");
+      navigate("/dashboard");
+    }
+  }, [authLoading, session, profile, hasAccess, navigate]);
 
   const { data: storesData, isLoading: storesLoading } = useStoresData();
   const { data: posData, isLoading: posLoading } = usePOSSalesData(dateRange);
@@ -266,6 +280,7 @@ export default function SalesDashboard() {
     toast.success("Report exported successfully");
   };
 
+  // Loading state
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -274,8 +289,14 @@ export default function SalesDashboard() {
     );
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/sales-login" replace />;
+  // Not logged in
+  if (!session) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // No access
+  if (!hasAccess) {
+    return null; // Will redirect via useEffect
   }
 
   return (
