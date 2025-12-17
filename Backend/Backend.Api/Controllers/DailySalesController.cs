@@ -40,10 +40,56 @@ namespace Backend.Api.Controllers
         }
 
         /// <summary>
+        /// GET /api/pos/daily-sales
+        /// Retrieves a list of daily sales records with optional filtering.
+        /// Supports filtering by date range and store code.
+        /// </summary>
+        /// <param name="startDate">Start date filter (inclusive, format: YYYY-MM-DD).</param>
+        /// <param name="endDate">End date filter (inclusive, format: YYYY-MM-DD).</param>
+        /// <param name="storeCode">Optional store code filter.</param>
+        /// <param name="limit">Maximum records to return (default 100, max 500).</param>
+        [HttpGet]
+        [Route("")]
+        public IHttpActionResult GetDailySalesList(
+            [FromUri] DateTime? startDate = null,
+            [FromUri] DateTime? endDate = null,
+            [FromUri] string storeCode = null,
+            [FromUri] int? limit = null)
+        {
+            try
+            {
+                // Validate and cap limit
+                int maxLimit = Math.Min(limit ?? 100, 500);
+
+                // Default to last 30 days if no date range specified
+                if (!startDate.HasValue && !endDate.HasValue)
+                {
+                    endDate = DateTime.Today;
+                    startDate = DateTime.Today.AddDays(-30);
+                }
+
+                var salesList = _dailySalesService.GetDailySalesList(startDate, endDate, storeCode, maxLimit);
+
+                return Ok(new
+                {
+                    count = salesList.Count,
+                    startDate = startDate?.ToString("yyyy-MM-dd"),
+                    endDate = endDate?.ToString("yyyy-MM-dd"),
+                    storeCode = storeCode,
+                    data = salesList
+                });
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(ex);
+            }
+        }
+
+        /// <summary>
         /// POST /api/pos/daily-sales
         /// Submits daily sales data from a POS terminal.
         /// Creates a Cash Book Entry (OR) in AutoCount with the aggregated sales data.
-        /// 
+        ///
         /// Idempotency: Use the same PosReference to prevent duplicate submissions.
         /// If a submission with the same PosReference already exists, returns the existing record.
         /// </summary>

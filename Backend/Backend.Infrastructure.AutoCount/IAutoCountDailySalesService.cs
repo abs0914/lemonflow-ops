@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Backend.Domain;
 
 namespace Backend.Infrastructure.AutoCount
@@ -17,6 +19,15 @@ namespace Backend.Infrastructure.AutoCount
     /// </summary>
     public interface IAutoCountDailySalesService
     {
+        /// <summary>
+        /// Retrieves a list of daily sales records with optional filtering.
+        /// </summary>
+        /// <param name="startDate">Start date filter (inclusive).</param>
+        /// <param name="endDate">End date filter (inclusive).</param>
+        /// <param name="storeCode">Optional store code filter.</param>
+        /// <param name="limit">Maximum records to return (default 100).</param>
+        /// <returns>List of daily sales records.</returns>
+        List<DailySales> GetDailySalesList(DateTime? startDate, DateTime? endDate, string storeCode, int? limit);
         /// <summary>
         /// Submits a daily sales batch from a POS terminal.
         /// Creates a Cash Book Entry (OR) in AutoCount with the aggregated sales data.

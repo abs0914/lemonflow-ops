@@ -280,6 +280,76 @@ namespace Backend.Infrastructure.AutoCount
             }
         }
 
+        public List<DailySales> GetDailySalesList(DateTime? startDate, DateTime? endDate, string storeCode, int? limit)
+        {
+            var results = new List<DailySales>();
+            int maxRecords = limit ?? 100;
+
+            lock (_lockObject)
+            {
+                try
+                {
+                    var userSession = _sessionProvider.GetUserSession();
+                    var dbSetting = userSession.DBSetting;
+
+                    // Build WHERE clause for BCE (Cash Book Entry) table
+                    // Filter by OR (Official Receipt) documents from POS
+                    var conditions = new List<string>();
+                    conditions.Add("DocType = 'OR'");
+                    conditions.Add("DocNo LIKE 'OR-%'"); // POS-generated docs start with OR-
+
+                    if (startDate.HasValue)
+                        conditions.Add(string.Format("DocDate >= '{0:yyyy-MM-dd}'", startDate.Value));
+
+                    if (endDate.HasValue)
+                        conditions.Add(string.Format("DocDate <= '{0:yyyy-MM-dd}'", endDate.Value));
+
+                    if (!string.IsNullOrWhiteSpace(storeCode))
+                    {
+                        // Store code is embedded in description or DocNo
+                        conditions.Add(string.Format("(Description LIKE '%{0}%' OR DocNo LIKE '%{0}%')",
+                            storeCode.Replace("'", "''").Replace("-", "").Substring(0, Math.Min(8, storeCode.Replace("-", "").Length))));
+                    }
+
+                    string whereClause = string.Join(" AND ", conditions);
+
+                    string sql = string.Format(@"
+                        SELECT TOP {0} DocNo, DocDate, DocType, Description, Amount, CurrencyCode, Cancelled
+                        FROM BCE
+                        WHERE {1}
+                        ORDER BY DocDate DESC, DocNo DESC",
+                        maxRecords,
+                        whereClause);
+
+                    DataTable dt = dbSetting.GetDataTable(sql, false);
+
+                    foreach (DataRow row in dt.Rows)
+                    {
+                        var dailySales = MapBCEToDailySales(row);
+                        if (dailySales != null)
+                        {
+                            // Extract store code from description if possible
+                            string desc = GetString(row, "Description") ?? "";
+                            if (desc.Contains("POS Sales - "))
+                            {
+                                int idx = desc.IndexOf("POS Sales - ") + 12;
+                                int endIdx = desc.IndexOf(" |", idx);
+                                if (endIdx < 0) endIdx = desc.Length;
+                                dailySales.StoreCode = desc.Substring(idx, endIdx - idx).Trim();
+                            }
+                            results.Add(dailySales);
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    // Return empty list on error
+                }
+            }
+
+            return results;
+        }
+
         public DailySalesValidationResult ValidateDailySales(DailySales dailySales)
         {
             var errors = new List<string>();

@@ -36,6 +36,67 @@ security:
 
 paths:
   /pos/daily-sales:
+    get:
+      summary: List Daily Sales
+      description: |
+        Retrieves a list of daily sales records with optional filtering.
+        Supports filtering by date range and store code.
+        Defaults to last 30 days if no date range specified.
+      operationId: listDailySales
+      tags:
+        - Daily Sales
+      parameters:
+        - name: startDate
+          in: query
+          description: Start date filter (inclusive, format YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+          example: "2024-12-01"
+        - name: endDate
+          in: query
+          description: End date filter (inclusive, format YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+          example: "2024-12-31"
+        - name: storeCode
+          in: query
+          description: Filter by store code
+          schema:
+            type: string
+          example: "STORE-SM-001"
+        - name: limit
+          in: query
+          description: Maximum records to return (default 100, max 500)
+          schema:
+            type: integer
+            default: 100
+            maximum: 500
+      responses:
+        '200':
+          description: List of daily sales records
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  startDate:
+                    type: string
+                    format: date
+                  endDate:
+                    type: string
+                    format: date
+                  storeCode:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DailySales'
+        '401':
+          description: Unauthorized
     post:
       summary: Submit Daily Sales
       description: |
@@ -236,6 +297,99 @@ paths:
                     format: date-time
         '401':
           description: Invalid credentials
+
+  /stores:
+    get:
+      summary: List Stores
+      description: |
+        Retrieves all stores (owned and franchise) with optional type filtering.
+        Use this endpoint to populate store filter dropdowns in dashboards.
+      operationId: listStores
+      tags:
+        - Stores
+      parameters:
+        - name: type
+          in: query
+          description: Filter by store type
+          schema:
+            type: string
+            enum: ["own", "franchise"]
+          example: "own"
+      responses:
+        '200':
+          description: List of stores
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  type:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Store'
+        '401':
+          description: Unauthorized
+
+  /stores/{storeCode}:
+    get:
+      summary: Get Store by Code
+      description: Retrieves a specific store by its code.
+      operationId: getStore
+      tags:
+        - Stores
+      parameters:
+        - name: storeCode
+          in: path
+          required: true
+          description: The store code
+          schema:
+            type: string
+          example: "STORE-SM-001"
+      responses:
+        '200':
+          description: Store found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Store'
+        '404':
+          description: Store not found
+        '401':
+          description: Unauthorized
+
+  /stores/{storeCode}/exists:
+    get:
+      summary: Check Store Exists
+      description: Checks if a store exists by code.
+      operationId: storeExists
+      tags:
+        - Stores
+      parameters:
+        - name: storeCode
+          in: path
+          required: true
+          description: The store code to check
+          schema:
+            type: string
+          example: "STORE-SM-001"
+      responses:
+        '200':
+          description: Existence check result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  storeCode:
+                    type: string
+                  exists:
+                    type: boolean
+        '401':
+          description: Unauthorized
 
 components:
   securitySchemes:
@@ -466,6 +620,46 @@ components:
           type: string
         error:
           type: string
+
+    Store:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Unique store code
+          example: "STORE-SM-001"
+        name:
+          type: string
+          description: Store display name
+          example: "SM North EDSA Branch"
+        type:
+          type: string
+          description: Store type
+          enum: ["own", "franchise"]
+          example: "own"
+        address:
+          type: string
+          description: Store address
+          example: "SM North EDSA, Quezon City"
+        city:
+          type: string
+          description: City/Municipality
+        phone:
+          type: string
+          description: Contact phone number
+        email:
+          type: string
+          description: Contact email
+        isActive:
+          type: boolean
+          description: Whether the store is currently active
+        region:
+          type: string
+          description: Region/area grouping for reporting
+        openedDate:
+          type: string
+          format: date
+          description: Date when the store was opened
 
 
 # =============================================================================
