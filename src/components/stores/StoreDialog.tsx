@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -46,7 +47,7 @@ export function StoreDialog({ open, onOpenChange, store }: StoreDialogProps) {
 
   const form = useForm<StoreFormData>({
     resolver: zodResolver(storeSchema),
-    defaultValues: store || {
+    defaultValues: {
       store_code: "",
       store_name: "",
       store_type: "own_store",
@@ -58,6 +59,35 @@ export function StoreDialog({ open, onOpenChange, store }: StoreDialogProps) {
       is_active: true,
     },
   });
+
+  // Reset form with store data when editing
+  useEffect(() => {
+    if (store) {
+      form.reset({
+        store_code: store.store_code || "",
+        store_name: store.store_name || "",
+        store_type: (store.store_type as "own_store" | "franchisee") || "own_store",
+        debtor_code: store.debtor_code || "",
+        address: store.address || "",
+        contact_person: store.contact_person || "",
+        phone: store.phone || "",
+        email: store.email || "",
+        is_active: store.is_active ?? true,
+      });
+    } else {
+      form.reset({
+        store_code: "",
+        store_name: "",
+        store_type: "own_store",
+        debtor_code: "",
+        address: "",
+        contact_person: "",
+        phone: "",
+        email: "",
+        is_active: true,
+      });
+    }
+  }, [store, form]);
 
   const onSubmit = async (data: StoreFormData) => {
     try {

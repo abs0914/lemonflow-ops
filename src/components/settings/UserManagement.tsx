@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,32 +26,70 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Session } from "@supabase/supabase-js";
 
 interface UserProfile {
   id: string;
   full_name: string;
   role: string;
   created_at: string;
+  email?: string;
 }
 
 export function UserManagement() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   const { data: users, isLoading } = useQuery({
-    queryKey: ["users"],
+    queryKey: ["users", session?.user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Fetch user profiles
+      const { data: profiles, error: profilesError } = await supabase
         .from("user_profiles")
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      return data as UserProfile[];
+      if (profilesError) throw profilesError;
+
+      // Fetch auth users to get emails
+      const { data: authData, error: authError } = await supabase.functions.invoke("manage-users", {
+        body: { action: "list" },
+      });
+
+      if (authError) {
+        console.error("Failed to fetch auth users:", authError);
+        // Return profiles without emails if auth fetch fails
+        return profiles as UserProfile[];
+      }
+
+      // Merge emails into profiles
+      const usersWithEmails = (profiles as UserProfile[]).map(profile => {
+        const authUser = authData?.users?.find((u: any) => u.id === profile.id);
+        return {
+          ...profile,
+          email: authUser?.email || undefined,
+        };
+      });
+
+      return usersWithEmails;
     },
+    enabled: !!session?.user,
   });
 
   const deleteUserMutation = useMutation({
@@ -95,6 +133,12 @@ export function UserManagement() {
         return "secondary";
       case "Warehouse":
         return "outline";
+      case "Store":
+        return "outline";
+      case "Fulfillment":
+        return "secondary";
+      case "Finance":
+        return "default";
       default:
         return "outline";
     }
@@ -133,6 +177,7 @@ export function UserManagement() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -142,6 +187,9 @@ export function UserManagement() {
               {users?.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.full_name}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {user.email || "—"}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={getRoleBadgeVariant(user.role)}>
                       {user.role}

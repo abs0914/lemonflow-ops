@@ -26,7 +26,7 @@ export function useProductionLogs() {
       const { data: movements, error } = await supabase
         .from("stock_movements")
         .select("*")
-        .eq("movement_type", "PRODUCTION_COMPLETE")
+        .eq("movement_type", "assembly_produce")
         .eq("item_type", "component")
         .order("created_at", { ascending: false });
 

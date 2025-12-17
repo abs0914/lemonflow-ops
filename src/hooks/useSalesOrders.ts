@@ -11,8 +11,7 @@ export function useSalesOrders(storeId?: string) {
         .from("sales_orders")
         .select(`
           *,
-          stores(*),
-          created_by_profile:user_profiles!created_by(full_name)
+          stores(*)
         `)
         .order("created_at", { ascending: false });
       
@@ -37,11 +36,10 @@ export function useSalesOrder(id?: string) {
         .from("sales_orders")
         .select(`
           *,
-          stores(*),
-          created_by_profile:user_profiles!created_by(full_name)
+          stores(*)
         `)
         .eq("id", id)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       return data as any;

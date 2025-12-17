@@ -50,8 +50,23 @@ serve(async (req) => {
     }
 
     const { action, ...data } = await req.json();
+    console.log("Action received:", action, "Data:", JSON.stringify(data));
 
     switch (action) {
+      case "list": {
+        // Get all users from auth.users with their emails
+        const { data: authUsers, error } = await supabaseAdmin.auth.admin.listUsers();
+        
+        if (error) {
+          console.error("List users error:", error);
+          throw error;
+        }
+
+        console.log("Listed", authUsers.users.length, "users");
+        return new Response(JSON.stringify({ users: authUsers.users }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       case "create": {
         const { email, password, fullName, role } = data;
         
@@ -65,8 +80,19 @@ serve(async (req) => {
           },
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error("Create user error:", error);
+          // Handle duplicate email error gracefully
+          if (error.message?.includes("already been registered") || error.message?.includes("already exists")) {
+            return new Response(JSON.stringify({ error: "A user with this email already exists. Please use a different email address." }), {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          throw error;
+        }
 
+        console.log("User created successfully:", newUser.user?.id);
         return new Response(JSON.stringify({ user: newUser }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -79,6 +105,35 @@ serve(async (req) => {
 
         if (error) throw error;
 
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case "reset-password": {
+        const { userId, newPassword } = data;
+        
+        console.log("Password reset requested for user:", userId);
+        
+        if (!newPassword || newPassword.length < 6) {
+          console.log("Password validation failed: too short");
+          return new Response(JSON.stringify({ error: "Password must be at least 6 characters" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const { data: updateData, error } = await supabaseAdmin.auth.admin.updateUserById(
+          userId,
+          { password: newPassword }
+        );
+
+        if (error) {
+          console.error("Password reset error:", error);
+          throw error;
+        }
+
+        console.log("Password reset successful for user:", userId);
         return new Response(JSON.stringify({ success: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

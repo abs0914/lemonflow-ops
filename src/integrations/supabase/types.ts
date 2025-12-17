@@ -767,17 +767,28 @@ export type Database = {
       }
       sales_orders: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           autocount_doc_no: string | null
           autocount_synced: boolean | null
+          cancellation_reason: string | null
           created_at: string | null
           created_by: string | null
           debtor_code: string
           delivery_date: string | null
+          delivery_notes: string | null
           description: string | null
           doc_date: string
+          fulfilled_at: string | null
+          fulfilled_by: string | null
           id: string
           order_number: string
+          payment_amount: number | null
+          payment_confirmed_at: string | null
+          payment_confirmed_by: string | null
+          payment_reference: string | null
           status: string | null
+          stock_reserved: boolean | null
           store_id: string | null
           submitted_at: string | null
           submitted_by: string | null
@@ -787,17 +798,28 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           autocount_doc_no?: string | null
           autocount_synced?: boolean | null
+          cancellation_reason?: string | null
           created_at?: string | null
           created_by?: string | null
           debtor_code: string
           delivery_date?: string | null
+          delivery_notes?: string | null
           description?: string | null
           doc_date?: string
+          fulfilled_at?: string | null
+          fulfilled_by?: string | null
           id?: string
           order_number: string
+          payment_amount?: number | null
+          payment_confirmed_at?: string | null
+          payment_confirmed_by?: string | null
+          payment_reference?: string | null
           status?: string | null
+          stock_reserved?: boolean | null
           store_id?: string | null
           submitted_at?: string | null
           submitted_by?: string | null
@@ -807,17 +829,28 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           autocount_doc_no?: string | null
           autocount_synced?: boolean | null
+          cancellation_reason?: string | null
           created_at?: string | null
           created_by?: string | null
           debtor_code?: string
           delivery_date?: string | null
+          delivery_notes?: string | null
           description?: string | null
           doc_date?: string
+          fulfilled_at?: string | null
+          fulfilled_by?: string | null
           id?: string
           order_number?: string
+          payment_amount?: number | null
+          payment_confirmed_at?: string | null
+          payment_confirmed_by?: string | null
+          payment_reference?: string | null
           status?: string | null
+          stock_reserved?: boolean | null
           store_id?: string | null
           submitted_at?: string | null
           submitted_by?: string | null
@@ -1106,6 +1139,13 @@ export type Database = {
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_store_assignments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
@@ -1113,12 +1153,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      complete_sales_order_stock: {
+        Args: { p_sales_order_id: string }
+        Returns: undefined
+      }
       generate_sales_order_number: { Args: never; Returns: string }
       get_next_item_code: { Args: never; Returns: string }
       get_next_raw_material_code: { Args: never; Returns: string }
       get_next_supplier_code: { Args: never; Returns: string }
       is_admin: { Args: { user_id: string }; Returns: boolean }
       is_ceo: { Args: { user_id: string }; Returns: boolean }
+      is_finance: { Args: { user_id: string }; Returns: boolean }
+      is_fulfillment: { Args: { user_id: string }; Returns: boolean }
+      release_sales_order_stock: {
+        Args: { p_sales_order_id: string }
+        Returns: undefined
+      }
       release_stock_reservation: {
         Args: {
           p_assembly_order_id: string
@@ -1133,6 +1183,10 @@ export type Database = {
           p_product_id: string
           p_quantity: number
         }
+        Returns: Json
+      }
+      reserve_stock_for_sales_order: {
+        Args: { p_sales_order_id: string }
         Returns: Json
       }
     }
