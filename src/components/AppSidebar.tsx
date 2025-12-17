@@ -15,7 +15,11 @@ import {
   ShoppingBag,
   ClipboardList,
   BarChart3,
-  DollarSign
+  DollarSign,
+  ChevronRight,
+  Plus,
+  ClipboardPaste,
+  List
 } from "lucide-react";
 import tlcLogo from "@/assets/tlc-logo.png";
 import {
@@ -29,20 +33,36 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useAuth } from "@/contexts/AuthContext";
+
+interface MenuItem {
+  title: string;
+  url: string;
+  icon: React.ComponentType<{ className?: string }>;
+  roles: string[];
+  subItems?: { title: string; url: string; icon: React.ComponentType<{ className?: string }> }[];
+}
 
 export function AppSidebar() {
   const { profile, signOut } = useAuth();
   const location = useLocation();
   const { state, isMobile, setOpenMobile } = useSidebar();
 
-  const menuItems = [
+  const menuItems: MenuItem[] = [
     {
       title: "Dashboard",
       url: "/dashboard",
@@ -96,6 +116,11 @@ export function AppSidebar() {
       url: "/store/orders",
       icon: ShoppingBag,
       roles: ["Admin", "Store"],
+      subItems: [
+        { title: "All Orders", url: "/store/orders", icon: List },
+        { title: "New Order", url: "/store/orders/create", icon: Plus },
+        { title: "Quick Entry", url: "/store/orders/quick-entry", icon: ClipboardPaste },
+      ],
     },
     {
       title: "Fulfillment",
@@ -134,6 +159,8 @@ export function AppSidebar() {
   );
 
   const isActive = (path: string) => location.pathname === path;
+  const isSubActive = (item: MenuItem) => 
+    item.subItems?.some(sub => location.pathname === sub.url) || location.pathname === item.url;
 
   const handleNavClick = () => {
     if (isMobile) {
@@ -188,28 +215,78 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {filteredItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
+              {filteredItems.map((item) => 
+                item.subItems ? (
+                  <Collapsible
+                    key={item.title}
                     asChild
-                    isActive={isActive(item.url)}
-                    tooltip={item.title}
+                    defaultOpen={isSubActive(item)}
+                    className="group/collapsible"
                   >
-                    <NavLink 
-                      to={item.url}
-                      onClick={handleNavClick}
-                      className={({ isActive }) => 
-                        isActive 
-                          ? "bg-sidebar-accent text-sidebar-primary font-semibold" 
-                          : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-                      }
+                    <SidebarMenuItem>
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuButton
+                          tooltip={item.title}
+                          isActive={isSubActive(item)}
+                          className={isSubActive(item) 
+                            ? "bg-sidebar-accent text-sidebar-primary font-semibold" 
+                            : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                          }
+                        >
+                          <item.icon className="h-4 w-4" />
+                          {state === "expanded" && <span>{item.title}</span>}
+                          {state === "expanded" && (
+                            <ChevronRight className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                          )}
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <SidebarMenuSub>
+                          {item.subItems.map((subItem) => (
+                            <SidebarMenuSubItem key={subItem.title}>
+                              <SidebarMenuSubButton asChild>
+                                <NavLink
+                                  to={subItem.url}
+                                  onClick={handleNavClick}
+                                  className={({ isActive }) =>
+                                    isActive
+                                      ? "bg-sidebar-accent text-sidebar-primary font-semibold"
+                                      : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                                  }
+                                >
+                                  <subItem.icon className="h-4 w-4" />
+                                  <span>{subItem.title}</span>
+                                </NavLink>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          ))}
+                        </SidebarMenuSub>
+                      </CollapsibleContent>
+                    </SidebarMenuItem>
+                  </Collapsible>
+                ) : (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(item.url)}
+                      tooltip={item.title}
                     >
-                      <item.icon className="h-4 w-4" />
-                      {state === "expanded" && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+                      <NavLink 
+                        to={item.url}
+                        onClick={handleNavClick}
+                        className={({ isActive }) => 
+                          isActive 
+                            ? "bg-sidebar-accent text-sidebar-primary font-semibold" 
+                            : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                        }
+                      >
+                        <item.icon className="h-4 w-4" />
+                        {state === "expanded" && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
