@@ -1,11 +1,10 @@
 // Order text parser for Quick Order Entry feature
 // Parses unstructured order messages from messaging apps into structured line items
+// SIMPLIFIED: Only extracts item code and quantity - UOM comes from inventory
 
 export interface ParsedOrderItem {
   itemCode: string;
-  description: string;
   quantity: number;
-  unit: string;
   notes: string;
   isValid?: boolean;
 }
@@ -16,19 +15,6 @@ export interface ParsedOrder {
   items: ParsedOrderItem[];
   unparsedLines: string[];
 }
-
-// Known units with variations
-const UNIT_PATTERNS: Record<string, RegExp> = {
-  packs: /packs?/i,
-  bottles: /bottles?/i,
-  pcs: /pcs|pieces?/i,
-  gallons: /gallons?/i,
-  unit: /units?/i,
-  box: /box(es)?/i,
-  case: /cases?/i,
-  roll: /rolls?/i,
-  dozen: /dozens?|doz/i,
-};
 
 // Section headers to skip (all caps, quotes, or known header keywords)
 const SECTION_HEADER_PATTERNS = [
@@ -58,7 +44,6 @@ function extractBranch(text: string): string | undefined {
 function extractRequester(text: string): string | undefined {
   const requesterMatch = text.match(/Requested\s*By:\s*(.+)/i);
   if (requesterMatch) {
-    // Clean up trailing punctuation or common phrases
     return requesterMatch[1]
       .replace(/thank\s*you\.?$/i, '')
       .trim();
@@ -70,10 +55,8 @@ function extractRequester(text: string): string | undefined {
 function isSectionHeader(line: string): boolean {
   const trimmed = line.trim();
   
-  // Skip empty lines
   if (!trimmed) return true;
   
-  // Check against known section patterns
   for (const pattern of SECTION_HEADER_PATTERNS) {
     if (pattern.test(trimmed)) return true;
   }
@@ -92,24 +75,7 @@ function isClosingPhrase(line: string): boolean {
   return CLOSING_PATTERNS.some(pattern => pattern.test(trimmed));
 }
 
-// Extract unit from text
-function extractUnit(text: string): { unit: string; remaining: string } {
-  const lowerText = text.toLowerCase();
-  
-  for (const [normalizedUnit, pattern] of Object.entries(UNIT_PATTERNS)) {
-    const match = text.match(pattern);
-    if (match) {
-      return {
-        unit: normalizedUnit,
-        remaining: text.replace(pattern, '').trim(),
-      };
-    }
-  }
-  
-  return { unit: 'unit', remaining: text };
-}
-
-// Parse a single line to extract item details
+// Parse a single line to extract item code and quantity only
 function parseItemLine(line: string): ParsedOrderItem | null {
   const trimmed = line.trim();
   
@@ -123,60 +89,20 @@ function parseItemLine(line: string): ParsedOrderItem | null {
     return null;
   }
   
-  // Main pattern: Item code followed by optional description and quantity/unit
-  // Handles: TLC00001 (LEMON)-150pcs, TLC00003 CUCUMBER- 3 packs, etc.
-  const itemPattern = /^([A-Z]{2,4}\d{4,6})\s*[-(\s]*([^-\d\n]*?)\s*[-)\s]*[-–]?\s*(\d+)?\s*(packs?|bottles?|pcs|pieces?|gallons?|units?|box(?:es)?|cases?|rolls?|dozens?|doz)?/i;
+  // Simplified pattern: Item code (2-4 letters + 4-6 digits) followed by quantity
+  // Handles: TLC00001 - 150pcs, TLC00003- 3 packs, TLC00001 (LEMON)-150pcs, etc.
+  const itemPattern = /^([A-Z]{2,4}\d{4,6})\s*[-(\s]*[^-\d]*[-)\s]*[-–]?\s*(\d+)/i;
   
   const match = trimmed.match(itemPattern);
   
   if (match) {
     const itemCode = match[1].toUpperCase();
-    let description = (match[2] || '').trim();
-    let quantity = match[3] ? parseInt(match[3], 10) : 1;
-    let unit = match[4] || 'unit';
-    
-    // Normalize unit
-    for (const [normalizedUnit, pattern] of Object.entries(UNIT_PATTERNS)) {
-      if (pattern.test(unit)) {
-        unit = normalizedUnit;
-        break;
-      }
-    }
-    
-    // Clean up description - remove trailing dashes, parentheses
-    description = description
-      .replace(/^[(\s-]+/, '')
-      .replace(/[)\s-]+$/, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-    
-    // Extract any additional notes from the end of the line
-    let notes = '';
-    
-    // Look for parenthetical notes after the quantity/unit
-    const remainingAfterMatch = trimmed.substring(match[0].length).trim();
-    if (remainingAfterMatch) {
-      const parentheticalMatch = remainingAfterMatch.match(/\(([^)]+)\)/);
-      if (parentheticalMatch) {
-        notes = parentheticalMatch[1].trim();
-      } else {
-        notes = remainingAfterMatch;
-      }
-    }
-    
-    // Handle case where description might contain notes like "Medium" or "Black"
-    const descParts = description.match(/^(.+?)\s+(Medium|Large|Small|Black|White|Red|Blue|Green)/i);
-    if (descParts) {
-      description = descParts[1].trim();
-      notes = notes ? `${descParts[2]} ${notes}` : descParts[2];
-    }
+    const quantity = parseInt(match[2], 10) || 1;
     
     return {
       itemCode,
-      description,
-      quantity: quantity || 1,
-      unit,
-      notes: notes.trim(),
+      quantity,
+      notes: '',
     };
   }
   
@@ -189,7 +115,6 @@ export function parseOrderText(text: string): ParsedOrder {
   const items: ParsedOrderItem[] = [];
   const unparsedLines: string[] = [];
   
-  // Extract metadata
   const branch = extractBranch(text);
   const requester = extractRequester(text);
   
@@ -198,15 +123,12 @@ export function parseOrderText(text: string): ParsedOrder {
   for (const line of lines) {
     const trimmed = line.trim();
     
-    // Skip empty lines
     if (!trimmed) continue;
     
-    // Skip branch/requester lines
     if (/^Branch:/i.test(trimmed) || /^Requested\s*By:/i.test(trimmed)) continue;
     
     // Track current section for notes
     if (isSectionHeader(trimmed)) {
-      // Extract section name for potential notes
       if (/LACKING\s*ITEMS?/i.test(trimmed)) {
         currentSection = 'LACKING ITEMS';
       } else {
@@ -215,20 +137,17 @@ export function parseOrderText(text: string): ParsedOrder {
       continue;
     }
     
-    // Skip closing phrases
     if (isClosingPhrase(trimmed)) continue;
     
-    // Try to parse as item line
     const item = parseItemLine(trimmed);
     
     if (item) {
       // Add section context as notes for lacking items
-      if (currentSection === 'LACKING ITEMS' && !item.notes) {
+      if (currentSection === 'LACKING ITEMS') {
         item.notes = 'LACKING ITEMS';
       }
       items.push(item);
     } else {
-      // Track unparsed lines (but not empty or known skip patterns)
       if (trimmed && !isClosingPhrase(trimmed)) {
         unparsedLines.push(trimmed);
       }

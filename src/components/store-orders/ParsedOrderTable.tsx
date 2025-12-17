@@ -10,33 +10,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Plus, Trash2, Check, AlertTriangle, Edit2 } from "lucide-react";
 import { ParsedOrderItem } from "@/lib/orderParser";
+import { ComponentItem } from "@/hooks/useValidateItemCodes";
 
 interface ParsedOrderTableProps {
   items: ParsedOrderItem[];
   onItemsChange: (items: ParsedOrderItem[]) => void;
-  itemDetails?: Map<string, { name: string; price: number | null }>;
+  itemDetails?: Map<string, ComponentItem>;
 }
-
-const UNIT_OPTIONS = [
-  { value: "unit", label: "Unit" },
-  { value: "pcs", label: "Pcs" },
-  { value: "packs", label: "Packs" },
-  { value: "bottles", label: "Bottles" },
-  { value: "gallons", label: "Gallons" },
-  { value: "box", label: "Box" },
-  { value: "case", label: "Case" },
-  { value: "roll", label: "Roll" },
-  { value: "dozen", label: "Dozen" },
-];
 
 export function ParsedOrderTable({
   items,
@@ -66,9 +48,7 @@ export function ParsedOrderTable({
   const handleAddRow = () => {
     const newItem: ParsedOrderItem = {
       itemCode: "",
-      description: "",
       quantity: 1,
-      unit: "unit",
       notes: "",
       isValid: false,
     };
@@ -110,7 +90,7 @@ export function ParsedOrderTable({
           <TableHeader>
             <TableRow>
               <TableHead className="w-[120px]">Item Code</TableHead>
-              <TableHead>Description</TableHead>
+              <TableHead>Item Name</TableHead>
               <TableHead className="w-[80px]">Qty</TableHead>
               <TableHead className="w-[100px]">Unit</TableHead>
               <TableHead>Notes</TableHead>
@@ -150,21 +130,8 @@ export function ParsedOrderTable({
                       )}
                     </TableCell>
                     <TableCell>
-                      {isEditing ? (
-                        <Input
-                          value={item.description}
-                          onChange={(e) =>
-                            handleFieldChange(index, "description", e.target.value)
-                          }
-                          className="h-8"
-                          placeholder="Item description"
-                        />
-                      ) : (
-                        <span>
-                          {componentInfo?.name || item.description || (
-                            <span className="text-muted-foreground italic">No description</span>
-                          )}
-                        </span>
+                      {componentInfo?.name || (
+                        <span className="text-muted-foreground italic">Unknown</span>
                       )}
                     </TableCell>
                     <TableCell>
@@ -183,27 +150,9 @@ export function ParsedOrderTable({
                       )}
                     </TableCell>
                     <TableCell>
-                      {isEditing ? (
-                        <Select
-                          value={item.unit}
-                          onValueChange={(value) =>
-                            handleFieldChange(index, "unit", value)
-                          }
-                        >
-                          <SelectTrigger className="h-8 w-24">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {UNIT_OPTIONS.map((opt) => (
-                              <SelectItem key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">{item.unit}</span>
-                      )}
+                      <span className="text-sm text-muted-foreground">
+                        {componentInfo?.unit || "Unknown"}
+                      </span>
                     </TableCell>
                     <TableCell>
                       {isEditing ? (
