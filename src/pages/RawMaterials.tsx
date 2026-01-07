@@ -266,6 +266,7 @@ export default function RawMaterials() {
             isLoading={isLoading}
             onRefetch={refetch}
             onAdjustStock={handleAdjustStock as any}
+            tableName="raw_materials"
           />
         )}
       </div>

@@ -27,9 +27,10 @@ interface InventoryTableProps {
   isLoading: boolean;
   onRefetch: () => void;
   onAdjustStock?: (component: Component) => void;
+  tableName?: "components" | "raw_materials";
 }
 
-export function InventoryTable({ components, isLoading, onRefetch, onAdjustStock }: InventoryTableProps) {
+export function InventoryTable({ components, isLoading, onRefetch, onAdjustStock, tableName = "components" }: InventoryTableProps) {
   const { user } = useAuth();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -40,29 +41,31 @@ export function InventoryTable({ components, isLoading, onRefetch, onAdjustStock
   const [itemToAdjust, setItemToAdjust] = useState<Component | null>(null);
 
 
+  const itemType = tableName === "raw_materials" ? "raw_material" : "component";
+
   const deleteMutation = useMutation({
-    mutationFn: async (componentIds: string[]) => {
+    mutationFn: async (itemIds: string[]) => {
       // Delete associated stock movements first
       const { error: movementError } = await supabase
         .from("stock_movements")
         .delete()
-        .in("item_id", componentIds)
-        .eq("item_type", "component");
+        .in("item_id", itemIds)
+        .eq("item_type", itemType);
 
       if (movementError) throw movementError;
 
-      // Delete components
-      const { error: componentError } = await supabase
-        .from("components")
+      // Delete items from the correct table
+      const { error: deleteError } = await supabase
+        .from(tableName)
         .delete()
-        .in("id", componentIds);
+        .in("id", itemIds);
 
-      if (componentError) throw componentError;
+      if (deleteError) throw deleteError;
     },
-    onSuccess: (_, componentIds) => {
+    onSuccess: (_, itemIds) => {
       toast({
         title: "Items Deleted",
-        description: `Successfully deleted ${componentIds.length} ${componentIds.length === 1 ? 'item' : 'items'}`,
+        description: `Successfully deleted ${itemIds.length} ${itemIds.length === 1 ? 'item' : 'items'}`,
       });
       setSelectedIds(new Set());
       setDeleteDialogOpen(false);
