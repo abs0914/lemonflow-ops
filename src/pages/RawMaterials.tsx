@@ -11,6 +11,7 @@ import { StockAdjustmentDialog } from "@/components/inventory/StockAdjustmentDia
 import { SyncInventoryDialog } from "@/components/inventory/SyncInventoryDialog";
 import { DeleteInventoryDialog } from "@/components/inventory/DeleteInventoryDialog";
 import { AddInventoryDialog } from "@/components/inventory/AddInventoryDialog";
+import { RawMaterialsCsvUpload } from "@/components/inventory/RawMaterialsCsvUpload";
 import { FloatingActionButton } from "@/components/ui/floating-action-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -178,6 +179,7 @@ export default function RawMaterials() {
           </div>
           {!isMobile && (
             <div className="flex gap-2">
+              <RawMaterialsCsvUpload />
               <Button onClick={() => setAddDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add Item
