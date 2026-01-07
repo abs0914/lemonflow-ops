@@ -45,6 +45,20 @@ export function InventoryTable({ components, isLoading, onRefetch, onAdjustStock
 
   const deleteMutation = useMutation({
     mutationFn: async (itemIds: string[]) => {
+      // Check if raw materials are used in BOM items
+      if (tableName === "raw_materials") {
+        const { data: bomUsage, error: bomCheckError } = await supabase
+          .from("bom_items")
+          .select("id, raw_material_id")
+          .in("raw_material_id", itemIds);
+        
+        if (bomCheckError) throw bomCheckError;
+        
+        if (bomUsage && bomUsage.length > 0) {
+          throw new Error("Cannot delete: This raw material is used in Bill of Materials (BOM). Remove it from all BOMs first.");
+        }
+      }
+
       // Delete associated stock movements first
       const { error: movementError } = await supabase
         .from("stock_movements")
