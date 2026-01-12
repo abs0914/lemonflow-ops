@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
@@ -32,6 +32,7 @@ interface InventoryTableProps {
 
 export function InventoryTable({ components, isLoading, onRefetch, onAdjustStock, tableName = "components" }: InventoryTableProps) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -103,6 +104,11 @@ export function InventoryTable({ components, isLoading, onRefetch, onAdjustStock
       setSelectedIds(new Set());
       setDeleteDialogOpen(false);
       setItemToDelete(null);
+      // Invalidate all related queries to force refetch
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["raw-materials"] });
+      queryClient.invalidateQueries({ queryKey: ["component-groups"] });
+      queryClient.invalidateQueries({ queryKey: ["component-types"] });
       onRefetch();
     },
     onError: (error) => {
