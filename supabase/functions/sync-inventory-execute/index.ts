@@ -16,7 +16,7 @@ interface AutoCountStockItem {
   isActive?: boolean;
   standardCost?: number;
   price?: number;
-  stockBalance?: number;
+  stockBalance?: number | null;
   mainSupplier?: string;
   barcode?: string;
   hasBom?: boolean;
