@@ -108,6 +108,7 @@ Deno.serve(async (req) => {
     for (const acItem of autoCountItems) {
       try {
         // Handle multiple possible field names for stock balance
+        // Note: API currently returns stockBalance: null because ItemEntity doesn't expose it
         const rawStockBalance = (acItem as any).stockBalance 
           ?? (acItem as any).StockBalance 
           ?? (acItem as any).totalBalQty 
@@ -115,25 +116,19 @@ Deno.serve(async (req) => {
           ?? (acItem as any).balQty
           ?? (acItem as any).BalQty;
         
-        console.log(`[sync-inventory-execute] Processing item ${acItem.itemCode}, rawStockBalance:`, rawStockBalance, 'full item:', JSON.stringify(acItem));
+        // Check if we have a valid stock balance from API
+        const hasValidStockBalance = rawStockBalance !== undefined && 
+                                      rawStockBalance !== null && 
+                                      !isNaN(Number(rawStockBalance));
+        
+        console.log(`[sync-inventory-execute] Processing item ${acItem.itemCode}, rawStockBalance:`, rawStockBalance, 'hasValid:', hasValidStockBalance);
         
         const existingComponent = existingComponents?.find(
           c => c.autocount_item_code === acItem.itemCode || c.sku === acItem.itemCode
         );
 
-        // Determine stock_quantity - NEVER set to null
-        // If API returns null/undefined, keep existing or default to 0
-        let stockQty: number;
-        if (rawStockBalance !== undefined && rawStockBalance !== null && !isNaN(Number(rawStockBalance))) {
-          stockQty = Number(rawStockBalance);
-        } else if (existingComponent?.stock_quantity !== undefined && existingComponent?.stock_quantity !== null) {
-          // Keep existing stock if API doesn't provide it
-          stockQty = existingComponent.stock_quantity;
-        } else {
-          stockQty = 0;
-        }
-
-        const componentData = {
+        // Base component data WITHOUT stock_quantity
+        const baseComponentData = {
           sku: acItem.itemCode,
           name: acItem.description,
           description: acItem.description,
@@ -145,29 +140,37 @@ Deno.serve(async (req) => {
           has_batch_no: acItem.hasBatchNo ?? false,
           cost_per_unit: acItem.standardCost || null,
           price: acItem.price || null,
-          stock_quantity: stockQty, // Always a number, never null
           last_synced_at: new Date().toISOString(),
         };
 
-        console.log(`[sync-inventory-execute] Component data for ${acItem.itemCode}: stock_quantity=${stockQty}`);
-
         if (existingComponent) {
-          // Update existing
+          // Update existing - only include stock_quantity if API provides valid value
+          const updateData = hasValidStockBalance 
+            ? { ...baseComponentData, stock_quantity: Number(rawStockBalance) }
+            : baseComponentData; // Don't touch stock_quantity if API returns null
+          
           const { error } = await supabaseClient
             .from('components')
-            .update(componentData)
+            .update(updateData)
             .eq('id', existingComponent.id);
 
           if (error) throw error;
           updated++;
+          console.log(`[sync-inventory-execute] Updated ${acItem.itemCode}, stock_quantity ${hasValidStockBalance ? 'set to ' + rawStockBalance : 'unchanged'}`);
         } else {
-          // Create new
+          // Create new - default stock to 0 if not provided
+          const insertData = {
+            ...baseComponentData,
+            stock_quantity: hasValidStockBalance ? Number(rawStockBalance) : 0,
+          };
+          
           const { error } = await supabaseClient
             .from('components')
-            .insert(componentData);
+            .insert(insertData);
 
           if (error) throw error;
           created++;
+          console.log(`[sync-inventory-execute] Created ${acItem.itemCode} with stock_quantity=${insertData.stock_quantity}`);
         }
       } catch (error: any) {
         console.error(`Error syncing item ${acItem.itemCode}:`, error);
