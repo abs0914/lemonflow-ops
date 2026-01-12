@@ -38,32 +38,31 @@ Deno.serve(async (req) => {
       throw new Error('Missing LemonCo API credentials');
     }
 
-    // Authenticate using /api/auth/login with email
+    // Authenticate using /auth/login with username
     console.log('[sync-inventory-execute] Authenticating');
-    const authResponse = await fetch(`${apiUrl}/api/auth/login`, {
+    const authResponse = await fetch(`${apiUrl}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: username, password }),
+      body: JSON.stringify({ username, password }),
     });
 
     if (!authResponse.ok) {
-      throw new Error(`Authentication failed: ${authResponse.status}`);
+      const authError = await authResponse.text();
+      console.error('[sync-inventory-execute] Auth error:', authError);
+      throw new Error(`Authentication failed: ${authResponse.status} - ${authError}`);
     }
 
     const authData = await authResponse.json();
+    console.log('[sync-inventory-execute] Auth successful');
 
     // Get AutoCount stock items
-    // Try with limit parameter in case API uses pagination
     const itemsUrl = `${apiUrl}/autocount/items?limit=1000`;
-    console.log('[sync-inventory-execute] Fetching AutoCount stock items');
-    console.log('[sync-inventory-execute] API URL:', apiUrl);
-    console.log('[sync-inventory-execute] Full URL:', itemsUrl);
+    console.log('[sync-inventory-execute] Fetching AutoCount stock items from:', itemsUrl);
 
     const acResponse = await fetch(itemsUrl, {
       method: 'GET',
       headers: {
-        // Backend returns PascalCase: AccessToken
-        'Authorization': `Bearer ${authData.AccessToken}`,
+        'Authorization': `Bearer ${authData.token}`,
         'Content-Type': 'application/json',
       },
     });
