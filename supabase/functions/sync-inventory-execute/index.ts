@@ -107,18 +107,30 @@ Deno.serve(async (req) => {
 
     for (const acItem of autoCountItems) {
       try {
-        console.log(`[sync-inventory-execute] Processing item ${acItem.itemCode}, stockBalance:`, acItem.stockBalance);
+        // Handle multiple possible field names for stock balance
+        const rawStockBalance = (acItem as any).stockBalance 
+          ?? (acItem as any).StockBalance 
+          ?? (acItem as any).totalBalQty 
+          ?? (acItem as any).TotalBalQty
+          ?? (acItem as any).balQty
+          ?? (acItem as any).BalQty;
+        
+        console.log(`[sync-inventory-execute] Processing item ${acItem.itemCode}, rawStockBalance:`, rawStockBalance, 'full item:', JSON.stringify(acItem));
         
         const existingComponent = existingComponents?.find(
           c => c.autocount_item_code === acItem.itemCode || c.sku === acItem.itemCode
         );
 
-        // Determine stock_quantity with explicit null handling
-        let stockQty = 0;
-        if (acItem.stockBalance !== undefined && acItem.stockBalance !== null) {
-          stockQty = acItem.stockBalance;
+        // Determine stock_quantity - NEVER set to null
+        // If API returns null/undefined, keep existing or default to 0
+        let stockQty: number;
+        if (rawStockBalance !== undefined && rawStockBalance !== null && !isNaN(Number(rawStockBalance))) {
+          stockQty = Number(rawStockBalance);
         } else if (existingComponent?.stock_quantity !== undefined && existingComponent?.stock_quantity !== null) {
+          // Keep existing stock if API doesn't provide it
           stockQty = existingComponent.stock_quantity;
+        } else {
+          stockQty = 0;
         }
 
         const componentData = {
@@ -133,11 +145,11 @@ Deno.serve(async (req) => {
           has_batch_no: acItem.hasBatchNo ?? false,
           cost_per_unit: acItem.standardCost || null,
           price: acItem.price || null,
-          stock_quantity: stockQty,
+          stock_quantity: stockQty, // Always a number, never null
           last_synced_at: new Date().toISOString(),
         };
 
-        console.log(`[sync-inventory-execute] Component data for ${acItem.itemCode}:`, componentData);
+        console.log(`[sync-inventory-execute] Component data for ${acItem.itemCode}: stock_quantity=${stockQty}`);
 
         if (existingComponent) {
           // Update existing
