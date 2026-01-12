@@ -51,15 +51,34 @@ export function InventoryTable({ components, isLoading, onRefetch, onAdjustStock
           .from("bom_items")
           .select("id, raw_material_id")
           .in("raw_material_id", itemIds);
-        
+
         if (bomCheckError) throw bomCheckError;
-        
+
         if (bomUsage && bomUsage.length > 0) {
-          throw new Error("Cannot delete: This raw material is used in Bill of Materials (BOM). Remove it from all BOMs first.");
+          throw new Error(
+            "Cannot delete: This raw material is used in Bill of Materials (BOM). Remove it from all BOMs first."
+          );
         }
       }
 
-      // Delete associated stock movements first
+      // Remove dependent purchase order lines to avoid FK constraint errors
+      if (tableName === "components") {
+        const { error: poLinesError } = await supabase
+          .from("purchase_order_lines")
+          .delete()
+          .in("component_id", itemIds);
+
+        if (poLinesError) throw poLinesError;
+      } else {
+        const { error: poLinesError } = await supabase
+          .from("purchase_order_lines")
+          .delete()
+          .in("raw_material_id", itemIds);
+
+        if (poLinesError) throw poLinesError;
+      }
+
+      // Delete associated stock movements
       const { error: movementError } = await supabase
         .from("stock_movements")
         .delete()
