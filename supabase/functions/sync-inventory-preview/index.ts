@@ -47,13 +47,13 @@ Deno.serve(async (req) => {
       throw new Error('Missing LemonCo API credentials');
     }
 
-    // Authenticate using /api/auth/login with email
+    // Authenticate using /auth/login with username
     console.log('[sync-inventory-preview] Authenticating to', apiUrl);
 
-    const authResponse = await fetch(`${apiUrl}/api/auth/login`, {
+    const authResponse = await fetch(`${apiUrl}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: username, password }),
+      body: JSON.stringify({ username, password }),
     });
 
     if (!authResponse.ok) {
@@ -63,16 +63,16 @@ Deno.serve(async (req) => {
     }
 
     const authData = await authResponse.json();
+    console.log('[sync-inventory-preview] Auth successful');
 
     // Get AutoCount stock items
     const itemsUrl = `${apiUrl}/autocount/items?limit=1000`;
-    console.log('[sync-inventory-preview] Fetching AutoCount stock items');
+    console.log('[sync-inventory-preview] Fetching AutoCount stock items from:', itemsUrl);
 
     const acResponse = await fetch(itemsUrl, {
       method: 'GET',
       headers: {
-        // Backend returns PascalCase: AccessToken
-        'Authorization': `Bearer ${authData.AccessToken}`,
+        'Authorization': `Bearer ${authData.token}`,
         'Content-Type': 'application/json',
       },
     });
