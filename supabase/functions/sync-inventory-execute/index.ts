@@ -113,6 +113,14 @@ Deno.serve(async (req) => {
           c => c.autocount_item_code === acItem.itemCode || c.sku === acItem.itemCode
         );
 
+        // Determine stock_quantity with explicit null handling
+        let stockQty = 0;
+        if (acItem.stockBalance !== undefined && acItem.stockBalance !== null) {
+          stockQty = acItem.stockBalance;
+        } else if (existingComponent?.stock_quantity !== undefined && existingComponent?.stock_quantity !== null) {
+          stockQty = existingComponent.stock_quantity;
+        }
+
         const componentData = {
           sku: acItem.itemCode,
           name: acItem.description,
@@ -125,7 +133,7 @@ Deno.serve(async (req) => {
           has_batch_no: acItem.hasBatchNo ?? false,
           cost_per_unit: acItem.standardCost || null,
           price: acItem.price || null,
-          stock_quantity: acItem.stockBalance !== undefined ? acItem.stockBalance : existingComponent?.stock_quantity || 0,
+          stock_quantity: stockQty,
           last_synced_at: new Date().toISOString(),
         };
 

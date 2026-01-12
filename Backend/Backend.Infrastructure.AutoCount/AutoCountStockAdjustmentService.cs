@@ -1,4 +1,5 @@
 using System;
+using System.Data;
 using AutoCount;
 using AutoCount.Stock.StockAdjustment;
 using Backend.Domain;
@@ -56,11 +57,32 @@ namespace Backend.Infrastructure.AutoCount
                         doc.RefDocNo = adjustment.Reason;
                     }
 
+                    // Look up the item's base UOM from AutoCount if not provided
+                    string itemUom = adjustment.UOM;
+                    if (string.IsNullOrWhiteSpace(itemUom))
+                    {
+                        // Query the item's base UOM from the database
+                        string uomSql = "SELECT BaseUOM FROM Item WHERE ItemCode = @ItemCode";
+                        var uomParam = new System.Data.SqlClient.SqlParameter("@ItemCode", adjustment.ItemCode);
+                        DataTable uomTable = userSession.DBSetting.GetDataTable(uomSql, false, new[] { uomParam });
+
+                        if (uomTable.Rows.Count > 0 && uomTable.Rows[0]["BaseUOM"] != DBNull.Value)
+                        {
+                            itemUom = uomTable.Rows[0]["BaseUOM"].ToString();
+                        }
+                        else
+                        {
+                            throw new InvalidOperationException(
+                                "Item '" + adjustment.ItemCode + "' not found or has no base UOM defined in AutoCount.");
+                        }
+                    }
+
                     // Single detail line. Per AutoCount docs, positive Qty
                     // increases stock and must provide UnitCost; negative
                     // Qty decreases stock and UnitCost is for reference only.
                     var dtl = doc.AddDetail();
                     dtl.ItemCode = adjustment.ItemCode;
+                    dtl.UOM = itemUom;
 
                     decimal qty = Math.Abs(adjustment.Quantity);
                     string type = (adjustment.AdjustmentType ?? "IN").ToUpperInvariant();
@@ -100,7 +122,13 @@ namespace Backend.Infrastructure.AutoCount
                 }
                 catch (Exception ex)
                 {
-                    throw new InvalidOperationException("Failed to create stock adjustment in AutoCount.", ex);
+                    // Include inner exception details for debugging
+                    string errorDetails = ex.Message;
+                    if (ex.InnerException != null)
+                    {
+                        errorDetails += " Inner: " + ex.InnerException.Message;
+                    }
+                    throw new InvalidOperationException("Failed to create stock adjustment: " + errorDetails, ex);
                 }
             }
         }

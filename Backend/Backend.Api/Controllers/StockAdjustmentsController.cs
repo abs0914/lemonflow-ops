@@ -108,27 +108,38 @@ namespace Backend.Api.Controllers
             }
             catch (InvalidOperationException ex)
             {
-                // Attempt to surface "item not found" style errors as 404 so
-                // Supabase can present a user-friendly message.
-                var text = ex.ToString().ToLowerInvariant();
-                if (text.Contains("item not found") ||
-                    text.Contains("item does not exist") ||
-                    text.Contains("invalid itemcode"))
+                // Build detailed error message including inner exceptions
+                var fullMessage = ex.Message;
+                if (ex.InnerException != null)
                 {
-                    return Content(HttpStatusCode.NotFound, new
+                    fullMessage += " | " + ex.InnerException.Message;
+                    if (ex.InnerException.InnerException != null)
                     {
-                        message = ex.Message
-                    });
+                        fullMessage += " | " + ex.InnerException.InnerException.Message;
+                    }
                 }
 
-                return Content(HttpStatusCode.BadRequest, new
+                // Attempt to surface "item not found" style errors as 404 so
+                // Supabase can present a user-friendly message.
+                var text = fullMessage.ToLowerInvariant();
+                if (text.Contains("item not found") ||
+                    text.Contains("item does not exist") ||
+                    text.Contains("invalid itemcode") ||
+                    text.Contains("does not exist"))
                 {
-                    message = ex.Message
-                });
+                    return Content(HttpStatusCode.NotFound, fullMessage);
+                }
+
+                return Content(HttpStatusCode.BadRequest, fullMessage);
             }
             catch (Exception ex)
             {
-                return InternalServerError(ex);
+                var errorMessage = ex.Message;
+                if (ex.InnerException != null)
+                {
+                    errorMessage += " | " + ex.InnerException.Message;
+                }
+                return Content(HttpStatusCode.InternalServerError, "Internal error: " + errorMessage);
             }
         }
 
