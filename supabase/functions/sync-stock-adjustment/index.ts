@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
 
     const requestData: StockAdjustmentRequest = await req.json();
 
-    console.log("Syncing stock adjustment to AutoCount:", requestData);
+    console.log("[sync-stock-adjustment] Syncing to AutoCount:", requestData);
 
     // Get AutoCount credentials from environment variables (Supabase secrets)
     const apiUrl = Deno.env.get("LEMONCO_API_URL");
@@ -55,20 +55,22 @@ Deno.serve(async (req) => {
       throw new Error("AutoCount configuration is incomplete. Please check LEMONCO_API_URL, LEMONCO_USERNAME, and LEMONCO_PASSWORD secrets.");
     }
 
-    // Authenticate to get Bearer token using /api/auth/login with email
-    console.log("Authenticating with AutoCount API");
-    const authResponse = await fetch(`${apiUrl}/api/auth/login`, {
+    // Authenticate using /auth/login with username
+    console.log("[sync-stock-adjustment] Authenticating");
+    const authResponse = await fetch(`${apiUrl}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: username, password }),
+      body: JSON.stringify({ username, password }),
     });
 
     if (!authResponse.ok) {
       const errorText = await authResponse.text();
+      console.error("[sync-stock-adjustment] Auth error:", errorText);
       throw new Error(`Authentication failed: ${authResponse.status} - ${errorText}`);
     }
 
     const authData = await authResponse.json();
+    console.log("[sync-stock-adjustment] Auth successful");
 
     // Create stock adjustment in AutoCount
     const adjustmentPayload = {
@@ -83,14 +85,13 @@ Deno.serve(async (req) => {
       docDate: new Date().toISOString().split('T')[0],
     };
 
-    console.log("Calling AutoCount API for stock adjustment:", adjustmentPayload);
+    console.log("[sync-stock-adjustment] Calling AutoCount API:", adjustmentPayload);
 
     const response = await fetch(`${apiUrl}/autocount/stock-adjustments`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        // Backend returns PascalCase: AccessToken
-        Authorization: `Bearer ${authData.AccessToken}`,
+        Authorization: `Bearer ${authData.token}`,
       },
       body: JSON.stringify(adjustmentPayload),
     });
@@ -136,25 +137,9 @@ Deno.serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("Error syncing stock adjustment:", error);
+    console.error("[sync-stock-adjustment] Error:", error);
     
-    // Log sync failure
-    try {
-      const supabaseClient = createClient(
-        Deno.env.get("SUPABASE_URL") ?? "",
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-      );
-      const requestData: StockAdjustmentRequest = await req.json();
-      await supabaseClient.from("autocount_sync_log").insert({
-        reference_id: requestData.itemCode,
-        reference_type: "stock_adjustment",
-        sync_type: "stock_adjustment",
-        sync_status: "failed",
-        error_message: error instanceof Error ? error.message : "Unknown error occurred",
-      });
-    } catch (logError) {
-      console.error("Failed to log sync error:", logError);
-    }
+    // Note: Cannot log to DB here as request body was already consumed
     
     return new Response(
       JSON.stringify({
