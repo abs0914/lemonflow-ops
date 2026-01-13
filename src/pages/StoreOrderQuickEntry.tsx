@@ -16,6 +16,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ArrowLeft, Save, Send, User, MapPin, AlertTriangle } from "lucide-react";
 import { useUserStores, usePrimaryStore } from "@/hooks/useUserStore";
+import { useStores } from "@/hooks/useStores";
+import { useAuth } from "@/contexts/AuthContext";
 import { useCreateSalesOrder, useUpdateSalesOrder } from "@/hooks/useSalesOrders";
 import { useValidateItemCodes } from "@/hooks/useValidateItemCodes";
 import { QuickOrderInput } from "@/components/store-orders/QuickOrderInput";
@@ -28,10 +30,16 @@ import { supabase } from "@/integrations/supabase/client";
 
 export default function StoreOrderQuickEntry() {
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const { data: userStores } = useUserStores();
+  const { data: allStores } = useStores();
   const primaryStore = usePrimaryStore();
   const createMutation = useCreateSalesOrder();
   const updateMutation = useUpdateSalesOrder();
+
+  // Operational roles see all stores, Store role sees only assigned stores
+  const operationalRoles = ["Admin", "Warehouse", "Fulfillment", "Production"];
+  const isOperationalRole = profile?.role && operationalRoles.includes(profile.role);
 
   // Form state
   const [storeId, setStoreId] = useState<string>(primaryStore?.store_id || "");
@@ -58,7 +66,10 @@ export default function StoreOrderQuickEntry() {
     }
   }, [validationData?.validCodes]);
 
-  const selectedStore = userStores?.find(s => s.store_id === storeId);
+  // Get selected store info from either all stores or user stores
+  const selectedStore = isOperationalRole 
+    ? allStores?.find(s => s.id === storeId)
+    : userStores?.find(s => s.store_id === storeId)?.stores;
 
   const handleParse = () => {
     if (!storeId) {
@@ -129,7 +140,7 @@ export default function StoreOrderQuickEntry() {
 
     await createMutation.mutateAsync({
       store_id: storeId,
-      debtor_code: selectedStore?.stores?.debtor_code || "",
+      debtor_code: selectedStore?.debtor_code || "",
       doc_date: docDate,
       delivery_date: deliveryDate || undefined,
       description,
@@ -163,14 +174,14 @@ export default function StoreOrderQuickEntry() {
 
     const order = await createMutation.mutateAsync({
       store_id: storeId,
-      debtor_code: selectedStore?.stores?.debtor_code || "",
+      debtor_code: selectedStore?.debtor_code || "",
       doc_date: docDate,
       delivery_date: deliveryDate || undefined,
       description,
       lines,
     });
 
-    const isFranchisee = selectedStore?.stores?.store_type === "franchisee";
+    const isFranchisee = selectedStore?.store_type === "franchisee";
 
     if (isFranchisee) {
       // Franchisee: Reserve stock and send to Finance for payment confirmation
@@ -249,11 +260,17 @@ export default function StoreOrderQuickEntry() {
                       <SelectValue placeholder="Select store" />
                     </SelectTrigger>
                     <SelectContent>
-                      {userStores?.map((assignment) => (
-                        <SelectItem key={assignment.store_id} value={assignment.store_id}>
-                          {assignment.stores?.store_name} ({assignment.stores?.store_code})
-                        </SelectItem>
-                      ))}
+                      {isOperationalRole
+                        ? allStores?.map((store) => (
+                            <SelectItem key={store.id} value={store.id}>
+                              {store.store_name} ({store.store_code})
+                            </SelectItem>
+                          ))
+                        : userStores?.map((assignment) => (
+                            <SelectItem key={assignment.store_id} value={assignment.store_id}>
+                              {assignment.stores?.store_name} ({assignment.stores?.store_code})
+                            </SelectItem>
+                          ))}
                     </SelectContent>
                   </Select>
                 </div>
