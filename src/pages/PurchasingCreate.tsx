@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -330,21 +331,25 @@ export default function PurchasingCreate() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex gap-2">
-                <Select value={selectedComponent} onValueChange={setSelectedComponent}>
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder={isCashPurchase ? "Select raw material to add" : "Select component to add"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {isCashPurchase 
-                      ? rawMaterials?.map(material => <SelectItem key={material.id} value={material.id}>
-                          {material.name} ({material.sku})
-                        </SelectItem>)
-                      : components?.map(component => <SelectItem key={component.id} value={component.id}>
-                          {component.name} ({component.sku})
-                        </SelectItem>)
-                    }
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  className="flex-1"
+                  value={selectedComponent}
+                  onValueChange={setSelectedComponent}
+                  placeholder={isCashPurchase ? "Select raw material to add" : "Select component to add"}
+                  searchPlaceholder={isCashPurchase ? "Search raw materials..." : "Search components..."}
+                  emptyMessage={isCashPurchase ? "No raw materials found." : "No components found."}
+                  options={
+                    isCashPurchase
+                      ? (rawMaterials?.map(material => ({
+                          value: material.id,
+                          label: `${material.name} (${material.sku})`,
+                        })) || [])
+                      : (components?.map(component => ({
+                          value: component.id,
+                          label: `${component.name} (${component.sku})`,
+                        })) || [])
+                  }
+                />
                 <Button type="button" onClick={addLine}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Line

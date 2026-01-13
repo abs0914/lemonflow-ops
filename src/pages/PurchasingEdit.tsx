@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -379,18 +380,20 @@ export default function PurchasingEdit() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex gap-2">
-                <Select value={selectedComponent} onValueChange={setSelectedComponent}>
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Select component to add" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {components?.map((component) => (
-                      <SelectItem key={component.id} value={component.id}>
-                        {component.name} ({component.sku})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  className="flex-1"
+                  value={selectedComponent}
+                  onValueChange={setSelectedComponent}
+                  placeholder="Select component to add"
+                  searchPlaceholder="Search components..."
+                  emptyMessage="No components found."
+                  options={
+                    components?.map(component => ({
+                      value: component.id,
+                      label: `${component.name} (${component.sku})`,
+                    })) || []
+                  }
+                />
                 <Button type="button" onClick={addLine}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Line
