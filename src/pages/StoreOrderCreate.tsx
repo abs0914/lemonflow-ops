@@ -15,6 +15,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Save, Send } from "lucide-react";
 import { useUserStores, usePrimaryStore } from "@/hooks/useUserStore";
+import { useStores } from "@/hooks/useStores";
+import { useAuth } from "@/contexts/AuthContext";
 import { useCreateSalesOrder, useUpdateSalesOrder } from "@/hooks/useSalesOrders";
 import { ItemSelector } from "@/components/store-orders/ItemSelector";
 import { OrderLineForm } from "@/components/store-orders/OrderLineForm";
@@ -25,10 +27,16 @@ import { supabase } from "@/integrations/supabase/client";
 
 export default function StoreOrderCreate() {
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const { data: userStores } = useUserStores();
+  const { data: allStores } = useStores();
   const primaryStore = usePrimaryStore();
   const createMutation = useCreateSalesOrder();
   const updateMutation = useUpdateSalesOrder();
+
+  // Operational roles see all stores, Store role sees only assigned stores
+  const operationalRoles = ["Admin", "Warehouse", "Fulfillment", "Production"];
+  const isOperationalRole = profile?.role && operationalRoles.includes(profile.role);
 
   const [storeId, setStoreId] = useState<string>(primaryStore?.store_id || "");
   const [docDate, setDocDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
@@ -36,7 +44,10 @@ export default function StoreOrderCreate() {
   const [description, setDescription] = useState<string>("");
   const [lines, setLines] = useState<Omit<SalesOrderLine, 'id' | 'sales_order_id' | 'created_at' | 'updated_at'>[]>([]);
 
-  const selectedStore = userStores?.find(s => s.store_id === storeId);
+  // Get selected store info from either all stores or user stores
+  const selectedStore = isOperationalRole 
+    ? allStores?.find(s => s.id === storeId)
+    : userStores?.find(s => s.store_id === storeId)?.stores;
 
   const handleAddLine = (line: Omit<SalesOrderLine, 'id' | 'sales_order_id' | 'created_at' | 'updated_at' | 'line_number'>) => {
     setLines([...lines, { ...line, line_number: lines.length + 1 }]);
@@ -56,7 +67,7 @@ export default function StoreOrderCreate() {
 
     await createMutation.mutateAsync({
       store_id: storeId,
-      debtor_code: selectedStore?.stores?.debtor_code || "",
+      debtor_code: selectedStore?.debtor_code || "",
       doc_date: docDate,
       delivery_date: deliveryDate || undefined,
       description: description || undefined,
@@ -74,14 +85,14 @@ export default function StoreOrderCreate() {
 
     const order = await createMutation.mutateAsync({
       store_id: storeId,
-      debtor_code: selectedStore?.stores?.debtor_code || "",
+      debtor_code: selectedStore?.debtor_code || "",
       doc_date: docDate,
       delivery_date: deliveryDate || undefined,
       description: description || undefined,
       lines,
     });
 
-    const isFranchisee = selectedStore?.stores?.store_type === "franchisee";
+    const isFranchisee = selectedStore?.store_type === "franchisee";
 
     if (isFranchisee) {
       // Franchisee: Reserve stock and send to Finance for payment confirmation
@@ -156,11 +167,17 @@ export default function StoreOrderCreate() {
                       <SelectValue placeholder="Select store" />
                     </SelectTrigger>
                     <SelectContent>
-                      {userStores?.map((assignment) => (
-                        <SelectItem key={assignment.store_id} value={assignment.store_id}>
-                          {assignment.stores?.store_name} ({assignment.stores?.store_code})
-                        </SelectItem>
-                      ))}
+                      {isOperationalRole
+                        ? allStores?.map((store) => (
+                            <SelectItem key={store.id} value={store.id}>
+                              {store.store_name} ({store.store_code})
+                            </SelectItem>
+                          ))
+                        : userStores?.map((assignment) => (
+                            <SelectItem key={assignment.store_id} value={assignment.store_id}>
+                              {assignment.stores?.store_name} ({assignment.stores?.store_code})
+                            </SelectItem>
+                          ))}
                     </SelectContent>
                   </Select>
                 </div>
