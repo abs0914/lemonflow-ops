@@ -49,6 +49,7 @@ export default function PurchasingCreate() {
   const [lines, setLines] = useState<POLine[]>([]);
   const [selectedComponent, setSelectedComponent] = useState<string>("");
   const [isCashPurchase, setIsCashPurchase] = useState(false);
+  const [itemType, setItemType] = useState<'component' | 'raw_material'>('component');
   
   const { data: suppliers } = useSuppliers(true);
   const { data: components } = useQuery({
@@ -180,11 +181,11 @@ export default function PurchasingCreate() {
   };
   const addLine = () => {
     if (!selectedComponent) {
-      toast.error(isCashPurchase ? "Please select a raw material" : "Please select a component");
+      toast.error(itemType === 'raw_material' ? "Please select a raw material" : "Please select a component");
       return;
     }
     
-    if (isCashPurchase) {
+    if (itemType === 'raw_material') {
       const rawMaterial = rawMaterials?.find(r => r.id === selectedComponent);
       if (!rawMaterial) return;
       setLines([...lines, {
@@ -330,16 +331,49 @@ export default function PurchasingCreate() {
               <CardTitle>Line Items</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Item Type Selector */}
+              <div className="flex gap-2 p-3 bg-muted/50 rounded-lg">
+                <Label className="flex items-center text-sm font-medium mr-4">Item Type:</Label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="itemType"
+                      checked={itemType === 'component'}
+                      onChange={() => {
+                        setItemType('component');
+                        setSelectedComponent("");
+                      }}
+                      className="w-4 h-4 accent-primary"
+                    />
+                    <span className="text-sm">Inventory Items (Components)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="itemType"
+                      checked={itemType === 'raw_material'}
+                      onChange={() => {
+                        setItemType('raw_material');
+                        setSelectedComponent("");
+                      }}
+                      className="w-4 h-4 accent-primary"
+                    />
+                    <span className="text-sm">Raw Materials</span>
+                  </label>
+                </div>
+              </div>
+
               <div className="flex gap-2">
                 <SearchableSelect
                   className="flex-1"
                   value={selectedComponent}
                   onValueChange={setSelectedComponent}
-                  placeholder={isCashPurchase ? "Select raw material to add" : "Select component to add"}
-                  searchPlaceholder={isCashPurchase ? "Search raw materials..." : "Search components..."}
-                  emptyMessage={isCashPurchase ? "No raw materials found." : "No components found."}
+                  placeholder={itemType === 'raw_material' ? "Select raw material to add" : "Select component to add"}
+                  searchPlaceholder={itemType === 'raw_material' ? "Search raw materials..." : "Search components..."}
+                  emptyMessage={itemType === 'raw_material' ? "No raw materials found." : "No components found."}
                   options={
-                    isCashPurchase
+                    itemType === 'raw_material'
                       ? (rawMaterials?.map(material => ({
                           value: material.id,
                           label: `${material.name} (${material.sku})`,
@@ -360,7 +394,8 @@ export default function PurchasingCreate() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>{isCashPurchase ? "Raw Material" : "Component"}</TableHead>
+                        <TableHead>Item</TableHead>
+                        <TableHead className="w-20">Type</TableHead>
                         <TableHead className="w-24">Quantity</TableHead>
                         <TableHead className="w-32">Unit Price</TableHead>
                         <TableHead className="w-20">UOM</TableHead>
@@ -371,6 +406,11 @@ export default function PurchasingCreate() {
                     <TableBody>
                       {lines.map((line, index) => <TableRow key={index}>
                           <TableCell className="font-medium">{line.item_name}</TableCell>
+                          <TableCell>
+                            <span className={`text-xs px-2 py-1 rounded-full ${line.item_type === 'raw_material' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+                              {line.item_type === 'raw_material' ? 'Raw' : 'Inv'}
+                            </span>
+                          </TableCell>
                           <TableCell>
                             <Input type="number" min="0" step="0.01" value={line.quantity} onChange={e => updateLine(index, "quantity", parseFloat(e.target.value) || 0)} className="w-full" />
                           </TableCell>
