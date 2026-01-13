@@ -67,19 +67,19 @@ export function AppSidebar() {
       title: "Dashboard",
       url: "/dashboard",
       icon: LayoutDashboard,
-      roles: ["Admin", "CEO", "Production", "Warehouse"],
+      roles: ["Admin", "CEO", "Production", "Warehouse", "Fulfillment"],
     },
     {
       title: "BOM Manager",
       url: "/bom",
       icon: Package,
-      roles: ["Admin"],
+      roles: ["Admin", "Warehouse", "Fulfillment", "Production"],
     },
     {
       title: "Production",
       url: "/production",
       icon: Factory,
-      roles: ["Admin", "Production"],
+      roles: ["Admin", "Production", "Warehouse", "Fulfillment"],
     },
     {
       title: "Commissary",
@@ -97,7 +97,7 @@ export function AppSidebar() {
       title: "Inventory",
       url: "/inventory",
       icon: Database,
-      roles: ["Admin", "Warehouse"],
+      roles: ["Admin", "Warehouse", "Fulfillment", "Production"],
     },
     {
       title: "Suppliers",
@@ -115,7 +115,7 @@ export function AppSidebar() {
       title: "Store Orders",
       url: "/store/orders",
       icon: ShoppingBag,
-      roles: ["Admin", "Store"],
+      roles: ["Admin", "Store", "Warehouse", "Fulfillment", "Production"],
       subItems: [
         { title: "All Orders", url: "/store/orders", icon: List },
         { title: "New Order", url: "/store/orders/create", icon: Plus },
@@ -126,7 +126,7 @@ export function AppSidebar() {
       title: "Fulfillment",
       url: "/fulfillment",
       icon: ClipboardList,
-      roles: ["Admin", "Fulfillment"],
+      roles: ["Admin", "Fulfillment", "Warehouse", "Production"],
     },
     {
       title: "Finance",
@@ -144,7 +144,7 @@ export function AppSidebar() {
       title: "Reports",
       url: "/reports",
       icon: BarChart3,
-      roles: ["Admin", "CEO", "Production", "Warehouse", "Store"],
+      roles: ["Admin", "CEO", "Production", "Warehouse", "Store", "Fulfillment"],
     },
     {
       title: "Settings",
