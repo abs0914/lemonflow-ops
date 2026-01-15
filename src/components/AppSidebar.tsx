@@ -104,7 +104,7 @@ export function AppSidebar() {
       title: "Purchasing",
       url: "/purchasing",
       icon: ShoppingCart,
-      roles: ["Admin", "CEO", "Warehouse"],
+      roles: ["Admin", "CEO", "Warehouse", "Finance"],
     },
     {
       title: "Incoming Inventory",
