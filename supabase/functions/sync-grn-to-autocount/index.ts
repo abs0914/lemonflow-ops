@@ -30,11 +30,16 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { purchaseOrderId, componentId, quantity, batchNumber, warehouseLocation } = await req.json();
+    const { purchaseOrderId, itemId, itemType, quantity, batchNumber, warehouseLocation } = await req.json();
+    
+    // Support legacy componentId parameter
+    const actualItemId = itemId || (await req.json()).componentId;
+    const actualItemType = itemType || 'component';
 
     console.log('[sync-grn-to-autocount] Starting GRN sync', {
       purchaseOrderId,
-      componentId,
+      itemId: actualItemId,
+      itemType: actualItemType,
       quantity,
       batchNumber,
       warehouseLocation,
@@ -51,15 +56,31 @@ serve(async (req) => {
       throw new Error(`Purchase order not found: ${poError?.message}`);
     }
 
-    // Get component details
-    const { data: component, error: componentError } = await supabaseClient
-      .from('components')
-      .select('*')
-      .eq('id', componentId)
-      .single();
+    // Get item details based on type
+    let item: { autocount_item_code: string | null; sku: string; name: string; unit: string } | null = null;
 
-    if (componentError || !component) {
-      throw new Error(`Component not found: ${componentError?.message}`);
+    if (actualItemType === 'raw_material') {
+      const { data: rawMaterial, error: rmError } = await supabaseClient
+        .from('raw_materials')
+        .select('autocount_item_code, sku, name, unit')
+        .eq('id', actualItemId)
+        .single();
+
+      if (rmError || !rawMaterial) {
+        throw new Error(`Raw material not found: ${rmError?.message}`);
+      }
+      item = rawMaterial;
+    } else {
+      const { data: component, error: componentError } = await supabaseClient
+        .from('components')
+        .select('autocount_item_code, sku, name, unit')
+        .eq('id', actualItemId)
+        .single();
+
+      if (componentError || !component) {
+        throw new Error(`Component not found: ${componentError?.message}`);
+      }
+      item = component;
     }
 
     // Prepare AutoCount GRN data
@@ -71,10 +92,10 @@ serve(async (req) => {
       location: warehouseLocation || 'MAIN',
       detail: [
         {
-          itemCode: component.autocount_item_code || component.sku,
-          description: component.name,
+          itemCode: item.autocount_item_code || item.sku,
+          description: item.name,
           qty: quantity,
-          uom: component.unit,
+          uom: item.unit,
           batchNo: batchNumber || null,
         },
       ],
@@ -109,7 +130,7 @@ serve(async (req) => {
         autocount_doc_no: result.docNo || null,
       })
       .eq('purchase_order_id', purchaseOrderId)
-      .eq('item_id', componentId)
+      .eq('item_id', actualItemId)
       .eq('movement_type', 'receipt');
 
     if (updateError) {
