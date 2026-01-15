@@ -41,6 +41,7 @@ interface InventoryFormData {
   unit: string;
   cost_per_unit: number;
   price: number;
+  low_stock_threshold: number;
   stock_control: boolean;
   has_batch_no: boolean;
   sync_to_autocount: boolean;
@@ -67,6 +68,7 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
       item_type: "CONSUMABLE",
       cost_per_unit: 0,
       price: 0,
+      low_stock_threshold: 10,
     },
   });
 
@@ -84,6 +86,7 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
         unit: component.unit,
         cost_per_unit: component.cost_per_unit || 0,
         price: component.price || 0,
+        low_stock_threshold: component.low_stock_threshold ?? 10,
         stock_control: component.stock_control ?? true,
         has_batch_no: component.has_batch_no ?? false,
         sync_to_autocount: true,
@@ -107,6 +110,7 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
           unit: data.unit,
           cost_per_unit: data.cost_per_unit,
           price: data.price,
+          low_stock_threshold: data.low_stock_threshold,
           stock_control: data.stock_control,
           has_batch_no: data.has_batch_no,
         })
@@ -292,14 +296,30 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
             </p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="price">Selling Price</Label>
-            <Input
-              id="price"
-              type="number"
-              step="0.01"
-              {...register("price", { valueAsNumber: true })}
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="price">Selling Price</Label>
+              <Input
+                id="price"
+                type="number"
+                step="0.01"
+                {...register("price", { valueAsNumber: true })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="low_stock_threshold">Low Stock Threshold</Label>
+              <Input
+                id="low_stock_threshold"
+                type="number"
+                step="1"
+                min="0"
+                {...register("low_stock_threshold", { valueAsNumber: true, min: 0 })}
+              />
+              <p className="text-xs text-muted-foreground">
+                Items below this quantity show as "Low Stock"
+              </p>
+            </div>
           </div>
 
           <div className="flex flex-col gap-3 pt-2">

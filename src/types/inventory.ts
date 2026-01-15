@@ -14,6 +14,7 @@ export interface Component {
   has_batch_no: boolean | null;
   autocount_item_code: string | null;
   last_synced_at: string | null;
+  low_stock_threshold: number | null;
 }
 
 export interface RawMaterial {
@@ -32,6 +33,7 @@ export interface RawMaterial {
   has_batch_no: boolean | null;
   autocount_item_code: string | null;
   last_synced_at: string | null;
+  low_stock_threshold: number | null;
   created_at: string;
   updated_at: string;
 }
