@@ -10,7 +10,6 @@ import Dashboard from "./pages/Dashboard";
 import BomManager from "./pages/BomManager";
 import Production from "./pages/Production";
 import ProductionCreate from "./pages/ProductionCreate";
-import Warehouse from "./pages/Warehouse";
 import Inventory from "./pages/Inventory";
 import Suppliers from "./pages/Suppliers";
 import Purchasing from "./pages/Purchasing";
@@ -57,7 +56,6 @@ const App = () => (
             <Route path="/bom" element={<BomManager />} />
             <Route path="/production" element={<Production />} />
             <Route path="/production/create" element={<ProductionCreate />} />
-            <Route path="/warehouse" element={<Warehouse />} />
             <Route path="/inventory" element={<Inventory />} />
             <Route path="/suppliers" element={<Suppliers />} />
             <Route path="/purchasing" element={<Purchasing />} />

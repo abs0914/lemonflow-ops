@@ -83,12 +83,6 @@ export function AppSidebar() {
       roles: ["Admin", "Production", "Warehouse", "Fulfillment"],
     },
     {
-      title: "Commissary",
-      url: "/warehouse",
-      icon: Warehouse,
-      roles: ["Admin", "Warehouse"],
-    },
-    {
       title: "Raw Materials",
       url: "/raw-materials",
       icon: Package,
