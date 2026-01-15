@@ -18,6 +18,7 @@ import PurchasingCreate from "./pages/PurchasingCreate";
 import PurchasingEdit from "./pages/PurchasingEdit";
 import PurchaseOrderDetail from "./pages/PurchaseOrderDetail";
 import RawMaterials from "./pages/RawMaterials";
+import IncomingInventory from "./pages/IncomingInventory";
 import CEODashboard from "./pages/CEODashboard";
 import Settings from "./pages/Settings";
 import StoreOrders from "./pages/StoreOrders";
@@ -64,6 +65,7 @@ const App = () => (
             <Route path="/purchasing/:id" element={<PurchaseOrderDetail />} />
             <Route path="/purchasing/:id/edit" element={<PurchasingEdit />} />
             <Route path="/raw-materials" element={<RawMaterials />} />
+            <Route path="/incoming-inventory" element={<IncomingInventory />} />
             <Route path="/ceo-dashboard" element={<CEODashboard />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/store/orders" element={<StoreOrders />} />

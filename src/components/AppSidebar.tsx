@@ -19,7 +19,8 @@ import {
   ChevronRight,
   Plus,
   ClipboardPaste,
-  List
+  List,
+  Truck
 } from "lucide-react";
 import tlcLogo from "@/assets/tlc-logo.png";
 import {
@@ -110,6 +111,12 @@ export function AppSidebar() {
       url: "/purchasing",
       icon: ShoppingCart,
       roles: ["Admin", "CEO", "Warehouse"],
+    },
+    {
+      title: "Incoming Inventory",
+      url: "/incoming-inventory",
+      icon: Truck,
+      roles: ["Admin", "Warehouse", "Fulfillment", "Production"],
     },
     {
       title: "Store Orders",
