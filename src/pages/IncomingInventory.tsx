@@ -10,13 +10,17 @@ import { Badge } from "@/components/ui/badge";
 import { PendingReceiptsList } from "@/components/inventory/PendingReceiptsList";
 import { EnhancedGoodsReceivedForm } from "@/components/inventory/EnhancedGoodsReceivedForm";
 import { ReceivingHistory } from "@/components/inventory/ReceivingHistory";
+import { GoodsReturnForm } from "@/components/warehouse/GoodsReturnForm";
+import { StockReceiptForm } from "@/components/warehouse/StockReceiptForm";
 import { 
   Package, 
   ClipboardCheck, 
   Clock, 
   History,
   AlertCircle,
-  Truck
+  Truck,
+  PackageX,
+  PackagePlus
 } from "lucide-react";
 
 export default function IncomingInventory() {
@@ -96,7 +100,7 @@ export default function IncomingInventory() {
             Incoming Inventory
           </h1>
           <p className="text-muted-foreground mt-1">
-            Centralized management for receiving goods from purchase orders
+            Centralized management for receiving goods, returns, and direct receipts
           </p>
         </div>
 
@@ -149,26 +153,31 @@ export default function IncomingInventory() {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
-            <TabsTrigger value="pending" className="flex items-center gap-2">
+          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+            <TabsTrigger value="pending" className="flex items-center gap-1 text-xs sm:text-sm">
               <Clock className="h-4 w-4" />
-              <span className="hidden sm:inline">Pending Receipts</span>
-              <span className="sm:hidden">Pending</span>
+              <span className="hidden sm:inline">Pending</span>
               {kpiData?.pendingPOs ? (
-                <Badge variant="secondary" className="ml-1">
+                <Badge variant="secondary" className="ml-1 hidden lg:inline-flex">
                   {kpiData.pendingPOs}
                 </Badge>
               ) : null}
             </TabsTrigger>
-            <TabsTrigger value="receive" className="flex items-center gap-2">
+            <TabsTrigger value="receive" className="flex items-center gap-1 text-xs sm:text-sm">
               <ClipboardCheck className="h-4 w-4" />
-              <span className="hidden sm:inline">Receive Goods</span>
-              <span className="sm:hidden">Receive</span>
+              <span className="hidden sm:inline">Receive</span>
             </TabsTrigger>
-            <TabsTrigger value="history" className="flex items-center gap-2">
+            <TabsTrigger value="direct" className="flex items-center gap-1 text-xs sm:text-sm">
+              <PackagePlus className="h-4 w-4" />
+              <span className="hidden sm:inline">Direct</span>
+            </TabsTrigger>
+            <TabsTrigger value="return" className="flex items-center gap-1 text-xs sm:text-sm">
+              <PackageX className="h-4 w-4" />
+              <span className="hidden sm:inline">Return</span>
+            </TabsTrigger>
+            <TabsTrigger value="history" className="flex items-center gap-1 text-xs sm:text-sm">
               <History className="h-4 w-4" />
-              <span className="hidden sm:inline">Receiving History</span>
-              <span className="sm:hidden">History</span>
+              <span className="hidden sm:inline">History</span>
             </TabsTrigger>
           </TabsList>
 
@@ -180,6 +189,14 @@ export default function IncomingInventory() {
 
           <TabsContent value="receive" className="space-y-4">
             <EnhancedGoodsReceivedForm />
+          </TabsContent>
+
+          <TabsContent value="direct" className="space-y-4">
+            <StockReceiptForm />
+          </TabsContent>
+
+          <TabsContent value="return" className="space-y-4">
+            <GoodsReturnForm />
           </TabsContent>
 
           <TabsContent value="history" className="space-y-4">
