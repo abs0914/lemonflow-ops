@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, FileText, Trash2, Edit, RefreshCw, Upload, Download } from "lucide-react";
+import { Plus, Search, FileText, Trash2, Edit, RefreshCw, Upload, Download, CheckCircle, Clock, Package } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,11 +25,15 @@ import { PurchaseOrder } from "@/types/inventory";
 export default function Purchasing() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<string>("all");
+  const [financeFilter, setFinanceFilter] = useState<string>("all");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [poToDelete, setPoToDelete] = useState<PurchaseOrder | null>(null);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
+  const { profile } = useAuth();
+  
+  const isFinanceUser = profile?.role === "Finance";
   
   const {
     data: allOrders,
@@ -37,9 +42,35 @@ export default function Purchasing() {
   
   const filteredOrders = allOrders?.filter(order => {
     const matchesSearch = order.po_number.toLowerCase().includes(searchTerm.toLowerCase()) || order.suppliers?.company_name.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Finance users only see approved POs
+    if (isFinanceUser) {
+      if (order.status !== "approved") return false;
+      
+      // Apply finance-specific filter
+      if (financeFilter === "pending_receipt") {
+        return matchesSearch && !order.goods_received;
+      } else if (financeFilter === "received") {
+        return matchesSearch && order.goods_received;
+      }
+      return matchesSearch;
+    }
+    
     const matchesTab = activeTab === "all" || order.status === activeTab;
     return matchesSearch && matchesTab;
   });
+  
+  const getFinanceStats = () => {
+    const approvedPOs = allOrders?.filter(o => o.status === "approved") || [];
+    return {
+      total: approvedPOs.length,
+      pendingReceipt: approvedPOs.filter(o => !o.goods_received).length,
+      received: approvedPOs.filter(o => o.goods_received).length,
+      totalValue: approvedPOs.reduce((sum, o) => sum + (o.total_amount || 0), 0),
+    };
+  };
+  
+  const financeStats = isFinanceUser ? getFinanceStats() : null;
   
   const deleteMutation = useMutation({
     mutationFn: async (po: PurchaseOrder) => {
@@ -226,10 +257,16 @@ export default function Purchasing() {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 md:items-center md:justify-between px-[20px] py-[23px] md:flex md:flex-row">
           <div>
-            <h1 className="text-3xl font-bold">Purchase Orders</h1>
-            <p className="text-muted-foreground">Manage purchase orders and procurement</p>
+            <h1 className="text-3xl font-bold">
+              {isFinanceUser ? "Approved Purchase Orders" : "Purchase Orders"}
+            </h1>
+            <p className="text-muted-foreground">
+              {isFinanceUser 
+                ? "Review approved purchase orders and track goods receipt status" 
+                : "Manage purchase orders and procurement"}
+            </p>
           </div>
-          {!isMobile && (
+          {!isMobile && !isFinanceUser && (
             <div className="flex gap-2">
               <Button
                 variant="outline"
@@ -261,7 +298,69 @@ export default function Purchasing() {
               </Button>
             </div>
           )}
+          {!isMobile && isFinanceUser && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+                toast.success("Refreshed purchase orders");
+              }}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh
+            </Button>
+          )}
         </div>
+
+        {/* Finance Stats Cards */}
+        {isFinanceUser && financeStats && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-4">
+            <Card className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <FileText className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Approved</p>
+                  <p className="text-2xl font-bold">{financeStats.total}</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-yellow-500/10 rounded-lg">
+                  <Clock className="h-5 w-5 text-yellow-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Pending Receipt</p>
+                  <p className="text-2xl font-bold">{financeStats.pendingReceipt}</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-500/10 rounded-lg">
+                  <Package className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Goods Received</p>
+                  <p className="text-2xl font-bold">{financeStats.received}</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-500/10 rounded-lg">
+                  <CheckCircle className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Value</p>
+                  <p className="text-2xl font-bold">{formatCurrency(financeStats.totalValue)}</p>
+                </div>
+              </div>
+            </Card>
+          </div>
+        )}
 
         <Card>
           <CardHeader>
@@ -270,14 +369,24 @@ export default function Purchasing() {
                 <Search className="h-5 w-5 text-muted-foreground" />
                 <Input placeholder="Search purchase orders..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="max-w-sm" />
               </div>
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full md:w-auto">
-                <TabsList>
-                  <TabsTrigger value="all">All</TabsTrigger>
-                  <TabsTrigger value="draft">Draft</TabsTrigger>
-                  <TabsTrigger value="submitted">Submitted</TabsTrigger>
-                  <TabsTrigger value="approved">Approved</TabsTrigger>
-                </TabsList>
-              </Tabs>
+              {isFinanceUser ? (
+                <Tabs value={financeFilter} onValueChange={setFinanceFilter} className="w-full md:w-auto">
+                  <TabsList>
+                    <TabsTrigger value="all">All Approved</TabsTrigger>
+                    <TabsTrigger value="pending_receipt">Pending Receipt</TabsTrigger>
+                    <TabsTrigger value="received">Goods Received</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              ) : (
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full md:w-auto">
+                  <TabsList>
+                    <TabsTrigger value="all">All</TabsTrigger>
+                    <TabsTrigger value="draft">Draft</TabsTrigger>
+                    <TabsTrigger value="submitted">Submitted</TabsTrigger>
+                    <TabsTrigger value="approved">Approved</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              )}
             </div>
           </CardHeader>
           <CardContent>
@@ -304,7 +413,11 @@ export default function Purchasing() {
                     <TableHead>Date</TableHead>
                     <TableHead>Delivery Date</TableHead>
                     <TableHead>Total Amount</TableHead>
-                    <TableHead>Status</TableHead>
+                    {isFinanceUser ? (
+                      <TableHead>Goods Receipt</TableHead>
+                    ) : (
+                      <TableHead>Status</TableHead>
+                    )}
                     <TableHead>AutoCount Sync</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -317,14 +430,30 @@ export default function Purchasing() {
                       <TableCell>{dateFormatters.short(order.doc_date)}</TableCell>
                       <TableCell>{order.delivery_date ? dateFormatters.short(order.delivery_date) : "-"}</TableCell>
                       <TableCell>{formatCurrency(order.total_amount)}</TableCell>
-                      <TableCell>{getStatusBadge(order.status)}</TableCell>
+                      {isFinanceUser ? (
+                        <TableCell>
+                          {order.goods_received ? (
+                            <Badge variant="default" className="bg-green-600">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Received
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Pending
+                            </Badge>
+                          )}
+                        </TableCell>
+                      ) : (
+                        <TableCell>{getStatusBadge(order.status)}</TableCell>
+                      )}
                       <TableCell>{getSyncStatusBadge(order)}</TableCell>
                       <TableCell>
                         <div className="flex gap-2">
                           <Button variant="outline" size="sm" onClick={() => navigate(`/purchasing/${order.id}`)}>
                             View
                           </Button>
-                          {!order.autocount_synced && (
+                          {!isFinanceUser && !order.autocount_synced && (
                             <Button
                               variant="outline"
                               size="sm"
@@ -335,7 +464,7 @@ export default function Purchasing() {
                               Sync
                             </Button>
                           )}
-                          {(order.status === "draft" || order.status === "submitted") && (
+                          {!isFinanceUser && (order.status === "draft" || order.status === "submitted") && (
                             <>
                               <Button 
                                 variant="outline" 
@@ -375,7 +504,7 @@ export default function Purchasing() {
           </CardContent>
         </Card>
 
-        {isMobile && <FloatingActionButton onClick={() => navigate("/purchasing/create")} icon={Plus} />}
+        {isMobile && !isFinanceUser && <FloatingActionButton onClick={() => navigate("/purchasing/create")} icon={Plus} />}
 
         <DeletePurchaseOrderDialog
           open={deleteDialogOpen}
