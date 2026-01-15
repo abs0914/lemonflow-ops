@@ -20,7 +20,8 @@ import {
   Plus,
   ClipboardPaste,
   List,
-  Truck
+  Truck,
+  RefreshCw
 } from "lucide-react";
 import tlcLogo from "@/assets/tlc-logo.png";
 import {
@@ -146,6 +147,12 @@ export function AppSidebar() {
       url: "/reports",
       icon: BarChart3,
       roles: ["Admin", "CEO", "Production", "Warehouse", "Store", "Fulfillment"],
+    },
+    {
+      title: "Sync Monitor",
+      url: "/sync-monitor",
+      icon: RefreshCw,
+      roles: ["Admin"],
     },
     {
       title: "Settings",

@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
 import { useProductionLogs } from "@/hooks/useProductionLogs";
 import { LogProductionDialog } from "@/components/production/LogProductionDialog";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -20,12 +20,18 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function Production() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
   const [showLogDialog, setShowLogDialog] = useState(false);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
 
   const { data: productionLogs, isLoading } = useProductionLogs();
 
@@ -126,6 +132,42 @@ export default function Production() {
     },
   });
 
+  const retrySyncMutation = useMutation({
+    mutationFn: async (movementId: string) => {
+      setRetryingId(movementId);
+      const { data, error } = await supabase.functions.invoke("retry-failed-sync", {
+        body: { 
+          reference_id: movementId,
+          sync_type: "production_complete"
+        },
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Retry failed");
+
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["production-logs"] });
+      queryClient.invalidateQueries({ queryKey: ["sync-logs"] });
+      toast({
+        title: "Sync retry successful",
+        description: "Production has been synced to AutoCount.",
+      });
+      setRetryingId(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Retry failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      setRetryingId(null);
+    },
+  });
+
+  const pendingSyncCount = productionLogs?.filter(log => !log.autocount_synced).length || 0;
+
   return (
     <DashboardLayout>
       <div className="p-4 md:p-8 space-y-6 md:space-y-8">
@@ -183,11 +225,29 @@ export default function Production() {
                         {log.user_profiles?.full_name || "Unknown"}
                       </TableCell>
                       <TableCell>
-                        {log.autocount_synced ? (
-                          <Badge variant="default">Synced</Badge>
-                        ) : (
-                          <Badge variant="secondary">Pending</Badge>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {log.autocount_synced ? (
+                            <Badge variant="default">Synced</Badge>
+                          ) : (
+                            <>
+                              <Badge variant="secondary">Pending</Badge>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-6 w-6"
+                                    onClick={() => retrySyncMutation.mutate(log.id)}
+                                    disabled={retryingId === log.id}
+                                  >
+                                    <RefreshCw className={`h-3 w-3 ${retryingId === log.id ? "animate-spin" : ""}`} />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Retry sync</TooltipContent>
+                              </Tooltip>
+                            </>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {log.notes || "-"}
