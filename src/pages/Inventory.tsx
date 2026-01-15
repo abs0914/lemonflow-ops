@@ -76,9 +76,17 @@ export default function Inventory() {
 
       let filteredData = data || [];
       if (stockStatusFilter === "in-stock") {
-        filteredData = filteredData.filter(c => c.stock_quantity - c.reserved_quantity > 0);
+        filteredData = filteredData.filter(c => {
+          const available = c.stock_quantity - c.reserved_quantity;
+          const threshold = c.low_stock_threshold ?? 10;
+          return available > threshold;
+        });
       } else if (stockStatusFilter === "low-stock") {
-        filteredData = filteredData.filter(c => c.stock_quantity - c.reserved_quantity > 0 && c.stock_quantity - c.reserved_quantity < 10);
+        filteredData = filteredData.filter(c => {
+          const available = c.stock_quantity - c.reserved_quantity;
+          const threshold = c.low_stock_threshold ?? 10;
+          return available > 0 && available <= threshold;
+        });
       } else if (stockStatusFilter === "out-of-stock") {
         filteredData = filteredData.filter(c => c.stock_quantity - c.reserved_quantity <= 0);
       }
@@ -114,9 +122,13 @@ export default function Inventory() {
     }
   });
 
-  // Calculate KPIs
+  // Calculate KPIs using individual thresholds
   const totalItems = components?.length || 0;
-  const lowStockCount = components?.filter(c => c.stock_quantity - c.reserved_quantity > 0 && c.stock_quantity - c.reserved_quantity < 10).length || 0;
+  const lowStockCount = components?.filter(c => {
+    const available = c.stock_quantity - c.reserved_quantity;
+    const threshold = c.low_stock_threshold ?? 10;
+    return available > 0 && available <= threshold;
+  }).length || 0;
   const outOfStockCount = components?.filter(c => c.stock_quantity - c.reserved_quantity <= 0).length || 0;
 
   const handleAdjustStock = (component: Component) => {
@@ -212,25 +224,35 @@ export default function Inventory() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card 
+            className={`cursor-pointer transition-all hover:shadow-md hover:border-yellow-400 ${stockStatusFilter === "low-stock" ? "ring-2 ring-yellow-400 border-yellow-400" : ""}`}
+            onClick={() => setStockStatusFilter(stockStatusFilter === "low-stock" ? "all" : "low-stock")}
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Low Stock</CardTitle>
               <AlertCircle className="h-4 w-4 text-yellow-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{lowStockCount}</div>
-              <p className="text-xs text-muted-foreground">Items below threshold</p>
+              <p className="text-xs text-muted-foreground">
+                {stockStatusFilter === "low-stock" ? "Click to clear filter" : "Click to filter"}
+              </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card 
+            className={`cursor-pointer transition-all hover:shadow-md hover:border-red-400 ${stockStatusFilter === "out-of-stock" ? "ring-2 ring-red-400 border-red-400" : ""}`}
+            onClick={() => setStockStatusFilter(stockStatusFilter === "out-of-stock" ? "all" : "out-of-stock")}
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Out of Stock</CardTitle>
               <Database className="h-4 w-4 text-red-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{outOfStockCount}</div>
-              <p className="text-xs text-muted-foreground">Items unavailable</p>
+              <p className="text-xs text-muted-foreground">
+                {stockStatusFilter === "out-of-stock" ? "Click to clear filter" : "Click to filter"}
+              </p>
             </CardContent>
           </Card>
         </div>

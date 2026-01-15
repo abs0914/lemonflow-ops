@@ -234,6 +234,7 @@ export type Database = {
           item_group: string | null
           item_type: string | null
           last_synced_at: string | null
+          low_stock_threshold: number | null
           name: string
           price: number | null
           reserved_quantity: number
@@ -253,6 +254,7 @@ export type Database = {
           item_group?: string | null
           item_type?: string | null
           last_synced_at?: string | null
+          low_stock_threshold?: number | null
           name: string
           price?: number | null
           reserved_quantity?: number
@@ -272,6 +274,7 @@ export type Database = {
           item_group?: string | null
           item_type?: string | null
           last_synced_at?: string | null
+          low_stock_threshold?: number | null
           name?: string
           price?: number | null
           reserved_quantity?: number
@@ -657,6 +660,7 @@ export type Database = {
           item_group: string | null
           item_type: string | null
           last_synced_at: string | null
+          low_stock_threshold: number | null
           name: string
           price: number | null
           reserved_quantity: number
@@ -676,6 +680,7 @@ export type Database = {
           item_group?: string | null
           item_type?: string | null
           last_synced_at?: string | null
+          low_stock_threshold?: number | null
           name: string
           price?: number | null
           reserved_quantity?: number
@@ -695,6 +700,7 @@ export type Database = {
           item_group?: string | null
           item_type?: string | null
           last_synced_at?: string | null
+          low_stock_threshold?: number | null
           name?: string
           price?: number | null
           reserved_quantity?: number
