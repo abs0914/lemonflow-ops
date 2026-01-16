@@ -277,7 +277,7 @@ export function InventoryTable({ components, isLoading, onRefetch, onAdjustStock
                 <TableRow 
                   key={component.id}
                   className={`cursor-pointer hover:bg-muted/50 ${available <= 0 ? "bg-red-50 dark:bg-red-950/20" : available < 10 ? "bg-yellow-50 dark:bg-yellow-950/20" : ""}`}
-                  onClick={() => handleEdit(component)}
+                  onClick={() => handleAdjustStock(component)}
                 >
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <Checkbox
