@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/currency";
+import { ConversionHelper } from "./ConversionHelper";
 
 interface BomEditorProps {
   productId?: string;
@@ -215,6 +216,12 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
                 onChange={(e) => setQuantity(e.target.value)}
                 placeholder="0.000"
               />
+              {selectedRawMaterialId && (
+                <ConversionHelper
+                  baseUnit={rawMaterials.find((rm) => rm.id === selectedRawMaterialId)?.unit || ""}
+                  onApply={(value) => setQuantity(value)}
+                />
+              )}
             </div>
 
             <div>
