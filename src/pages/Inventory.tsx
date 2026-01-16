@@ -12,6 +12,7 @@ import { SyncInventoryDialog } from "@/components/inventory/SyncInventoryDialog"
 import { PushInventoryDialog } from "@/components/inventory/PushInventoryDialog";
 import { DeleteInventoryDialog } from "@/components/inventory/DeleteInventoryDialog";
 import { AddInventoryDialog } from "@/components/inventory/AddInventoryDialog";
+import { EditInventoryDialog } from "@/components/inventory/EditInventoryDialog";
 import { FloatingActionButton } from "@/components/ui/floating-action-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +43,8 @@ export default function Inventory() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [selectedComponent, setSelectedComponent] = useState<Component | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [itemToEdit, setItemToEdit] = useState<Component | null>(null);
 
   // Redirect if not authenticated or not authorized
   if (!user) {
@@ -134,6 +137,11 @@ export default function Inventory() {
   const handleAdjustStock = (component: Component) => {
     setSelectedComponent(component);
     setAdjustmentDialogOpen(true);
+  };
+
+  const handleEdit = (component: Component) => {
+    setItemToEdit(component);
+    setEditDialogOpen(true);
   };
   const handleSyncComplete = () => {
     queryClient.invalidateQueries({
@@ -285,6 +293,7 @@ export default function Inventory() {
                   component={component as any}
                   onAdjustStock={handleAdjustStock as any}
                   onDelete={handleDeleteClick}
+                  onEdit={handleEdit as any}
                 />
               ))
             ) : (
@@ -366,6 +375,12 @@ export default function Inventory() {
         onConfirm={handleConfirmDelete}
         itemCount={1}
         isDeleting={deleteMutation.isPending}
+      />
+
+      <EditInventoryDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        component={itemToEdit}
       />
     </DashboardLayout>;
 }

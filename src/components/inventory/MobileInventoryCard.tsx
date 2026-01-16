@@ -10,9 +10,10 @@ interface MobileInventoryCardProps {
   component: Component;
   onAdjustStock: (component: Component) => void;
   onDelete: (id: string) => void;
+  onEdit: (component: Component) => void;
 }
 
-export function MobileInventoryCard({ component, onAdjustStock, onDelete }: MobileInventoryCardProps) {
+export function MobileInventoryCard({ component, onAdjustStock, onDelete, onEdit }: MobileInventoryCardProps) {
   const available = component.stock_quantity - component.reserved_quantity;
 
   const getStockStatusBadge = (available: number) => {
@@ -126,6 +127,7 @@ export function MobileInventoryCard({ component, onAdjustStock, onDelete }: Mobi
           ? "bg-yellow-50 dark:bg-yellow-950/20" 
           : ""
       }
+      onClick={() => onEdit(component)}
     >
       <div className="space-y-3">
         <div className="flex items-start justify-between">
