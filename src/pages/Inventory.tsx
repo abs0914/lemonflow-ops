@@ -13,10 +13,11 @@ import { PushInventoryDialog } from "@/components/inventory/PushInventoryDialog"
 import { DeleteInventoryDialog } from "@/components/inventory/DeleteInventoryDialog";
 import { AddInventoryDialog } from "@/components/inventory/AddInventoryDialog";
 import { EditInventoryDialog } from "@/components/inventory/EditInventoryDialog";
+import { ImportInventoryDialog } from "@/components/inventory/ImportInventoryDialog";
 import { FloatingActionButton } from "@/components/ui/floating-action-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, AlertCircle, Database, Plus, RefreshCw, Download } from "lucide-react";
+import { Package, AlertCircle, Database, Plus, RefreshCw, Download, Upload } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { Component } from "@/types/inventory";
@@ -45,6 +46,7 @@ export default function Inventory() {
   const [selectedComponent, setSelectedComponent] = useState<Component | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [itemToEdit, setItemToEdit] = useState<Component | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   // Redirect if not authenticated or not authorized
   if (!user) {
@@ -259,6 +261,10 @@ export default function Inventory() {
                 <Download className="mr-2 h-4 w-4" />
                 Export
               </Button>
+              <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+                <Upload className="mr-2 h-4 w-4" />
+                Import
+              </Button>
               <Button variant="outline" onClick={() => setSyncDialogOpen(true)}>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Pull from AutoCount
@@ -432,6 +438,11 @@ export default function Inventory() {
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         component={itemToEdit}
+      />
+
+      <ImportInventoryDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
       />
     </DashboardLayout>;
 }
