@@ -187,7 +187,7 @@ export function StockAdjustmentDialog({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["components"] });
-      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "inventory" });
       queryClient.invalidateQueries({ queryKey: ["raw-materials"] });
       queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
       toast({ 
