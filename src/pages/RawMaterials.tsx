@@ -11,6 +11,7 @@ import { StockAdjustmentDialog } from "@/components/inventory/StockAdjustmentDia
 import { SyncInventoryDialog } from "@/components/inventory/SyncInventoryDialog";
 import { DeleteInventoryDialog } from "@/components/inventory/DeleteInventoryDialog";
 import { AddInventoryDialog } from "@/components/inventory/AddInventoryDialog";
+import { EditInventoryDialog } from "@/components/inventory/EditInventoryDialog";
 import { RawMaterialsCsvUpload } from "@/components/inventory/RawMaterialsCsvUpload";
 import { FloatingActionButton } from "@/components/ui/floating-action-button";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,8 @@ export default function RawMaterials() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [selectedRawMaterial, setSelectedRawMaterial] = useState<RawMaterial | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [itemToEdit, setItemToEdit] = useState<RawMaterial | null>(null);
 
   // Redirect if not authenticated or not authorized
   if (!user) {
@@ -117,6 +120,11 @@ export default function RawMaterials() {
   const handleAdjustStock = (rawMaterial: RawMaterial) => {
     setSelectedRawMaterial(rawMaterial);
     setAdjustmentDialogOpen(true);
+  };
+
+  const handleEdit = (rawMaterial: RawMaterial) => {
+    setItemToEdit(rawMaterial);
+    setEditDialogOpen(true);
   };
 
   const handleSyncComplete = () => {
@@ -252,6 +260,7 @@ export default function RawMaterials() {
                   component={rawMaterial as any}
                   onAdjustStock={handleAdjustStock as any}
                   onDelete={handleDeleteClick}
+                  onEdit={handleEdit as any}
                 />
               ))
             ) : (
@@ -307,6 +316,12 @@ export default function RawMaterials() {
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
         isRawMaterial={true}
+      />
+
+      <EditInventoryDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        component={itemToEdit as any}
       />
     </DashboardLayout>
   );
