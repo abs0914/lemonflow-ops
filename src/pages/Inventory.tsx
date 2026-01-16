@@ -293,7 +293,6 @@ export default function Inventory() {
                   component={component as any}
                   onAdjustStock={handleAdjustStock as any}
                   onDelete={handleDeleteClick}
-                  onEdit={handleEdit as any}
                 />
               ))
             ) : (

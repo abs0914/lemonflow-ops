@@ -260,7 +260,6 @@ export default function RawMaterials() {
                   component={rawMaterial as any}
                   onAdjustStock={handleAdjustStock as any}
                   onDelete={handleDeleteClick}
-                  onEdit={handleEdit as any}
                 />
               ))
             ) : (
