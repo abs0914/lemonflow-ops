@@ -16,7 +16,7 @@ import { EditInventoryDialog } from "@/components/inventory/EditInventoryDialog"
 import { FloatingActionButton } from "@/components/ui/floating-action-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, AlertCircle, Database, Plus, RefreshCw } from "lucide-react";
+import { Package, AlertCircle, Database, Plus, RefreshCw, Download } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { Component } from "@/types/inventory";
@@ -143,6 +143,54 @@ export default function Inventory() {
     setItemToEdit(component);
     setEditDialogOpen(true);
   };
+
+  const handleExport = () => {
+    if (!components || components.length === 0) {
+      toast({
+        title: "No Data",
+        description: "No inventory data to export",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const headers = ["SKU", "AutoCount Code", "Name", "Item Group", "Item Type", "Stock Qty", "Reserved", "Available", "Unit", "Low Stock Threshold"];
+    const csvRows = [headers.join(",")];
+
+    components.forEach((item) => {
+      const available = item.stock_quantity - item.reserved_quantity;
+      const row = [
+        item.sku,
+        item.autocount_item_code || "",
+        `"${(item.name || "").replace(/"/g, '""')}"`,
+        item.item_group || "",
+        item.item_type || "",
+        item.stock_quantity,
+        item.reserved_quantity,
+        available,
+        item.unit,
+        item.low_stock_threshold ?? 10
+      ];
+      csvRows.push(row.join(","));
+    });
+
+    const csvContent = csvRows.join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `inventory-export-${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Export Complete",
+      description: `Exported ${components.length} items to CSV`
+    });
+  };
+
   const handleSyncComplete = () => {
     queryClient.invalidateQueries({
       queryKey: ["inventory"]
@@ -206,6 +254,10 @@ export default function Inventory() {
               <Button onClick={() => setAddDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add Item
+              </Button>
+              <Button variant="outline" onClick={handleExport}>
+                <Download className="mr-2 h-4 w-4" />
+                Export
               </Button>
               <Button variant="outline" onClick={() => setSyncDialogOpen(true)}>
                 <RefreshCw className="mr-2 h-4 w-4" />
