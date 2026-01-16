@@ -19,8 +19,8 @@ export default function BomManager() {
       console.log("BomManager - No profile, redirecting to login");
       navigate("/login");
     }
-    if (!loading && profile && profile.role !== "Admin") {
-      console.log("BomManager - Not admin, redirecting to dashboard. Role:", profile.role);
+    if (!loading && profile && profile.role !== "Admin" && profile.role !== "Warehouse") {
+      console.log("BomManager - No access, redirecting to dashboard. Role:", profile.role);
       navigate("/dashboard");
     }
   }, [profile, loading, navigate]);
