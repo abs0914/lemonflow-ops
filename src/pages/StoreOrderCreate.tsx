@@ -40,7 +40,6 @@ export default function StoreOrderCreate() {
 
   const [storeId, setStoreId] = useState<string>(primaryStore?.store_id || "");
   const [docDate, setDocDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
-  const [deliveryDate, setDeliveryDate] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [lines, setLines] = useState<Omit<SalesOrderLine, 'id' | 'sales_order_id' | 'created_at' | 'updated_at'>[]>([]);
 
@@ -69,7 +68,6 @@ export default function StoreOrderCreate() {
       store_id: storeId,
       debtor_code: selectedStore?.debtor_code || "",
       doc_date: docDate,
-      delivery_date: deliveryDate || undefined,
       description: description || undefined,
       lines,
     });
@@ -87,7 +85,6 @@ export default function StoreOrderCreate() {
       store_id: storeId,
       debtor_code: selectedStore?.debtor_code || "",
       doc_date: docDate,
-      delivery_date: deliveryDate || undefined,
       description: description || undefined,
       lines,
     });
@@ -189,16 +186,6 @@ export default function StoreOrderCreate() {
                     type="date"
                     value={docDate}
                     onChange={(e) => setDocDate(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="deliveryDate">Delivery Date</Label>
-                  <Input
-                    id="deliveryDate"
-                    type="date"
-                    value={deliveryDate}
-                    onChange={(e) => setDeliveryDate(e.target.value)}
                   />
                 </div>
               </div>
