@@ -86,9 +86,9 @@ Deno.serve(async (req) => {
     const authData: LemonCoAuthResponse = await authResponse.json();
     console.log('Authentication successful');
 
-    // Step 2: Fetch stores from AutoCount (debtors with STR-TLC- or FRC-TLC- prefix)
-    console.log('Fetching stores from AutoCount API...');
-    const response = await fetch(`${apiUrl}/autocount/stores`, {
+    // Step 2: Fetch all debtors from AutoCount
+    console.log('Fetching debtors from AutoCount API...');
+    const response = await fetch(`${apiUrl}/autocount/debtors`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${authData.token}`,
@@ -102,8 +102,14 @@ Deno.serve(async (req) => {
       throw new Error(`AutoCount API error: ${response.status} - ${errorText}`);
     }
 
-    const stores: AutoCountDebtor[] = await response.json();
-    console.log(`Successfully fetched ${stores.length} stores from AutoCount`);
+    const allDebtors: AutoCountDebtor[] = await response.json();
+    console.log(`Fetched ${allDebtors.length} total debtors from AutoCount`);
+
+    // Step 3: Filter for stores (STR-TLC- or FRC-TLC- prefix)
+    const stores = allDebtors.filter(d => 
+      d.code.startsWith('STR-TLC-') || d.code.startsWith('FRC-TLC-')
+    );
+    console.log(`Filtered to ${stores.length} stores (STR-TLC-* or FRC-TLC-*)`);
 
     // Step 3: Upsert stores to Supabase
     let synced = 0;
