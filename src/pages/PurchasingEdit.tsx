@@ -354,7 +354,7 @@ export default function PurchasingEdit() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="delivery_date">Delivery Date</Label>
+                  <Label htmlFor="delivery_date">Purchase Date</Label>
                   <Input
                     id="delivery_date"
                     type="date"
