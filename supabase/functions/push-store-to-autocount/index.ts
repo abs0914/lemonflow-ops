@@ -107,7 +107,7 @@ async function checkDebtorExists(apiUrl: string, token: string, debtorCode: stri
   }
 }
 
-async function createDebtor(apiUrl: string, token: string, store: Store): Promise<{ success: boolean; error?: string; httpStatus?: number }> {
+async function createDebtor(apiUrl: string, token: string, store: Store, retryWithUpdate = true): Promise<{ success: boolean; error?: string; httpStatus?: number }> {
   console.log(`Creating debtor for store: ${store.store_name} (${store.debtor_code})`);
   
   const payload: DebtorPayload = {
@@ -140,6 +140,17 @@ async function createDebtor(apiUrl: string, token: string, store: Store): Promis
 
     if (!response.ok) {
       console.error(`Failed to create debtor ${store.debtor_code}: HTTP ${status} - ${responseText}`);
+      
+      // WORKAROUND: Backend throws "Debtor record not found" error during create
+      // This is a known backend bug - try UPDATE instead as a fallback
+      const isDebtorNotFoundError = responseText.toLowerCase().includes('debtor record not found') ||
+                                     responseText.toLowerCase().includes('debtorrecordnotfoundexception');
+      
+      if (isDebtorNotFoundError && retryWithUpdate) {
+        console.log(`WORKAROUND: Backend threw "Debtor record not found" during CREATE for ${store.debtor_code}. Attempting UPDATE as fallback...`);
+        return await updateDebtor(apiUrl, token, store);
+      }
+      
       return { success: false, error: responseText, httpStatus: status };
     }
 
