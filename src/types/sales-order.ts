@@ -9,6 +9,8 @@ export interface Store {
   phone?: string;
   email?: string;
   is_active: boolean;
+  autocount_synced?: boolean;
+  last_synced_at?: string;
   created_at: string;
   updated_at: string;
 }

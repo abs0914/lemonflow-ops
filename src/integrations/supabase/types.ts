@@ -974,12 +974,14 @@ export type Database = {
       stores: {
         Row: {
           address: string | null
+          autocount_synced: boolean | null
           contact_person: string | null
           created_at: string | null
           debtor_code: string
           email: string | null
           id: string
           is_active: boolean | null
+          last_synced_at: string | null
           phone: string | null
           store_code: string
           store_name: string
@@ -988,12 +990,14 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          autocount_synced?: boolean | null
           contact_person?: string | null
           created_at?: string | null
           debtor_code: string
           email?: string | null
           id?: string
           is_active?: boolean | null
+          last_synced_at?: string | null
           phone?: string | null
           store_code: string
           store_name: string
@@ -1002,12 +1006,14 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          autocount_synced?: boolean | null
           contact_person?: string | null
           created_at?: string | null
           debtor_code?: string
           email?: string | null
           id?: string
           is_active?: boolean | null
+          last_synced_at?: string | null
           phone?: string | null
           store_code?: string
           store_name?: string

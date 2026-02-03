@@ -32,6 +32,7 @@ import FinanceDashboard from "./pages/FinanceDashboard";
 import FinanceOrderDetail from "./pages/FinanceOrderDetail";
 import Reports from "./pages/Reports";
 import SyncMonitor from "./pages/SyncMonitor";
+import Stores from "./pages/Stores";
 import NotFound from "./pages/NotFound";
 
 // Create QueryClient instance outside component to prevent recreation
@@ -73,6 +74,7 @@ const App = () => (
             <Route path="/store/orders/:id" element={<StoreOrderDetail />} />
             <Route path="/settings/stores" element={<StoresManagement />} />
             <Route path="/settings/store-assignments" element={<StoreAssignmentsManagement />} />
+            <Route path="/stores" element={<Stores />} />
             <Route path="/fulfillment" element={<FulfillmentDashboard />} />
             <Route path="/fulfillment/orders/:id" element={<FulfillmentOrderDetail />} />
             <Route path="/finance" element={<FinanceDashboard />} />

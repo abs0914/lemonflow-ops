@@ -68,3 +68,6 @@ verify_jwt = true
 
 [functions.retry-failed-sync]
 verify_jwt = true
+
+[functions.push-store-to-autocount]
+verify_jwt = true

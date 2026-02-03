@@ -5,6 +5,7 @@ import {
   Factory, 
   Barcode, 
   Warehouse,
+  Store,
   Database,
   Users,
   UserCheck,
@@ -99,6 +100,12 @@ export function AppSidebar() {
       title: "Suppliers",
       url: "/suppliers",
       icon: Users,
+      roles: ["Admin", "Warehouse"],
+    },
+    {
+      title: "Stores",
+      url: "/stores",
+      icon: Store,
       roles: ["Admin", "Warehouse"],
     },
     {
