@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
 interface Store {
@@ -19,15 +19,26 @@ interface Store {
   autocount_synced: boolean | null;
 }
 
+interface DebtorPayload {
+  code: string;
+  name: string;
+  contactPerson?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  isActive: boolean;
+}
+
 async function authenticateWithAutoCount(apiUrl: string, username: string, password: string): Promise<string> {
   console.log('Authenticating with AutoCount API...');
   
-  const response = await fetch(`${apiUrl}/auth/login`, {
+  // Use /api/auth/login endpoint with email parameter (matching supplier sync)
+  const response = await fetch(`${apiUrl}/api/auth/login`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ email: username, password }),
   });
 
   if (!response.ok) {
@@ -38,7 +49,8 @@ async function authenticateWithAutoCount(apiUrl: string, username: string, passw
 
   const data = await response.json();
   console.log('Authentication successful');
-  return data.token;
+  // Backend returns PascalCase: AccessToken
+  return data.AccessToken;
 }
 
 async function checkDebtorExists(apiUrl: string, token: string, debtorCode: string): Promise<boolean> {
@@ -61,7 +73,7 @@ async function checkDebtorExists(apiUrl: string, token: string, debtorCode: stri
 async function createDebtor(apiUrl: string, token: string, store: Store): Promise<{ success: boolean; error?: string }> {
   console.log(`Creating debtor for store: ${store.store_name} (${store.debtor_code})`);
   
-  const payload = {
+  const payload: DebtorPayload = {
     code: store.debtor_code,
     name: store.store_name,
     contactPerson: store.contact_person || '',
