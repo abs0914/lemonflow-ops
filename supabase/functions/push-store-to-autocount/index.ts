@@ -35,26 +35,34 @@ interface RequestBody {
   storeId?: string;
 }
 
+interface LemonCoAuthResponse {
+  token: string;
+}
+
 async function authenticateWithAutoCount(apiUrl: string, username: string, password: string): Promise<string> {
-  console.log('Authenticating with AutoCount API...');
-  
-  const response = await fetch(`${apiUrl}/api/auth/login`, {
+  // Standardized LemonCo auth contract used across our AutoCount edge functions:
+  // POST {apiUrl}/auth/login  { username, password }  -> { token }
+  console.log('Authenticating with LemonCo API...');
+
+  const response = await fetch(`${apiUrl}/auth/login`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ email: username, password }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
   });
 
   if (!response.ok) {
     const errorText = await response.text();
     console.error('Authentication failed:', errorText);
-    throw new Error(`Authentication failed: ${response.status}`);
+    throw new Error(`Authentication failed: ${response.status} ${errorText}`);
   }
 
-  const data = await response.json();
+  const data: LemonCoAuthResponse = await response.json();
+  if (!data?.token) {
+    throw new Error('Authentication response missing token');
+  }
+
   console.log('Authentication successful');
-  return data.AccessToken;
+  return data.token;
 }
 
 async function checkDebtorExists(apiUrl: string, token: string, debtorCode: string): Promise<{ exists: boolean; status: number; error?: string }> {
