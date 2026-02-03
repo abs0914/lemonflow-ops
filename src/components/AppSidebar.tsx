@@ -135,7 +135,7 @@ export function AppSidebar() {
       title: "Fulfillment",
       url: "/fulfillment",
       icon: ClipboardList,
-      roles: ["Admin", "Fulfillment", "Warehouse", "Production"],
+      roles: ["Admin", "Fulfillment", "Warehouse", "Production", "Finance"],
     },
     {
       title: "Finance",
