@@ -108,22 +108,36 @@ namespace Backend.Infrastructure.AutoCount
             {
                 try
                 {
-	                    var userSession = _sessionProvider.GetUserSession();
-	                    var dbSetting = userSession.DBSetting;
-	                    var cmd = DebtorDataAccess.Create(userSession, dbSetting);
+                    var userSession = _sessionProvider.GetUserSession();
+                    var dbSetting = userSession.DBSetting;
+                    var cmd = DebtorDataAccess.Create(userSession, dbSetting);
 
-	                    // Ensure we are not creating a duplicate debtor.
-	                    var existing = cmd.GetDebtor(debtor.Code);
-	                    if (existing != null)
-	                    {
-	                        throw new InvalidOperationException("Debtor '" + debtor.Code + "' already exists in AutoCount.");
-	                    }
+                    // Check if debtor already exists (handle "not found" exception as normal case)
+                    DebtorEntity existing = null;
+                    try
+                    {
+                        existing = cmd.GetDebtor(debtor.Code);
+                    }
+                    catch (AutoCount.ARAP.Debtor.DebtorRecordNotFoundException)
+                    {
+                        // Debtor does not exist - this is expected for create, proceed normally
+                        existing = null;
+                    }
 
-	                    var acDebtor = cmd.NewDebtor();
-	                    MapDomainDebtorToEntity(debtor, acDebtor, userSession);
-	                    cmd.SaveDebtor(acDebtor, userSession.LoginUserID);
+                    if (existing != null)
+                    {
+                        throw new InvalidOperationException("Debtor '" + debtor.Code + "' already exists in AutoCount.");
+                    }
 
-	                    return MapAutoCountDebtorToDomain(acDebtor);
+                    var acDebtor = cmd.NewDebtor();
+                    MapDomainDebtorToEntity(debtor, acDebtor, userSession);
+                    cmd.SaveDebtor(acDebtor, userSession.LoginUserID);
+
+                    return MapAutoCountDebtorToDomain(acDebtor);
+                }
+                catch (InvalidOperationException)
+                {
+                    throw; // Re-throw our own exceptions
                 }
                 catch (Exception ex)
                 {
