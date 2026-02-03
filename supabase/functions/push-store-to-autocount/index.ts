@@ -22,7 +22,6 @@ interface Store {
 interface DebtorPayload {
   code: string;
   name: string;
-  // Some LemonCo API versions expect companyName instead of name
   companyName?: string;
   contactPerson?: string;
   phone?: string;
@@ -31,10 +30,13 @@ interface DebtorPayload {
   isActive: boolean;
 }
 
+interface RequestBody {
+  storeId?: string;
+}
+
 async function authenticateWithAutoCount(apiUrl: string, username: string, password: string): Promise<string> {
   console.log('Authenticating with AutoCount API...');
   
-  // Use /api/auth/login endpoint with email parameter (matching supplier sync)
   const response = await fetch(`${apiUrl}/api/auth/login`, {
     method: 'POST',
     headers: {
@@ -51,11 +53,11 @@ async function authenticateWithAutoCount(apiUrl: string, username: string, passw
 
   const data = await response.json();
   console.log('Authentication successful');
-  // Backend returns PascalCase: AccessToken
   return data.AccessToken;
 }
 
-async function checkDebtorExists(apiUrl: string, token: string, debtorCode: string): Promise<boolean> {
+async function checkDebtorExists(apiUrl: string, token: string, debtorCode: string): Promise<{ exists: boolean; status: number; error?: string }> {
+  console.log(`Checking if debtor exists: ${debtorCode}`);
   try {
     const response = await fetch(`${apiUrl}/autocount/debtors/${encodeURIComponent(debtorCode)}`, {
       method: 'GET',
@@ -65,14 +67,38 @@ async function checkDebtorExists(apiUrl: string, token: string, debtorCode: stri
       },
     });
 
-    return response.ok;
-  } catch (error) {
+    const status = response.status;
+    console.log(`Debtor existence check for ${debtorCode}: HTTP ${status}`);
+
+    if (response.ok) {
+      return { exists: true, status };
+    }
+
+    // Capture response body for diagnostic purposes
+    let errorBody = '';
+    try {
+      errorBody = await response.text();
+      console.log(`Debtor ${debtorCode} existence check response body: ${errorBody.substring(0, 500)}`);
+    } catch (e) {
+      console.log(`Could not read existence check response body for ${debtorCode}`);
+    }
+
+    // 404 = not found (expected for new debtors)
+    // 500 = backend throws exception for "not found" (known issue)
+    if (status === 404 || status === 500) {
+      console.log(`Debtor ${debtorCode} does not exist (status ${status})`);
+      return { exists: false, status, error: errorBody };
+    }
+
+    // Other errors
+    return { exists: false, status, error: errorBody };
+  } catch (error: any) {
     console.error(`Error checking debtor ${debtorCode}:`, error);
-    return false;
+    return { exists: false, status: 0, error: error.message };
   }
 }
 
-async function createDebtor(apiUrl: string, token: string, store: Store): Promise<{ success: boolean; error?: string }> {
+async function createDebtor(apiUrl: string, token: string, store: Store): Promise<{ success: boolean; error?: string; httpStatus?: number }> {
   console.log(`Creating debtor for store: ${store.store_name} (${store.debtor_code})`);
   
   const payload: DebtorPayload = {
@@ -86,6 +112,8 @@ async function createDebtor(apiUrl: string, token: string, store: Store): Promis
     isActive: store.is_active ?? true,
   };
 
+  console.log(`Create debtor payload: ${JSON.stringify(payload)}`);
+
   try {
     const response = await fetch(`${apiUrl}/autocount/debtors`, {
       method: 'POST',
@@ -96,13 +124,21 @@ async function createDebtor(apiUrl: string, token: string, store: Store): Promis
       body: JSON.stringify(payload),
     });
 
+    const status = response.status;
+    const responseText = await response.text();
+    console.log(`Create debtor ${store.debtor_code} response: HTTP ${status}, body: ${responseText.substring(0, 500)}`);
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Failed to create debtor ${store.debtor_code}:`, errorText);
-      return { success: false, error: errorText };
+      console.error(`Failed to create debtor ${store.debtor_code}: HTTP ${status} - ${responseText}`);
+      return { success: false, error: responseText, httpStatus: status };
     }
 
-    const result = await response.json();
+    let result;
+    try {
+      result = JSON.parse(responseText);
+    } catch {
+      result = { message: responseText };
+    }
     
     // Handle case where debtor already exists
     if (result.alreadyExists) {
@@ -111,17 +147,16 @@ async function createDebtor(apiUrl: string, token: string, store: Store): Promis
     }
 
     console.log(`Successfully created debtor: ${store.debtor_code}`);
-    return { success: true };
+    return { success: true, httpStatus: status };
   } catch (error: any) {
     console.error(`Error creating debtor ${store.debtor_code}:`, error);
     return { success: false, error: error.message };
   }
 }
 
-async function updateDebtor(apiUrl: string, token: string, store: Store): Promise<{ success: boolean; error?: string }> {
+async function updateDebtor(apiUrl: string, token: string, store: Store): Promise<{ success: boolean; error?: string; httpStatus?: number }> {
   console.log(`Updating debtor for store: ${store.store_name} (${store.debtor_code})`);
   
-  // Include code in body to satisfy API validation ("code in URL does not match body")
   const payload: DebtorPayload = {
     code: store.debtor_code,
     name: store.store_name,
@@ -133,6 +168,8 @@ async function updateDebtor(apiUrl: string, token: string, store: Store): Promis
     isActive: store.is_active ?? true,
   };
 
+  console.log(`Update debtor payload: ${JSON.stringify(payload)}`);
+
   try {
     const response = await fetch(`${apiUrl}/autocount/debtors/${encodeURIComponent(store.debtor_code)}`, {
       method: 'PUT',
@@ -143,14 +180,17 @@ async function updateDebtor(apiUrl: string, token: string, store: Store): Promis
       body: JSON.stringify(payload),
     });
 
+    const status = response.status;
+    const responseText = await response.text();
+    console.log(`Update debtor ${store.debtor_code} response: HTTP ${status}, body: ${responseText.substring(0, 500)}`);
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Failed to update debtor ${store.debtor_code}:`, errorText);
-      return { success: false, error: errorText };
+      console.error(`Failed to update debtor ${store.debtor_code}: HTTP ${status} - ${responseText}`);
+      return { success: false, error: responseText, httpStatus: status };
     }
 
     console.log(`Successfully updated debtor: ${store.debtor_code}`);
-    return { success: true };
+    return { success: true, httpStatus: status };
   } catch (error: any) {
     console.error(`Error updating debtor ${store.debtor_code}:`, error);
     return { success: false, error: error.message };
@@ -179,17 +219,37 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Parse request body for optional storeId
+    let storeId: string | undefined;
+    try {
+      const body: RequestBody = await req.json();
+      storeId = body.storeId;
+      if (storeId) {
+        console.log(`Single-store sync requested for storeId: ${storeId}`);
+      }
+    } catch {
+      // No body or invalid JSON - proceed with bulk sync
+      console.log('No storeId specified, proceeding with bulk sync');
+    }
+
     // Create Supabase client
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Authenticate with AutoCount
     const token = await authenticateWithAutoCount(apiUrl, username, password);
 
-    // Fetch unsynced stores
-    const { data: stores, error: fetchError } = await supabase
-      .from('stores')
-      .select('*')
-      .or('autocount_synced.is.null,autocount_synced.eq.false');
+    // Fetch stores to sync
+    let query = supabase.from('stores').select('*');
+    
+    if (storeId) {
+      // Single store sync
+      query = query.eq('id', storeId);
+    } else {
+      // Bulk sync - only unsynced stores
+      query = query.or('autocount_synced.is.null,autocount_synced.eq.false');
+    }
+
+    const { data: stores, error: fetchError } = await query;
 
     if (fetchError) {
       console.error('Error fetching stores:', fetchError);
@@ -200,26 +260,35 @@ Deno.serve(async (req) => {
     }
 
     if (!stores || stores.length === 0) {
-      console.log('No unsynced stores found');
+      const message = storeId ? 'Store not found' : 'No stores to sync';
+      console.log(message);
       return new Response(
-        JSON.stringify({ success: true, synced: 0, message: 'No stores to sync' }),
+        JSON.stringify({ success: true, synced: 0, message }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Found ${stores.length} unsynced stores`);
+    console.log(`Found ${stores.length} store(s) to sync`);
 
     let syncedCount = 0;
-    const errors: { store: string; error: string }[] = [];
+    const errors: { store: string; storeCode: string; error: string; operation: string }[] = [];
 
     for (const store of stores) {
-      // Check if debtor exists
-      const exists = await checkDebtorExists(apiUrl, token, store.debtor_code);
+      // Check if debtor exists with enhanced diagnostics
+      const existenceCheck = await checkDebtorExists(apiUrl, token, store.debtor_code);
       
       let result;
-      if (exists) {
+      let operation: string;
+      
+      if (existenceCheck.exists) {
+        operation = 'update';
         result = await updateDebtor(apiUrl, token, store);
       } else {
+        operation = 'create';
+        // Log the existence check result for diagnostics
+        if (existenceCheck.status === 500) {
+          console.log(`Note: Existence check returned 500 for ${store.debtor_code} - backend may throw exception for "not found"`);
+        }
         result = await createDebtor(apiUrl, token, store);
       }
 
@@ -235,7 +304,12 @@ Deno.serve(async (req) => {
 
         if (updateError) {
           console.error(`Error updating sync status for store ${store.id}:`, updateError);
-          errors.push({ store: store.store_name, error: 'Failed to update sync status' });
+          errors.push({ 
+            store: store.store_name, 
+            storeCode: store.store_code,
+            error: 'Failed to update sync status in database', 
+            operation 
+          });
         } else {
           syncedCount++;
         }
@@ -244,18 +318,37 @@ Deno.serve(async (req) => {
         await supabase.from('autocount_sync_log').insert({
           reference_id: store.id,
           reference_type: 'store',
-          sync_type: exists ? 'update_debtor' : 'create_debtor',
+          sync_type: operation === 'update' ? 'update_debtor' : 'create_debtor',
           sync_status: 'success',
           synced_at: new Date().toISOString(),
         });
       } else {
-        errors.push({ store: store.store_name, error: result.error || 'Unknown error' });
+        // Parse error for more useful info
+        let parsedError = result.error || 'Unknown error';
+        try {
+          const errorObj = JSON.parse(result.error || '{}');
+          if (errorObj.ExceptionMessage) {
+            parsedError = errorObj.ExceptionMessage;
+            if (errorObj.InnerException?.ExceptionMessage) {
+              parsedError += ` - ${errorObj.InnerException.ExceptionMessage}`;
+            }
+          }
+        } catch {
+          // Keep original error string
+        }
+
+        errors.push({ 
+          store: store.store_name, 
+          storeCode: store.store_code,
+          error: parsedError, 
+          operation 
+        });
         
         // Log failure to sync log
         await supabase.from('autocount_sync_log').insert({
           reference_id: store.id,
           reference_type: 'store',
-          sync_type: exists ? 'update_debtor' : 'create_debtor',
+          sync_type: operation === 'update' ? 'update_debtor' : 'create_debtor',
           sync_status: 'failed',
           error_message: result.error,
         });
