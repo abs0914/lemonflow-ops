@@ -29,10 +29,12 @@ export function useConfirmPayment() {
       orderId,
       paymentAmount,
       paymentReference,
+      deliveryDate,
     }: {
       orderId: string;
       paymentAmount: number;
       paymentReference?: string;
+      deliveryDate: Date;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
@@ -62,11 +64,12 @@ export function useConfirmPayment() {
         syncErrorMessage = err instanceof Error ? err.message : "AutoCount sync failed";
       }
 
-      // Update order with payment confirmation and sync status
+      // Update order with payment confirmation, delivery date, and sync status
       const { error } = await supabase
         .from("sales_orders")
         .update({
           status: "processing",
+          delivery_date: deliveryDate.toISOString(),
           payment_amount: paymentAmount,
           payment_reference: paymentReference || null,
           payment_confirmed_by: user.id,

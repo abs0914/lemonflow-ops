@@ -8,11 +8,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useSalesOrder, useSalesOrderLines } from "@/hooks/useSalesOrders";
 import { useConfirmPayment, useRejectPayment } from "@/hooks/useFinanceOrders";
 import { format } from "date-fns";
-import { ArrowLeft, Check, X, Package, Store, Calendar, DollarSign } from "lucide-react";
+import { ArrowLeft, Check, X, Package, Store, Calendar as CalendarIcon, DollarSign } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -42,10 +49,16 @@ export default function FinanceOrderDetail() {
 
   const [paymentAmount, setPaymentAmount] = useState<string>("");
   const [paymentReference, setPaymentReference] = useState("");
+  const [deliveryDate, setDeliveryDate] = useState<Date | undefined>(undefined);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
 
   const isLoading = orderLoading || linesLoading;
+
+  // Initialize payment amount when order loads
+  if (order && !paymentAmount) {
+    setPaymentAmount((order.total_amount || 0).toString());
+  }
 
   // Initialize payment amount when order loads
   if (order && !paymentAmount) {
@@ -66,11 +79,17 @@ export default function FinanceOrderDetail() {
       return;
     }
 
+    if (!deliveryDate) {
+      toast.error("Please set a delivery date before confirming payment");
+      return;
+    }
+
     try {
       const result = await confirmPayment.mutateAsync({
         orderId: id,
         paymentAmount: amount,
         paymentReference: paymentReference || undefined,
+        deliveryDate: deliveryDate,
       });
       
       if (result?.syncSuccess) {
@@ -303,10 +322,45 @@ export default function FinanceOrderDetail() {
               </div>
             </div>
 
+            <div className="space-y-2">
+              <Label>
+                Delivery Date <span className="text-destructive">*</span>
+              </Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full md:w-[280px] justify-start text-left font-normal",
+                      !deliveryDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {deliveryDate ? format(deliveryDate, "PPP") : "Select delivery date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={deliveryDate}
+                    onSelect={setDeliveryDate}
+                    disabled={(date) => date < new Date()}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+              {!deliveryDate && (
+                <p className="text-xs text-muted-foreground">
+                  Set delivery date before confirming payment
+                </p>
+              )}
+            </div>
+
             <div className="flex gap-4 pt-4">
               <Button
                 onClick={handleConfirmPayment}
-                disabled={confirmPayment.isPending}
+                disabled={confirmPayment.isPending || !deliveryDate}
                 className="flex-1"
               >
                 <Check className="h-4 w-4 mr-2" />
