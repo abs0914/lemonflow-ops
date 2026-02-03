@@ -44,12 +44,32 @@ export function ProductList({ onSelectProduct, selectedProductId }: ProductListP
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      // First check for related assembly orders
+      const { data: relatedOrders, error: checkError } = await supabase
+        .from("assembly_orders")
+        .select("id")
+        .eq("product_id", id);
+      
+      if (checkError) throw checkError;
+      
+      if (relatedOrders && relatedOrders.length > 0) {
+        // Delete related assembly orders first
+        const { error: deleteOrdersError } = await supabase
+          .from("assembly_orders")
+          .delete()
+          .eq("product_id", id);
+        
+        if (deleteOrdersError) throw deleteOrdersError;
+      }
+      
+      // Then delete the product
       const { error } = await supabase.from("products").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["available-components-for-products"] });
+      queryClient.invalidateQueries({ queryKey: ["assembly-orders"] });
       toast({ title: "Product deleted successfully" });
     },
     onError: (error: Error) => {
