@@ -15,6 +15,7 @@ import { Plus, Search, Pencil, Trash2, Download, Upload, RefreshCw, CheckCircle2
 import { useStores, useDeleteStore } from "@/hooks/useStores";
 import { StoreDialog } from "@/components/stores/StoreDialog";
 import { ImportDebtorsDialog } from "@/components/stores/ImportDebtorsDialog";
+import { SyncErrorsDialog } from "@/components/stores/SyncErrorsDialog";
 import { Store } from "@/types/sales-order";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -31,6 +32,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
+interface SyncResult {
+  success: boolean;
+  synced: number;
+  total: number;
+  errors?: { store: string; storeCode: string; error: string; operation: string }[];
+}
+
 export default function Stores() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showStoreDialog, setShowStoreDialog] = useState(false);
@@ -39,6 +47,9 @@ export default function Stores() {
   const [storeToDelete, setStoreToDelete] = useState<Store | null>(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [syncingStoreId, setSyncingStoreId] = useState<string | null>(null);
+  const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
+  const [showSyncResultDialog, setShowSyncResultDialog] = useState(false);
 
   const { data: stores, isLoading, refetch } = useStores();
   const deleteMutation = useDeleteStore();
@@ -77,24 +88,45 @@ export default function Stores() {
     }
   };
 
-  const handleSyncToAutoCount = async () => {
-    setIsSyncing(true);
+  const handleSyncToAutoCount = async (storeId?: string) => {
+    if (storeId) {
+      setSyncingStoreId(storeId);
+    } else {
+      setIsSyncing(true);
+    }
+    
     try {
-      const { data, error } = await supabase.functions.invoke('push-store-to-autocount');
+      const body = storeId ? { storeId } : {};
+      const { data, error } = await supabase.functions.invoke('push-store-to-autocount', { body });
       
       if (error) throw error;
       
-      if (data?.success) {
-        toast.success(`Successfully synced ${data.synced || 0} stores to AutoCount`);
-        refetch();
+      const result: SyncResult = {
+        success: data?.success ?? false,
+        synced: data?.synced ?? 0,
+        total: data?.total ?? 0,
+        errors: data?.errors,
+      };
+      
+      if (result.success) {
+        toast.success(`Successfully synced ${result.synced} store(s) to AutoCount`);
+      } else if (result.synced > 0) {
+        toast.warning(`Synced ${result.synced} of ${result.total} stores. ${result.errors?.length || 0} failed.`);
+        setSyncResult(result);
+        setShowSyncResultDialog(true);
       } else {
-        toast.error(data?.error || 'Failed to sync stores to AutoCount');
+        toast.error(`Failed to sync stores. Click for details.`);
+        setSyncResult(result);
+        setShowSyncResultDialog(true);
       }
+      
+      refetch();
     } catch (error: any) {
       console.error('Sync error:', error);
       toast.error(error.message || 'Failed to sync stores to AutoCount');
     } finally {
       setIsSyncing(false);
+      setSyncingStoreId(null);
     }
   };
 
@@ -117,7 +149,7 @@ export default function Stores() {
             </Button>
             <Button 
               variant="outline" 
-              onClick={handleSyncToAutoCount}
+              onClick={() => handleSyncToAutoCount()}
               disabled={isSyncing || unsyncedCount === 0}
             >
               {isSyncing ? (
@@ -217,7 +249,20 @@ export default function Stores() {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleSyncToAutoCount(store.id)}
+                          disabled={syncingStoreId === store.id}
+                          title="Sync this store to AutoCount"
+                        >
+                          {syncingStoreId === store.id ? (
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Upload className="h-4 w-4" />
+                          )}
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -274,6 +319,12 @@ export default function Stores() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SyncErrorsDialog
+        open={showSyncResultDialog}
+        onOpenChange={setShowSyncResultDialog}
+        result={syncResult}
+      />
     </DashboardLayout>
   );
 }
