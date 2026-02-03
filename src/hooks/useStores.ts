@@ -91,6 +91,30 @@ export function useDeleteStore() {
 
   return useMutation({
     mutationFn: async (id: string) => {
+      // Check for linked sales orders first
+      const { count, error: countError } = await supabase
+        .from("sales_orders")
+        .select("id", { count: "exact", head: true })
+        .eq("store_id", id);
+
+      if (countError) throw countError;
+
+      if (count && count > 0) {
+        throw new Error(
+          `Cannot delete store: ${count} sales order(s) are linked to it. ` +
+          `Please reassign or delete those orders first.`
+        );
+      }
+
+      // Delete user-store assignments first (cascade not automatic)
+      const { error: assignmentError } = await supabase
+        .from("user_store_assignments")
+        .delete()
+        .eq("store_id", id);
+
+      if (assignmentError) throw assignmentError;
+
+      // Now delete the store
       const { error } = await supabase
         .from("stores")
         .delete()
@@ -103,7 +127,7 @@ export function useDeleteStore() {
       toast.success("Store deleted successfully");
     },
     onError: (error: Error) => {
-      toast.error(`Failed to delete store: ${error.message}`);
+      toast.error(error.message);
     },
   });
 }
