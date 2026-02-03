@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Store } from "@/types/sales-order";
-import { useCreateStore, useUpdateStore } from "@/hooks/useStores";
+import { useCreateStore, useUpdateStore, useStores } from "@/hooks/useStores";
 
 const storeSchema = z.object({
   store_code: z.string().trim().min(1, "Store code is required").max(50, "Store code must be less than 50 characters"),
@@ -41,9 +41,34 @@ interface StoreDialogProps {
   store?: Store;
 }
 
+function generateNextStoreCode(stores: Store[] | undefined): string {
+  if (!stores || stores.length === 0) {
+    return "STR-TLC-001";
+  }
+
+  // Find the highest existing code that matches STR-TLC-XXX pattern
+  const codePattern = /^STR-TLC-(\d{3})$/;
+  let maxNumber = 0;
+
+  for (const store of stores) {
+    const match = store.store_code?.match(codePattern);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (num > maxNumber) {
+        maxNumber = num;
+      }
+    }
+  }
+
+  const nextNumber = maxNumber + 1;
+  return `STR-TLC-${nextNumber.toString().padStart(3, '0')}`;
+}
+
 export function StoreDialog({ open, onOpenChange, store }: StoreDialogProps) {
   const createMutation = useCreateStore();
   const updateMutation = useUpdateStore();
+  const { data: existingStores } = useStores();
+  const [generatedCode, setGeneratedCode] = useState("");
 
   const form = useForm<StoreFormData>({
     resolver: zodResolver(storeSchema),
@@ -60,7 +85,7 @@ export function StoreDialog({ open, onOpenChange, store }: StoreDialogProps) {
     },
   });
 
-  // Reset form with store data when editing
+  // Reset form with store data when editing, or generate new code when creating
   useEffect(() => {
     if (store) {
       form.reset({
@@ -74,12 +99,16 @@ export function StoreDialog({ open, onOpenChange, store }: StoreDialogProps) {
         email: store.email || "",
         is_active: store.is_active ?? true,
       });
+      setGeneratedCode("");
     } else {
+      // Generate next store code for new stores
+      const nextCode = generateNextStoreCode(existingStores);
+      setGeneratedCode(nextCode);
       form.reset({
-        store_code: "",
+        store_code: nextCode,
         store_name: "",
         store_type: "own_store",
-        debtor_code: "",
+        debtor_code: nextCode, // Same as store_code
         address: "",
         contact_person: "",
         phone: "",
@@ -87,7 +116,7 @@ export function StoreDialog({ open, onOpenChange, store }: StoreDialogProps) {
         is_active: true,
       });
     }
-  }, [store, form]);
+  }, [store, form, existingStores, open]);
 
   const onSubmit = async (data: StoreFormData) => {
     try {
@@ -120,10 +149,15 @@ export function StoreDialog({ open, onOpenChange, store }: StoreDialogProps) {
               <Input
                 id="store_code"
                 {...form.register("store_code")}
-                placeholder="e.g., STORE-001"
+                placeholder="e.g., STR-TLC-001"
+                disabled={!store} // Read-only for new stores (auto-generated)
+                className={!store ? "bg-muted" : ""}
               />
               {form.formState.errors.store_code && (
                 <p className="text-sm text-destructive">{form.formState.errors.store_code.message}</p>
+              )}
+              {!store && (
+                <p className="text-xs text-muted-foreground">Auto-generated</p>
               )}
             </div>
 
@@ -133,9 +167,14 @@ export function StoreDialog({ open, onOpenChange, store }: StoreDialogProps) {
                 id="debtor_code"
                 {...form.register("debtor_code")}
                 placeholder="AutoCount debtor code"
+                disabled={!store} // Read-only for new stores (same as store_code)
+                className={!store ? "bg-muted" : ""}
               />
               {form.formState.errors.debtor_code && (
                 <p className="text-sm text-destructive">{form.formState.errors.debtor_code.message}</p>
+              )}
+              {!store && (
+                <p className="text-xs text-muted-foreground">Same as Store Code</p>
               )}
             </div>
           </div>
@@ -227,7 +266,7 @@ export function StoreDialog({ open, onOpenChange, store }: StoreDialogProps) {
               type="checkbox"
               id="is_active"
               {...form.register("is_active")}
-              className="h-4 w-4 rounded border-gray-300"
+              className="h-4 w-4 rounded border-border"
             />
             <Label htmlFor="is_active" className="cursor-pointer">
               Active Store
