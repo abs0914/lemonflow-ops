@@ -47,6 +47,7 @@ export default function Stores() {
   const [storeToDelete, setStoreToDelete] = useState<Store | null>(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isPulling, setIsPulling] = useState(false);
   const [syncingStoreId, setSyncingStoreId] = useState<string | null>(null);
   const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
   const [showSyncResultDialog, setShowSyncResultDialog] = useState(false);
@@ -130,6 +131,30 @@ export default function Stores() {
     }
   };
 
+  const handlePullFromAutoCount = async () => {
+    setIsPulling(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('pull-stores-from-autocount');
+      
+      if (error) throw error;
+      
+      if (data?.success) {
+        toast.success(`Synced ${data.synced} stores from AutoCount (${data.created} new, ${data.updated} updated)`);
+      } else if (data?.synced > 0) {
+        toast.warning(`Synced ${data.synced} of ${data.total} stores. ${data.errors?.length || 0} failed.`);
+      } else {
+        toast.error(data?.error || 'Failed to pull stores from AutoCount');
+      }
+      
+      refetch();
+    } catch (error: any) {
+      console.error('Pull error:', error);
+      toast.error(error.message || 'Failed to pull stores from AutoCount');
+    } finally {
+      setIsPulling(false);
+    }
+  };
+
   const unsyncedCount = stores?.filter(s => !s.autocount_synced).length || 0;
 
   return (
@@ -143,9 +168,17 @@ export default function Stores() {
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <Button variant="outline" onClick={() => setShowImportDialog(true)}>
-              <Download className="mr-2 h-4 w-4" />
-              Import from AutoCount
+            <Button 
+              variant="outline" 
+              onClick={handlePullFromAutoCount}
+              disabled={isPulling}
+            >
+              {isPulling ? (
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              Sync from AutoCount
             </Button>
             <Button 
               variant="outline" 
