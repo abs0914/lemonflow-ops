@@ -41,13 +41,18 @@ interface StoreDialogProps {
   store?: Store;
 }
 
-function generateNextStoreCode(stores: Store[] | undefined): string {
+function generateNextStoreCode(stores: Store[] | undefined, storeType: "own_store" | "franchisee"): string {
+  // Use different prefix based on store type
+  const prefix = storeType === "franchisee" ? "FRC-TLC-" : "STR-TLC-";
+  const codePattern = storeType === "franchisee" 
+    ? /^FRC-TLC-(\d{3})$/ 
+    : /^STR-TLC-(\d{3})$/;
+
   if (!stores || stores.length === 0) {
-    return "STR-TLC-001";
+    return `${prefix}001`;
   }
 
-  // Find the highest existing code that matches STR-TLC-XXX pattern
-  const codePattern = /^STR-TLC-(\d{3})$/;
+  // Find the highest existing code that matches the pattern for this store type
   let maxNumber = 0;
 
   for (const store of stores) {
@@ -61,7 +66,7 @@ function generateNextStoreCode(stores: Store[] | undefined): string {
   }
 
   const nextNumber = maxNumber + 1;
-  return `STR-TLC-${nextNumber.toString().padStart(3, '0')}`;
+  return `${prefix}${nextNumber.toString().padStart(3, '0')}`;
 }
 
 export function StoreDialog({ open, onOpenChange, store }: StoreDialogProps) {
@@ -85,6 +90,9 @@ export function StoreDialog({ open, onOpenChange, store }: StoreDialogProps) {
     },
   });
 
+  // Watch store_type to regenerate code when it changes
+  const watchedStoreType = form.watch("store_type");
+
   // Reset form with store data when editing, or generate new code when creating
   useEffect(() => {
     if (store) {
@@ -100,23 +108,25 @@ export function StoreDialog({ open, onOpenChange, store }: StoreDialogProps) {
         is_active: store.is_active ?? true,
       });
       setGeneratedCode("");
-    } else {
-      // Generate next store code for new stores
-      const nextCode = generateNextStoreCode(existingStores);
+    } else if (open) {
+      // Generate next store code for new stores based on store type
+      const currentStoreType = form.getValues("store_type") || "own_store";
+      const nextCode = generateNextStoreCode(existingStores, currentStoreType);
       setGeneratedCode(nextCode);
-      form.reset({
-        store_code: nextCode,
-        store_name: "",
-        store_type: "own_store",
-        debtor_code: nextCode, // Same as store_code
-        address: "",
-        contact_person: "",
-        phone: "",
-        email: "",
-        is_active: true,
-      });
+      form.setValue("store_code", nextCode);
+      form.setValue("debtor_code", nextCode);
     }
   }, [store, form, existingStores, open]);
+
+  // Regenerate code when store type changes (only for new stores)
+  useEffect(() => {
+    if (!store && open && watchedStoreType) {
+      const nextCode = generateNextStoreCode(existingStores, watchedStoreType);
+      setGeneratedCode(nextCode);
+      form.setValue("store_code", nextCode);
+      form.setValue("debtor_code", nextCode);
+    }
+  }, [watchedStoreType, store, open, existingStores, form]);
 
   const onSubmit = async (data: StoreFormData) => {
     try {
@@ -149,7 +159,7 @@ export function StoreDialog({ open, onOpenChange, store }: StoreDialogProps) {
               <Input
                 id="store_code"
                 {...form.register("store_code")}
-                placeholder="e.g., STR-TLC-001"
+                placeholder="e.g., STR-TLC-001 or FRC-TLC-001"
                 disabled={!store} // Read-only for new stores (auto-generated)
                 className={!store ? "bg-muted" : ""}
               />
