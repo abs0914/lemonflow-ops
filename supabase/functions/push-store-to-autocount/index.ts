@@ -28,6 +28,7 @@ interface DebtorPayload {
   email?: string;
   address?: string;
   isActive: boolean;
+  currencyCode: string;
 }
 
 interface RequestBody {
@@ -110,6 +111,7 @@ async function createDebtor(apiUrl: string, token: string, store: Store): Promis
     email: store.email || '',
     address: store.address || '',
     isActive: store.is_active ?? true,
+    currencyCode: 'PHP',
   };
 
   console.log(`Create debtor payload: ${JSON.stringify(payload)}`);
@@ -166,6 +168,7 @@ async function updateDebtor(apiUrl: string, token: string, store: Store): Promis
     email: store.email || '',
     address: store.address || '',
     isActive: store.is_active ?? true,
+    currencyCode: 'PHP',
   };
 
   console.log(`Update debtor payload: ${JSON.stringify(payload)}`);
