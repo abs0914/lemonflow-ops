@@ -39,7 +39,7 @@ export default function FulfillmentOrderDetail() {
 
   const isFranchisee = order?.stores?.store_type === "franchisee";
 
-  const handleApproveOrder = async () => {
+  const handleApproveOrder = async (deliveryDate: Date) => {
     if (!order || !user) return;
 
     // Franchisee orders should not be approved by fulfillment - they go through Finance
@@ -62,6 +62,7 @@ export default function FulfillmentOrderDetail() {
         id: order.id,
         updates: {
           status: "processing",
+          delivery_date: deliveryDate.toISOString(),
           approved_by: user.id,
           approved_at: new Date().toISOString(),
           autocount_synced: data?.success ? true : order.autocount_synced,

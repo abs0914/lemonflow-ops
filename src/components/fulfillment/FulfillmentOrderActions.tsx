@@ -1,7 +1,14 @@
 import { useState } from "react";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,18 +19,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { CheckCircle, XCircle, Truck, RefreshCw } from "lucide-react";
+import { CheckCircle, XCircle, Truck, RefreshCw, CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface FulfillmentOrderActionsProps {
   order: {
     id: string;
     status: string;
+    delivery_date?: string;
     autocount_synced?: boolean;
     stores?: {
       store_type?: string;
     };
   };
-  onApprove: () => Promise<void>;
+  onApprove: (deliveryDate: Date) => Promise<void>;
   onReject: (reason: string) => Promise<void>;
   onComplete: () => Promise<void>;
   isLoading: boolean;
@@ -38,7 +47,11 @@ export function FulfillmentOrderActions({
 }: FulfillmentOrderActionsProps) {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+  const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [deliveryDate, setDeliveryDate] = useState<Date | undefined>(
+    order.delivery_date ? new Date(order.delivery_date) : undefined
+  );
 
   const isSubmitted = order.status === "submitted";
   const isProcessing = order.status === "processing";
@@ -54,6 +67,12 @@ export function FulfillmentOrderActions({
   const handleCompleteConfirm = async () => {
     await onComplete();
     setShowCompleteDialog(false);
+  };
+
+  const handleApproveConfirm = async () => {
+    if (!deliveryDate) return;
+    await onApprove(deliveryDate);
+    setShowApproveDialog(false);
   };
 
   if (order.status === "completed" || order.status === "cancelled") {
@@ -79,11 +98,46 @@ export function FulfillmentOrderActions({
         </CardHeader>
         <CardContent className="space-y-3">
           {isSubmitted && !isFranchisee && (
-            <>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Confirm Delivery Date <span className="text-destructive">*</span>
+                </label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !deliveryDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {deliveryDate ? format(deliveryDate, "PPP") : "Select delivery date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={deliveryDate}
+                      onSelect={setDeliveryDate}
+                      disabled={(date) => date < new Date()}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+                {!deliveryDate && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Set delivery date before approving
+                  </p>
+                )}
+              </div>
+              
               <Button
                 className="w-full"
-                onClick={onApprove}
-                disabled={isLoading}
+                onClick={() => setShowApproveDialog(true)}
+                disabled={isLoading || !deliveryDate}
               >
                 {isLoading ? (
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
@@ -101,7 +155,7 @@ export function FulfillmentOrderActions({
                 <XCircle className="mr-2 h-4 w-4" />
                 Reject Order
               </Button>
-            </>
+            </div>
           )}
 
           {isSubmitted && isFranchisee && (
@@ -172,6 +226,26 @@ export function FulfillmentOrderActions({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleCompleteConfirm}>
               Complete Order
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Approve Dialog */}
+      <AlertDialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Approval</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to approve this order with delivery date{" "}
+              <strong>{deliveryDate ? format(deliveryDate, "PPP") : ""}</strong>?
+              This will sync the order to AutoCount.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleApproveConfirm}>
+              Approve Order
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
