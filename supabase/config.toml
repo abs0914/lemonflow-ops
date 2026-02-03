@@ -71,3 +71,6 @@ verify_jwt = true
 
 [functions.push-store-to-autocount]
 verify_jwt = true
+
+[functions.pull-stores-from-autocount]
+verify_jwt = true
