@@ -22,6 +22,8 @@ interface Store {
 interface DebtorPayload {
   code: string;
   name: string;
+  // Some LemonCo API versions expect companyName instead of name
+  companyName?: string;
   contactPerson?: string;
   phone?: string;
   email?: string;
@@ -76,6 +78,7 @@ async function createDebtor(apiUrl: string, token: string, store: Store): Promis
   const payload: DebtorPayload = {
     code: store.debtor_code,
     name: store.store_name,
+    companyName: store.store_name,
     contactPerson: store.contact_person || '',
     phone: store.phone || '',
     email: store.email || '',
@@ -118,8 +121,11 @@ async function createDebtor(apiUrl: string, token: string, store: Store): Promis
 async function updateDebtor(apiUrl: string, token: string, store: Store): Promise<{ success: boolean; error?: string }> {
   console.log(`Updating debtor for store: ${store.store_name} (${store.debtor_code})`);
   
-  const payload = {
+  // Include code in body to satisfy API validation ("code in URL does not match body")
+  const payload: DebtorPayload = {
+    code: store.debtor_code,
     name: store.store_name,
+    companyName: store.store_name,
     contactPerson: store.contact_person || '',
     phone: store.phone || '',
     email: store.email || '',
