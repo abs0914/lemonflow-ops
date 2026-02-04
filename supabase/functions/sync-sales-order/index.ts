@@ -16,7 +16,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 interface SyncSalesOrderRequest {
@@ -59,6 +59,10 @@ Deno.serve(async (req) => {
   try {
     console.log('[sync-sales-order] Starting sync...');
 
+    // --- Auth (verify_jwt=false in config, validate here) ---
+    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
     // Get environment variables
     const apiUrl = Deno.env.get('LEMONCO_API_URL');
     const username = Deno.env.get('LEMONCO_USERNAME');
@@ -73,6 +77,22 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
+
+    if (!token) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized: missing Bearer token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
+    if (userError || !userData?.user) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized: invalid session' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    console.log('[sync-sales-order] Request user:', userData.user.id);
 
     // Parse request
     const requestBody: SyncSalesOrderRequest = await req.json();
@@ -213,7 +233,12 @@ Deno.serve(async (req) => {
           error_message: errorMessage,
         });
 
-      throw new Error(errorMessage);
+      // IMPORTANT: return 200 so supabase-js doesn't surface this as a transport error
+      // (frontend should handle success=false)
+      return new Response(
+        JSON.stringify({ success: false, error: errorMessage }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const result = await response.json();
@@ -255,15 +280,13 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('[sync-sales-order] Error:', error);
+    // Return 200 with success=false to avoid "non-2xx" transport errors in the UI.
     return new Response(
       JSON.stringify({
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred',
       }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
