@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -37,6 +37,13 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
+export interface ProductionLogData {
+  id: string;
+  item_id: string;
+  quantity: number;
+  notes: string | null;
+}
+
 interface LogProductionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -46,6 +53,7 @@ interface LogProductionDialogProps {
     notes?: string;
   }) => void;
   isLoading?: boolean;
+  editingLog?: ProductionLogData | null;
 }
 
 export function LogProductionDialog({
@@ -53,6 +61,7 @@ export function LogProductionDialog({
   onOpenChange,
   onSubmit,
   isLoading = false,
+  editingLog,
 }: LogProductionDialogProps) {
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -62,6 +71,25 @@ export function LogProductionDialog({
       notes: "",
     },
   });
+
+  // Reset form when dialog opens with editing data
+  React.useEffect(() => {
+    if (open) {
+      if (editingLog) {
+        form.reset({
+          component_id: editingLog.item_id,
+          quantity: editingLog.quantity,
+          notes: editingLog.notes || "",
+        });
+      } else {
+        form.reset({
+          component_id: "",
+          quantity: 1,
+          notes: "",
+        });
+      }
+    }
+  }, [open, editingLog, form]);
 
   // Fetch products that have BOMs
   const { data: products } = useQuery({
@@ -110,11 +138,13 @@ export function LogProductionDialog({
     form.reset();
   };
 
+  const isEditing = !!editingLog;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Log Completed Production</DialogTitle>
+          <DialogTitle>{isEditing ? "Edit Production Log" : "Log Completed Production"}</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
@@ -127,7 +157,8 @@ export function LogProductionDialog({
                   <FormLabel>Product</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value}
+                    disabled={isEditing}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -197,7 +228,7 @@ export function LogProductionDialog({
                 Cancel
               </Button>
               <Button type="submit" disabled={isLoading}>
-                {isLoading ? "Logging..." : "Log Production"}
+                {isLoading ? (isEditing ? "Saving..." : "Logging...") : (isEditing ? "Save Changes" : "Log Production")}
               </Button>
             </div>
           </form>
