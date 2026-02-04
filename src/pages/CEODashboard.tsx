@@ -57,8 +57,7 @@ export default function CEODashboard() {
         }));
       }
       
-      return data;
-      return data;
+      return data || [];
     },
   });
 
