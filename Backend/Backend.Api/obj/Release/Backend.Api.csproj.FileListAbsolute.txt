@@ -17,7 +17,6 @@ C:\Users\USER\lemonflow-ops\Backend\Backend.Api\bin\System.Net.Http.Formatting.d
 C:\Users\USER\lemonflow-ops\Backend\Backend.Api\bin\System.Memory.dll
 C:\Users\USER\lemonflow-ops\Backend\Backend.Api\bin\AutoCount.Invoicing.dll
 C:\Users\USER\lemonflow-ops\Backend\Backend.Api\bin\System.Numerics.Vectors.dll
-C:\Users\USER\lemonflow-ops\Backend\Backend.Api\bin\System.Buffers.dll
 C:\Users\USER\lemonflow-ops\Backend\Backend.Api\bin\Backend.Application.pdb
 C:\Users\USER\lemonflow-ops\Backend\Backend.Api\bin\Backend.Infrastructure.AutoCount.pdb
 C:\Users\USER\lemonflow-ops\Backend\Backend.Api\bin\Backend.Domain.pdb

@@ -12,7 +12,6 @@ C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release
 C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\System.IdentityModel.Tokens.Jwt.dll
 C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\System.Memory.dll
 C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\System.Numerics.Vectors.dll
-C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\System.Buffers.dll
 C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\Backend.Domain.pdb
 C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\Microsoft.IdentityModel.Tokens.xml
 C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\System.IdentityModel.Tokens.Jwt.xml
@@ -21,3 +20,4 @@ C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\obj\Release
 C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\obj\Release\Backend..02D9D26F.Up2Date
 C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\obj\Release\Backend.Infrastructure.AutoCount.dll
 C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\obj\Release\Backend.Infrastructure.AutoCount.pdb
+C:\Users\USER\lemonflow-ops\Backend\Backend.Infrastructure.AutoCount\bin\Release\Newtonsoft.Json.dll

@@ -18,7 +18,7 @@ C:\Users\USER\lemonflow-ops\Backend\Backend.Application\bin\Release\AutoCount.Pu
 C:\Users\USER\lemonflow-ops\Backend\Backend.Application\bin\Release\AutoCount.Invoicing.dll
 C:\Users\USER\lemonflow-ops\Backend\Backend.Application\bin\Release\System.Memory.dll
 C:\Users\USER\lemonflow-ops\Backend\Backend.Application\bin\Release\System.Numerics.Vectors.dll
-C:\Users\USER\lemonflow-ops\Backend\Backend.Application\bin\Release\System.Buffers.dll
 C:\Users\USER\lemonflow-ops\Backend\Backend.Application\obj\Release\Backend.Application.csproj.AssemblyReference.cache
 C:\Users\USER\lemonflow-ops\Backend\Backend.Application\obj\Release\Backend.Application.csproj.CoreCompileInputs.cache
 C:\Users\USER\lemonflow-ops\Backend\Backend.Application\obj\Release\Backend..65AE5655.Up2Date
+C:\Users\USER\lemonflow-ops\Backend\Backend.Application\bin\Release\Newtonsoft.Json.dll

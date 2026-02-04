@@ -4,6 +4,7 @@ using Backend.Domain;
 using AutoCount.ARAP.Debtor;
 using AutoCount.SearchFilter;
 using System.Data;
+using System.Data.SqlClient;
 
 namespace Backend.Infrastructure.AutoCount
 {
@@ -118,7 +119,7 @@ namespace Backend.Infrastructure.AutoCount
                     {
                         existing = cmd.GetDebtor(debtor.Code);
                     }
-                    catch (AutoCount.ARAP.Debtor.DebtorRecordNotFoundException)
+                    catch (DebtorRecordNotFoundException)
                     {
                         // Debtor does not exist - this is expected for create, proceed normally
                         existing = null;
@@ -131,7 +132,26 @@ namespace Backend.Infrastructure.AutoCount
 
                     var acDebtor = cmd.NewDebtor();
                     MapDomainDebtorToEntity(debtor, acDebtor, userSession);
-                    cmd.SaveDebtor(acDebtor, userSession.LoginUserID);
+
+                    // SGEInvoicePeppolFormat is required by AutoCount database (Singapore e-invoicing).
+                    // The field is not exposed in DebtorEntity API.
+                    // Try to save, and if it fails due to SGEInvoicePeppolFormat, insert via raw SQL.
+                    try
+                    {
+                        cmd.SaveDebtor(acDebtor, userSession.LoginUserID);
+                    }
+                    catch (Exception saveEx) when (ContainsSGEError(saveEx))
+                    {
+                        // AutoCount API doesn't expose this field - insert via raw SQL
+                        InsertDebtorWithSGEField(dbSetting, debtor, userSession.LoginUserID);
+
+                        // Reload the debtor to return the proper entity
+                        acDebtor = cmd.GetDebtor(debtor.Code);
+                        if (acDebtor == null)
+                        {
+                            throw new InvalidOperationException("Debtor was inserted but could not be retrieved.");
+                        }
+                    }
 
                     return MapAutoCountDebtorToDomain(acDebtor);
                 }
@@ -339,6 +359,187 @@ namespace Backend.Infrastructure.AutoCount
 	                target.CreditLimit = source.CreditLimit;
 	            }
 	        }
+
+	        /// <summary>
+	        /// Sets a database field on the DebtorEntity that isn't directly exposed as a property.
+	        /// Uses reflection to access the internal DataRow.
+	        /// </summary>
+	        private void SetDebtorFieldViaReflection(DebtorEntity entity, string fieldName, object value)
+	        {
+	            try
+	            {
+	                // Try to find a DataRow property or field via reflection
+	                var type = entity.GetType();
+
+	                // Look for common patterns in AutoCount entities
+	                var propNames = new[] { "DataRow", "Row", "MasterRow", "drMaster" };
+	                foreach (var propName in propNames)
+	                {
+	                    var prop = type.GetProperty(propName,
+	                        System.Reflection.BindingFlags.Public |
+	                        System.Reflection.BindingFlags.NonPublic |
+	                        System.Reflection.BindingFlags.Instance);
+	                    if (prop != null && typeof(DataRow).IsAssignableFrom(prop.PropertyType))
+	                    {
+	                        var row = prop.GetValue(entity) as DataRow;
+	                        if (row != null && row.Table.Columns.Contains(fieldName))
+	                        {
+	                            row[fieldName] = value;
+	                            return;
+	                        }
+	                    }
+
+	                    var field = type.GetField(propName,
+	                        System.Reflection.BindingFlags.Public |
+	                        System.Reflection.BindingFlags.NonPublic |
+	                        System.Reflection.BindingFlags.Instance);
+	                    if (field != null && typeof(DataRow).IsAssignableFrom(field.FieldType))
+	                    {
+	                        var row = field.GetValue(entity) as DataRow;
+	                        if (row != null && row.Table.Columns.Contains(fieldName))
+	                        {
+	                            row[fieldName] = value;
+	                            return;
+	                        }
+	                    }
+	                }
+
+	                // If reflection fails, try to find a DataTable property
+	                var tableProps = new[] { "MasterTable", "Table", "DataTable" };
+	                foreach (var tablePropName in tableProps)
+	                {
+	                    var prop = type.GetProperty(tablePropName,
+	                        System.Reflection.BindingFlags.Public |
+	                        System.Reflection.BindingFlags.NonPublic |
+	                        System.Reflection.BindingFlags.Instance);
+	                    if (prop != null && typeof(DataTable).IsAssignableFrom(prop.PropertyType))
+	                    {
+	                        var table = prop.GetValue(entity) as DataTable;
+	                        if (table != null && table.Columns.Contains(fieldName) && table.Rows.Count > 0)
+	                        {
+	                            table.Rows[0][fieldName] = value;
+	                            return;
+	                        }
+	                    }
+	                }
+	            }
+	            catch
+	            {
+	                // If reflection fails, silently continue - the save will fail with a more specific error
+	            }
+	        }
+
+	        /// <summary>
+	        /// Ensures the SGEInvoicePeppolFormat column has a default constraint in the database.
+	        /// This is required because AutoCount's API doesn't expose this field but the database requires it.
+	        /// </summary>
+	        private static bool _sgeDefaultEnsured = false;
+	        private static readonly object _sgeDefaultLock = new object();
+
+        private void EnsureSGEInvoicePeppolFormatDefault(global::AutoCount.Data.DBSetting dbSetting)
+        {
+            if (_sgeDefaultEnsured) return;
+
+            lock (_sgeDefaultLock)
+            {
+                if (_sgeDefaultEnsured) return;
+
+                try
+                {
+                    // Use direct SqlConnection to execute DDL - dbSetting.ExecuteNonQuery may not exist
+                    string connStr = dbSetting.ConnectionString;
+                    using (var conn = new SqlConnection(connStr))
+                    {
+                        conn.Open();
+
+                        // Check if the column exists and add a default constraint if it doesn't have one
+                        string checkSql = @"
+                            IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                                       WHERE TABLE_NAME = 'AR_Customer' AND COLUMN_NAME = 'SGEInvoicePeppolFormat')
+                            BEGIN
+                                IF NOT EXISTS (SELECT 1 FROM sys.default_constraints dc
+                                               JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+                                               WHERE c.name = 'SGEInvoicePeppolFormat' AND OBJECT_NAME(dc.parent_object_id) = 'AR_Customer')
+                                BEGIN
+                                    ALTER TABLE AR_Customer ADD CONSTRAINT DF_AR_Customer_SGEInvoicePeppolFormat DEFAULT '' FOR SGEInvoicePeppolFormat
+                                END
+                            END";
+
+                        using (var cmd = new SqlCommand(checkSql, conn))
+                        {
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                    _sgeDefaultEnsured = true;
+                }
+                catch
+                {
+                    // If we can't add the constraint, continue anyway - the save might still work
+                    // or fail with a more specific error
+                }
+            }
+        }
+
+        /// <summary>
+        /// Inserts a debtor directly via SQL when the AutoCount API fails due to SGEInvoicePeppolFormat.
+        /// This is a workaround for AutoCount databases that have Singapore e-invoicing fields.
+        /// </summary>
+        private void InsertDebtorWithSGEField(global::AutoCount.Data.DBSetting dbSetting, Debtor debtor, string userId)
+        {
+            string connStr = dbSetting.ConnectionString;
+            using (var conn = new SqlConnection(connStr))
+            {
+                conn.Open();
+
+                // Insert minimal debtor record with SGEInvoicePeppolFormat set to empty string
+                // SGEInvoicePeppolFormat requires 'SG-Peppol-1.0' for Singapore IMDA standard
+                string insertSql = @"
+                    INSERT INTO AR_Customer (
+                        AccNo, CompanyName, IsActive, CurrencyCode,
+                        Contact, Phone1, Email, Address1,
+                        SGEInvoicePeppolFormat,
+                        CreatedUserID, CreatedTimeStamp, LastModifiedUserID, LastModifiedTimeStamp
+                    ) VALUES (
+                        @AccNo, @CompanyName, @IsActive, @CurrencyCode,
+                        @Contact, @Phone1, @Email, @Address1,
+                        'SG-Peppol-1.0',
+                        @UserID, GETDATE(), @UserID, GETDATE()
+                    )";
+
+                using (var cmd = new SqlCommand(insertSql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@AccNo", debtor.Code ?? string.Empty);
+                    cmd.Parameters.AddWithValue("@CompanyName", debtor.Name ?? string.Empty);
+                    cmd.Parameters.AddWithValue("@IsActive", debtor.IsActive ? "T" : "F");
+                    cmd.Parameters.AddWithValue("@CurrencyCode", debtor.CurrencyCode ?? "PHP");
+                    cmd.Parameters.AddWithValue("@Contact", debtor.ContactPerson ?? string.Empty);
+                    cmd.Parameters.AddWithValue("@Phone1", debtor.Phone ?? string.Empty);
+                    cmd.Parameters.AddWithValue("@Email", debtor.Email ?? string.Empty);
+                    cmd.Parameters.AddWithValue("@Address1", debtor.Address1 ?? string.Empty);
+                    cmd.Parameters.AddWithValue("@UserID", userId ?? "ABORJA");
+
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Checks if any exception in the chain contains the SGEInvoicePeppolFormat error.
+        /// </summary>
+        private static bool ContainsSGEError(Exception ex)
+        {
+            var current = ex;
+            while (current != null)
+            {
+                if (current.Message != null &&
+                    current.Message.IndexOf("SGEInvoicePeppolFormat", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return true;
+                }
+                current = current.InnerException;
+            }
+            return false;
+        }
     }
 }
 

@@ -20,15 +20,14 @@ interface Store {
 }
 
 interface DebtorPayload {
-  code: string;
-  name: string;
-  companyName?: string;
-  contactPerson?: string;
-  phone?: string;
-  email?: string;
-  address?: string;
-  isActive: boolean;
-  currencyCode: string;
+  Code: string;
+  Name: string;
+  ContactPerson?: string;
+  Phone?: string;
+  Email?: string;
+  Address1?: string;
+  IsActive: boolean;
+  CurrencyCode: string;
 }
 
 interface RequestBody {
@@ -111,15 +110,14 @@ async function createDebtor(apiUrl: string, token: string, store: Store, retryWi
   console.log(`Creating debtor for store: ${store.store_name} (${store.debtor_code})`);
   
   const payload: DebtorPayload = {
-    code: store.debtor_code,
-    name: store.store_name,
-    companyName: store.store_name,
-    contactPerson: store.contact_person || '',
-    phone: store.phone || '',
-    email: store.email || '',
-    address: store.address || '',
-    isActive: store.is_active ?? true,
-    currencyCode: 'PHP',
+    Code: store.debtor_code,
+    Name: store.store_name,
+    ContactPerson: store.contact_person || '',
+    Phone: store.phone || '',
+    Email: store.email || '',
+    Address1: store.address || '',
+    IsActive: store.is_active ?? true,
+    CurrencyCode: 'PHP',
   };
 
   console.log(`Create debtor payload: ${JSON.stringify(payload)}`);
@@ -179,15 +177,14 @@ async function updateDebtor(apiUrl: string, token: string, store: Store): Promis
   console.log(`Updating debtor for store: ${store.store_name} (${store.debtor_code})`);
   
   const payload: DebtorPayload = {
-    code: store.debtor_code,
-    name: store.store_name,
-    companyName: store.store_name,
-    contactPerson: store.contact_person || '',
-    phone: store.phone || '',
-    email: store.email || '',
-    address: store.address || '',
-    isActive: store.is_active ?? true,
-    currencyCode: 'PHP',
+    Code: store.debtor_code,
+    Name: store.store_name,
+    ContactPerson: store.contact_person || '',
+    Phone: store.phone || '',
+    Email: store.email || '',
+    Address1: store.address || '',
+    IsActive: store.is_active ?? true,
+    CurrencyCode: 'PHP',
   };
 
   console.log(`Update debtor payload: ${JSON.stringify(payload)}`);
