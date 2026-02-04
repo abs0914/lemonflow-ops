@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import { MobileOrderCard } from "@/components/store-orders/MobileOrderCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { FilterableTableHead } from "@/components/ui/filterable-table-head";
 
 const statusColors = {
   draft: "bg-gray-100 text-gray-800",
@@ -35,16 +36,33 @@ export default function StoreOrders() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
 
+  // Column filters
+  const [orderFilter, setOrderFilter] = useState("");
+  const [storeFilter, setStoreFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [syncFilter, setSyncFilter] = useState("");
+
   const { data: userStores } = useUserStores();
   const storeIds = userStores?.map(s => s.store_id);
   const { data: orders, isLoading, refetch } = useSalesOrders(storeIds?.[0]);
 
-  const filteredOrders = orders?.filter((order) => {
-    const matchesSearch = order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.stores?.store_name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesTab = activeTab === "all" || order.status === activeTab;
-    return matchesSearch && matchesTab;
-  });
+  const filteredOrders = useMemo(() => {
+    return orders?.filter((order) => {
+      const matchesSearch = searchTerm === "" ||
+        order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.stores?.store_name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesTab = activeTab === "all" || order.status === activeTab;
+
+      // Column filters
+      const matchesOrder = orderFilter === "" || order.order_number.toLowerCase().includes(orderFilter.toLowerCase());
+      const matchesStore = storeFilter === "" || (order.stores?.store_name || "").toLowerCase().includes(storeFilter.toLowerCase());
+      const matchesStatus = statusFilter === "" || order.status.toLowerCase().includes(statusFilter.toLowerCase());
+      const matchesSync = syncFilter === "" || 
+        (order.autocount_synced ? "synced" : "pending").includes(syncFilter.toLowerCase());
+
+      return matchesSearch && matchesTab && matchesOrder && matchesStore && matchesStatus && matchesSync;
+    });
+  }, [orders, searchTerm, activeTab, orderFilter, storeFilter, statusFilter, syncFilter]);
 
   const getStatusBadge = (status: string) => (
     <Badge className={statusColors[status as keyof typeof statusColors]}>
@@ -144,12 +162,12 @@ export default function StoreOrders() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Order Number</TableHead>
-                      <TableHead>Store</TableHead>
+                      <FilterableTableHead value={orderFilter} onChange={setOrderFilter} placeholder="Filter order...">Order Number</FilterableTableHead>
+                      <FilterableTableHead value={storeFilter} onChange={setStoreFilter} placeholder="Filter store...">Store</FilterableTableHead>
                       <TableHead>Date</TableHead>
-                      <TableHead>Status</TableHead>
+                      <FilterableTableHead value={statusFilter} onChange={setStatusFilter} placeholder="Filter status...">Status</FilterableTableHead>
                       <TableHead className="text-right">Total</TableHead>
-                      <TableHead>AutoCount</TableHead>
+                      <FilterableTableHead value={syncFilter} onChange={setSyncFilter} placeholder="Filter sync...">AutoCount</FilterableTableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
