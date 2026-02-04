@@ -18,8 +18,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Store } from "@/types/sales-order";
-import { useCreateStore, useUpdateStore } from "@/hooks/useStores";
+import { useCreateStore, useUpdateStore, useStores } from "@/hooks/useStores";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { RefreshCw, Check, AlertCircle } from "lucide-react";
 
 const storeSchema = z.object({
   store_code: z.string().trim().min(1, "Store code is required").max(50, "Store code must be less than 50 characters"),
@@ -72,6 +76,43 @@ function generateNextStoreCode(stores: Store[] | undefined, storeType: "own_stor
 export function StoreDialog({ open, onOpenChange, store }: StoreDialogProps) {
   const createMutation = useCreateStore();
   const updateMutation = useUpdateStore();
+  const { data: existingStores } = useStores();
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [generatedCode, setGeneratedCode] = useState("");
+
+  const handleSyncToAutoCount = async () => {
+    if (!store) return;
+    
+    setIsSyncing(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("You must be logged in to sync");
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke("push-store-to-autocount", {
+        body: { storeId: store.id },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast.success("Store synced to AutoCount successfully");
+        // Invalidate queries to refresh data
+        window.location.reload();
+      } else {
+        throw new Error(data?.error || "Sync failed");
+      }
+    } catch (error: any) {
+      toast.error(`Sync failed: ${error.message}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const form = useForm<StoreFormData>({
     resolver: zodResolver(storeSchema),
