@@ -2,15 +2,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useInventoryItems } from "@/hooks/useInventoryItems";
-import { Plus, Search } from "lucide-react";
+import { Plus } from "lucide-react";
 import { SalesOrderLine } from "@/types/sales-order";
 
 interface ItemSelectorProps {
@@ -21,13 +15,11 @@ export function ItemSelector({ onAddItem }: ItemSelectorProps) {
   const { data: items, isLoading } = useInventoryItems();
   const [selectedItemId, setSelectedItemId] = useState<string>("");
   const [quantity, setQuantity] = useState<string>("1");
-  const [searchTerm, setSearchTerm] = useState("");
 
-  const filteredItems = items?.filter(
-    (item) =>
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.sku.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const itemOptions = items?.map((item) => ({
+    value: item.id,
+    label: `${item.name} (${item.sku}) - Stock: ${item.stock_quantity}`,
+  })) || [];
 
   const handleAddItem = () => {
     const selectedItem = items?.find((i) => i.id === selectedItemId);
@@ -51,7 +43,6 @@ export function ItemSelector({ onAddItem }: ItemSelectorProps) {
 
     setSelectedItemId("");
     setQuantity("1");
-    setSearchTerm("");
   };
 
   return (
@@ -60,44 +51,16 @@ export function ItemSelector({ onAddItem }: ItemSelectorProps) {
       
       <div className="grid gap-4">
         <div className="space-y-2">
-          <Label htmlFor="item-search">Search Item</Label>
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              id="item-search"
-              placeholder="Search by name or SKU..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="item-select">Select Item</Label>
-          <Select value={selectedItemId} onValueChange={setSelectedItemId}>
-            <SelectTrigger id="item-select">
-              <SelectValue placeholder="Choose an item" />
-            </SelectTrigger>
-            <SelectContent>
-              {isLoading ? (
-                <div className="p-2 text-sm text-muted-foreground">Loading items...</div>
-              ) : filteredItems?.length === 0 ? (
-                <div className="p-2 text-sm text-muted-foreground">No items found</div>
-              ) : (
-                filteredItems?.map((item) => (
-                  <SelectItem key={item.id} value={item.id}>
-                    <div className="flex items-center justify-between w-full">
-                      <span>{item.name}</span>
-                      <span className="text-xs text-muted-foreground ml-2">
-                        {item.sku} - Stock: {item.stock_quantity}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
+          <Label>Select Item</Label>
+          <SearchableSelect
+            options={itemOptions}
+            value={selectedItemId}
+            onValueChange={setSelectedItemId}
+            placeholder="Search and select an item..."
+            searchPlaceholder="Search by name or SKU..."
+            emptyMessage={isLoading ? "Loading items..." : "No items found."}
+            disabled={isLoading}
+          />
         </div>
 
         {selectedItemId && (
