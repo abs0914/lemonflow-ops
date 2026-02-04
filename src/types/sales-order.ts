@@ -8,7 +8,10 @@ export interface Store {
   contact_person?: string;
   phone?: string;
   email?: string;
+  credit_limit?: number;
   is_active: boolean;
+  autocount_synced?: boolean;
+  last_synced_at?: string;
   created_at: string;
   updated_at: string;
 }

@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,10 @@ import {
 } from "@/components/ui/select";
 import { Store } from "@/types/sales-order";
 import { useCreateStore, useUpdateStore } from "@/hooks/useStores";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { RefreshCw, Check, AlertCircle } from "lucide-react";
 
 const storeSchema = z.object({
   store_code: z.string().trim().min(1, "Store code is required").max(50, "Store code must be less than 50 characters"),
@@ -44,6 +48,35 @@ interface StoreDialogProps {
 export function StoreDialog({ open, onOpenChange, store }: StoreDialogProps) {
   const createMutation = useCreateStore();
   const updateMutation = useUpdateStore();
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSyncToAutoCount = async () => {
+    if (!store) return;
+
+    setIsSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('push-debtor-to-autocount', {
+        body: { storeIds: [store.id], forceUpdate: true }
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+
+      const results = data.results;
+      if (results.success.length > 0) {
+        toast.success("Store synced to AutoCount successfully");
+      } else if (results.skipped.length > 0) {
+        toast.info("Store already exists in AutoCount");
+      } else if (results.failed.length > 0) {
+        toast.error(`Sync failed: ${results.failed[0].error}`);
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to sync: ${errorMessage}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const form = useForm<StoreFormData>({
     resolver: zodResolver(storeSchema),
@@ -110,7 +143,39 @@ export function StoreDialog({ open, onOpenChange, store }: StoreDialogProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{store ? "Edit Store" : "Add New Store"}</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle>{store ? "Edit Store" : "Add New Store"}</DialogTitle>
+            {store && (
+              <div className="flex items-center gap-2">
+                {store.autocount_synced ? (
+                  <Badge variant="outline" className="text-green-600 border-green-600">
+                    <Check className="h-3 w-3 mr-1" />
+                    Synced
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-orange-600 border-orange-600">
+                    <AlertCircle className="h-3 w-3 mr-1" />
+                    Not Synced
+                  </Badge>
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSyncToAutoCount}
+                  disabled={isSyncing}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-1 ${isSyncing ? 'animate-spin' : ''}`} />
+                  {isSyncing ? 'Syncing...' : 'Sync to AutoCount'}
+                </Button>
+              </div>
+            )}
+          </div>
+          {store?.last_synced_at && (
+            <p className="text-xs text-muted-foreground">
+              Last synced: {new Date(store.last_synced_at).toLocaleString()}
+            </p>
+          )}
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

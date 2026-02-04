@@ -176,8 +176,24 @@ namespace Backend.Api.Controllers
                 if (string.IsNullOrWhiteSpace(debtor.Name))
                     return BadRequest("Debtor name is required");
 
+                // Check if debtor already exists
+                if (_debtorService.DebtorExists(debtor.Code))
+                {
+                    return Content(System.Net.HttpStatusCode.Conflict,
+                        "Debtor with code '" + debtor.Code + "' already exists in AutoCount.");
+                }
+
                 var createdDebtor = _debtorService.CreateDebtor(debtor);
                 return Created("autocount/debtors/" + createdDebtor.Code, createdDebtor);
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Handle duplicate debtor error from service layer
+                if (ex.Message.Contains("already exists"))
+                {
+                    return Content(System.Net.HttpStatusCode.Conflict, ex.Message);
+                }
+                return InternalServerError(ex);
             }
             catch (Exception ex)
             {

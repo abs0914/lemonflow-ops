@@ -5,6 +5,7 @@ using System.Linq;
 using AutoCount.Authentication;
 using AutoCount.Data;
 using AutoCount.Stock.Item;
+using AutoCount.Stock.StockBalance;
 using Backend.Domain;
 
 namespace Backend.Infrastructure.AutoCount
@@ -40,6 +41,7 @@ namespace Backend.Infrastructure.AutoCount
                     // Strategy based on official sample "GetModifiedItemData":
                     //   1. Query Item table for active ItemCode list
                     //   2. Use ItemDataAccess.LoadAllItem(string[]) to get full item data
+                    //   3. Use StockBalanceHelper to get actual stock balances
 
                     string sql = "SELECT ItemCode FROM Item WHERE IsActive='T'";
                     DataTable tblItemCode = dbSetting.GetDataTable(sql, false);
@@ -68,6 +70,9 @@ namespace Backend.Infrastructure.AutoCount
                     var cmd = ItemDataAccess.Create(userSession, dbSetting);
                     ItemEntities items = cmd.LoadAllItem(itemCodes.ToArray());
 
+                    // Get stock balances using StockBalanceHelper
+                    var stockBalances = GetStockBalances(userSession);
+
                     var result = new List<StockItem>();
                     var table = items.ItemTable;
                     foreach (DataRow row in table.Rows)
@@ -75,6 +80,11 @@ namespace Backend.Infrastructure.AutoCount
                         var item = MapDataRowToStockItem(row);
                         if (item != null)
                         {
+                            // Populate stock balance from StockBalanceHelper result
+                            if (stockBalances.ContainsKey(item.ItemCode))
+                            {
+                                item.StockBalance = stockBalances[item.ItemCode];
+                            }
                             result.Add(item);
                         }
                     }
@@ -86,6 +96,49 @@ namespace Backend.Infrastructure.AutoCount
                     throw new InvalidOperationException("Failed to retrieve items from AutoCount.", ex);
                 }
             }
+        }
+
+        /// <summary>
+        /// Gets stock balances for all items using StockBalanceHelper.
+        /// </summary>
+        private Dictionary<string, decimal> GetStockBalances(UserSession userSession)
+        {
+            var balances = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+
+            try
+            {
+                var sbHelper = new StockBalanceHelper(userSession);
+                sbHelper.Inquire(DateTime.Now);
+
+                if (sbHelper.ResultTable != null)
+                {
+                    foreach (DataRow row in sbHelper.ResultTable.Rows)
+                    {
+                        string itemCode = row["ItemCode"]?.ToString();
+                        // Use SmallestBalQty for the quantity in smallest/base UOM
+                        decimal qty = row["SmallestBalQty"] != DBNull.Value
+                            ? Convert.ToDecimal(row["SmallestBalQty"])
+                            : 0;
+
+                        if (!string.IsNullOrEmpty(itemCode) && !balances.ContainsKey(itemCode))
+                        {
+                            balances[itemCode] = qty;
+                        }
+                        else if (!string.IsNullOrEmpty(itemCode))
+                        {
+                            // Aggregate if there are multiple rows per item (e.g., multiple locations)
+                            balances[itemCode] += qty;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log but don't fail - stock balance is optional
+                System.Diagnostics.Debug.WriteLine("Failed to get stock balances: " + ex.Message);
+            }
+
+            return balances;
         }
 
         /// <inheritdoc />
