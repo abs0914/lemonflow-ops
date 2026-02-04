@@ -35,13 +35,29 @@ export default function CEODashboard() {
         .from("purchase_orders")
         .select(`
           *,
-          suppliers(supplier_code, company_name),
-          user_profiles!purchase_orders_created_by_fkey(full_name)
+          suppliers(supplier_code, company_name)
         `)
         .eq("status", "submitted")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
+      
+      // Fetch creator names separately since there's no FK for created_by
+      if (data && data.length > 0) {
+        const creatorIds = [...new Set(data.map(po => po.created_by))];
+        const { data: creators } = await supabase
+          .from("user_profiles")
+          .select("id, full_name")
+          .in("id", creatorIds);
+        
+        const creatorMap = new Map(creators?.map(c => [c.id, c.full_name]) || []);
+        return data.map(po => ({
+          ...po,
+          creator_name: creatorMap.get(po.created_by) || "Unknown"
+        }));
+      }
+      
+      return data;
       return data;
     },
   });
@@ -269,7 +285,7 @@ export default function CEODashboard() {
                             </div>
                             <div>
                               <span className="text-muted-foreground">Created By:</span>{" "}
-                              <span className="font-medium">{po.user_profiles?.full_name}</span>
+                              <span className="font-medium">{po.creator_name}</span>
                             </div>
                             <div>
                               <span className="text-muted-foreground">Date:</span>{" "}
