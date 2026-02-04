@@ -136,6 +136,7 @@ export function SalesOrderReport({ dateRange }: SalesOrderReportProps) {
       const orderProfit = orderAmount - orderCost;
 
       return {
+        id: o.id,
         order_number: o.order_number,
         store: o.stores?.store_name || "Unknown",
         status: o.status || "unknown",
