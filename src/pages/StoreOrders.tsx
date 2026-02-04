@@ -20,7 +20,8 @@ import { MobileOrderCard } from "@/components/store-orders/MobileOrderCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { FilterableTableHead } from "@/components/ui/filterable-table-head";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
+import { useTableSort } from "@/hooks/useTableSort";
 
 const statusColors = {
   draft: "bg-gray-100 text-gray-800",
@@ -36,12 +37,6 @@ export default function StoreOrders() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
 
-  // Column filters
-  const [orderFilter, setOrderFilter] = useState("");
-  const [storeFilter, setStoreFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [syncFilter, setSyncFilter] = useState("");
-
   const { data: userStores } = useUserStores();
   const storeIds = userStores?.map(s => s.store_id);
   const { data: orders, isLoading, refetch } = useSalesOrders(storeIds?.[0]);
@@ -52,17 +47,11 @@ export default function StoreOrders() {
         order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
         order.stores?.store_name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesTab = activeTab === "all" || order.status === activeTab;
-
-      // Column filters
-      const matchesOrder = orderFilter === "" || order.order_number.toLowerCase().includes(orderFilter.toLowerCase());
-      const matchesStore = storeFilter === "" || (order.stores?.store_name || "").toLowerCase().includes(storeFilter.toLowerCase());
-      const matchesStatus = statusFilter === "" || order.status.toLowerCase().includes(statusFilter.toLowerCase());
-      const matchesSync = syncFilter === "" || 
-        (order.autocount_synced ? "synced" : "pending").includes(syncFilter.toLowerCase());
-
-      return matchesSearch && matchesTab && matchesOrder && matchesStore && matchesStatus && matchesSync;
+      return matchesSearch && matchesTab;
     });
-  }, [orders, searchTerm, activeTab, orderFilter, storeFilter, statusFilter, syncFilter]);
+  }, [orders, searchTerm, activeTab]);
+
+  const { sortKey, sortDirection, handleSort, sortedData } = useTableSort(filteredOrders);
 
   const getStatusBadge = (status: string) => (
     <Badge className={statusColors[status as keyof typeof statusColors]}>
@@ -143,13 +132,13 @@ export default function StoreOrders() {
                   <Skeleton key={i} className="h-24 w-full" />
                 ))}
               </div>
-            ) : filteredOrders?.length === 0 ? (
+            ) : sortedData?.length === 0 ? (
               <div className="text-center py-12 border rounded-lg bg-muted/30">
                 <p className="text-muted-foreground">No orders found</p>
               </div>
             ) : isMobile ? (
               <div className="space-y-4">
-                {filteredOrders?.map((order) => (
+                {sortedData?.map((order) => (
                   <MobileOrderCard
                     key={order.id}
                     order={order}
@@ -162,16 +151,16 @@ export default function StoreOrders() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <FilterableTableHead value={orderFilter} onChange={setOrderFilter} placeholder="Filter order...">Order Number</FilterableTableHead>
-                      <FilterableTableHead value={storeFilter} onChange={setStoreFilter} placeholder="Filter store...">Store</FilterableTableHead>
-                      <TableHead>Date</TableHead>
-                      <FilterableTableHead value={statusFilter} onChange={setStatusFilter} placeholder="Filter status...">Status</FilterableTableHead>
-                      <TableHead className="text-right">Total</TableHead>
-                      <FilterableTableHead value={syncFilter} onChange={setSyncFilter} placeholder="Filter sync...">AutoCount</FilterableTableHead>
+                      <SortableTableHead sortKey="order_number" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Order Number</SortableTableHead>
+                      <SortableTableHead sortKey="stores.store_name" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Store</SortableTableHead>
+                      <SortableTableHead sortKey="doc_date" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Date</SortableTableHead>
+                      <SortableTableHead sortKey="status" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Status</SortableTableHead>
+                      <SortableTableHead sortKey="total_amount" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort} className="text-right">Total</SortableTableHead>
+                      <SortableTableHead sortKey="autocount_synced" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>AutoCount</SortableTableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredOrders?.map((order) => (
+                    {sortedData?.map((order) => (
                       <TableRow
                         key={order.id}
                         className="cursor-pointer hover:bg-muted/50"

@@ -21,7 +21,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { PurchaseOrder } from "@/types/inventory";
-import { FilterableTableHead } from "@/components/ui/filterable-table-head";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
+import { useTableSort } from "@/hooks/useTableSort";
 
 export default function Purchasing() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -34,18 +35,9 @@ export default function Purchasing() {
   const queryClient = useQueryClient();
   const { profile } = useAuth();
 
-  // Column filters
-  const [poNumberFilter, setPoNumberFilter] = useState("");
-  const [supplierFilter, setSupplierFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [syncFilter, setSyncFilter] = useState("");
-  
   const isFinanceUser = profile?.role === "Finance";
   
-  const {
-    data: allOrders,
-    isLoading
-  } = usePurchaseOrders();
+  const { data: allOrders, isLoading } = usePurchaseOrders();
   
   const filteredOrders = useMemo(() => {
     return allOrders?.filter(order => {
@@ -53,30 +45,25 @@ export default function Purchasing() {
         order.po_number.toLowerCase().includes(searchTerm.toLowerCase()) || 
         order.suppliers?.company_name.toLowerCase().includes(searchTerm.toLowerCase());
       
-      // Column filters
-      const matchesPONumber = poNumberFilter === "" || order.po_number.toLowerCase().includes(poNumberFilter.toLowerCase());
-      const matchesSupplier = supplierFilter === "" || (order.suppliers?.company_name || "").toLowerCase().includes(supplierFilter.toLowerCase());
-      const matchesStatus = statusFilter === "" || order.status.toLowerCase().includes(statusFilter.toLowerCase());
-      const matchesSync = syncFilter === "" || 
-        (order.autocount_synced ? "synced" : "not synced").includes(syncFilter.toLowerCase());
-      
       // Finance users only see approved POs
       if (isFinanceUser) {
         if (order.status !== "approved") return false;
         
         // Apply finance-specific filter
         if (financeFilter === "pending_receipt") {
-          return matchesSearch && matchesPONumber && matchesSupplier && matchesStatus && matchesSync && !order.goods_received;
+          return matchesSearch && !order.goods_received;
         } else if (financeFilter === "received") {
-          return matchesSearch && matchesPONumber && matchesSupplier && matchesStatus && matchesSync && order.goods_received;
+          return matchesSearch && order.goods_received;
         }
-        return matchesSearch && matchesPONumber && matchesSupplier && matchesStatus && matchesSync;
+        return matchesSearch;
       }
       
       const matchesTab = activeTab === "all" || order.status === activeTab;
-      return matchesSearch && matchesTab && matchesPONumber && matchesSupplier && matchesStatus && matchesSync;
+      return matchesSearch && matchesTab;
     });
-  }, [allOrders, searchTerm, activeTab, financeFilter, isFinanceUser, poNumberFilter, supplierFilter, statusFilter, syncFilter]);
+  }, [allOrders, searchTerm, activeTab, financeFilter, isFinanceUser]);
+
+  const { sortKey, sortDirection, handleSort, sortedData } = useTableSort<PurchaseOrder>(filteredOrders);
   
   const getFinanceStats = () => {
     const approvedPOs = allOrders?.filter(o => o.status === "approved") || [];
@@ -414,8 +401,8 @@ export default function Purchasing() {
               </div>
             ) : isMobile ? (
               <div className="space-y-4">
-                {filteredOrders?.map(order => <MobilePOCard key={order.id} order={order} onClick={() => navigate(`/purchasing/${order.id}`)} />)}
-                {filteredOrders?.length === 0 && (
+                {sortedData?.map(order => <MobilePOCard key={order.id} order={order} onClick={() => navigate(`/purchasing/${order.id}`)} />)}
+                {sortedData?.length === 0 && (
                   <div className="text-center py-8">
                     <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
                     <p className="text-muted-foreground">No purchase orders found</p>
@@ -426,22 +413,22 @@ export default function Purchasing() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <FilterableTableHead value={poNumberFilter} onChange={setPoNumberFilter} placeholder="Filter PO...">PO Number</FilterableTableHead>
-                    <FilterableTableHead value={supplierFilter} onChange={setSupplierFilter} placeholder="Filter supplier...">Supplier</FilterableTableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Delivery Date</TableHead>
-                    <TableHead>Total Amount</TableHead>
+                    <SortableTableHead sortKey="po_number" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>PO Number</SortableTableHead>
+                    <SortableTableHead sortKey="suppliers.company_name" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Supplier</SortableTableHead>
+                    <SortableTableHead sortKey="doc_date" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Date</SortableTableHead>
+                    <SortableTableHead sortKey="delivery_date" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Delivery Date</SortableTableHead>
+                    <SortableTableHead sortKey="total_amount" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Total Amount</SortableTableHead>
                     {isFinanceUser ? (
-                      <TableHead>Goods Receipt</TableHead>
+                      <SortableTableHead sortKey="goods_received" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Goods Receipt</SortableTableHead>
                     ) : (
-                      <FilterableTableHead value={statusFilter} onChange={setStatusFilter} placeholder="Filter status...">Status</FilterableTableHead>
+                      <SortableTableHead sortKey="status" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Status</SortableTableHead>
                     )}
-                    <FilterableTableHead value={syncFilter} onChange={setSyncFilter} placeholder="Filter sync...">AutoCount Sync</FilterableTableHead>
+                    <SortableTableHead sortKey="autocount_synced" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>AutoCount Sync</SortableTableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredOrders?.map(order => (
+                  {sortedData?.map(order => (
                     <TableRow key={order.id}>
                       <TableCell className="font-mono">{order.po_number}</TableCell>
                       <TableCell className="font-medium">{order.suppliers?.company_name}</TableCell>
@@ -508,7 +495,7 @@ export default function Purchasing() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {filteredOrders?.length === 0 && (
+                  {sortedData?.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center py-8">
                         <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
