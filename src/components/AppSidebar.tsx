@@ -186,11 +186,11 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
-        <div className="flex items-center gap-2 px-2 py-4">
+        <div className={`flex items-center gap-2 py-3 ${state === "expanded" ? "px-2" : "justify-center px-1"}`}>
           <img 
             src={tlcLogo} 
             alt="The Lemon Co Logo" 
-            className="h-10 w-10 rounded-lg"
+            className={`rounded-lg ${state === "expanded" ? "h-10 w-10" : "h-8 w-8"}`}
           />
           {state === "expanded" && (
             <div className="flex flex-col">
