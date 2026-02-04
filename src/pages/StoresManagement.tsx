@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { FilterableTableHead } from "@/components/ui/filterable-table-head";
 
 export default function StoresManagement() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -36,17 +37,35 @@ export default function StoresManagement() {
   const [storeToDelete, setStoreToDelete] = useState<Store | null>(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
 
+  // Column filters
+  const [codeFilter, setCodeFilter] = useState("");
+  const [nameFilter, setNameFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
+  const [debtorFilter, setDebtorFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+
   const { data: stores, isLoading } = useStores();
   const deleteMutation = useDeleteStore();
 
-  const filteredStores = stores?.filter((store) => {
-    const search = searchTerm.toLowerCase();
-    return (
-      (store.store_name?.toLowerCase() || '').includes(search) ||
-      (store.store_code?.toLowerCase() || '').includes(search) ||
-      (store.debtor_code?.toLowerCase() || '').includes(search)
-    );
-  });
+  const filteredStores = useMemo(() => {
+    return stores?.filter((store) => {
+      const search = searchTerm.toLowerCase();
+      const matchesSearch = searchTerm === "" ||
+        (store.store_name?.toLowerCase() || '').includes(search) ||
+        (store.store_code?.toLowerCase() || '').includes(search) ||
+        (store.debtor_code?.toLowerCase() || '').includes(search);
+
+      const matchesCode = codeFilter === "" || (store.store_code?.toLowerCase() || '').includes(codeFilter.toLowerCase());
+      const matchesName = nameFilter === "" || (store.store_name?.toLowerCase() || '').includes(nameFilter.toLowerCase());
+      const matchesType = typeFilter === "" || 
+        (store.store_type === "own_store" ? "own store" : "franchisee").includes(typeFilter.toLowerCase());
+      const matchesDebtor = debtorFilter === "" || (store.debtor_code?.toLowerCase() || '').includes(debtorFilter.toLowerCase());
+      const matchesStatus = statusFilter === "" || 
+        (store.is_active ? "active" : "inactive").includes(statusFilter.toLowerCase());
+
+      return matchesSearch && matchesCode && matchesName && matchesType && matchesDebtor && matchesStatus;
+    });
+  }, [stores, searchTerm, codeFilter, nameFilter, typeFilter, debtorFilter, statusFilter]);
 
   const handleEdit = (store: Store) => {
     setSelectedStore(store);
@@ -122,12 +141,12 @@ export default function StoresManagement() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Store Code</TableHead>
-                  <TableHead>Store Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Debtor Code</TableHead>
+                  <FilterableTableHead value={codeFilter} onChange={setCodeFilter} placeholder="Filter code...">Store Code</FilterableTableHead>
+                  <FilterableTableHead value={nameFilter} onChange={setNameFilter} placeholder="Filter name...">Store Name</FilterableTableHead>
+                  <FilterableTableHead value={typeFilter} onChange={setTypeFilter} placeholder="Filter type...">Type</FilterableTableHead>
+                  <FilterableTableHead value={debtorFilter} onChange={setDebtorFilter} placeholder="Filter debtor...">Debtor Code</FilterableTableHead>
                   <TableHead>Contact</TableHead>
-                  <TableHead>Status</TableHead>
+                  <FilterableTableHead value={statusFilter} onChange={setStatusFilter} placeholder="Filter status...">Status</FilterableTableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>

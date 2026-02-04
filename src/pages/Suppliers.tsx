@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Plus, Search, RefreshCw, Upload, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -18,6 +18,8 @@ import { SyncSuppliersDialog } from "@/components/suppliers/SyncSuppliersDialog"
 import { DeleteSupplierDialog } from "@/components/suppliers/DeleteSupplierDialog";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { Supplier } from "@/types/inventory";
+import { FilterableTableHead } from "@/components/ui/filterable-table-head";
+
 export default function Suppliers() {
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -27,11 +29,39 @@ export default function Suppliers() {
   const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
+
+  // Column filters
+  const [codeFilter, setCodeFilter] = useState("");
+  const [companyFilter, setCompanyFilter] = useState("");
+  const [contactFilter, setContactFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [syncFilter, setSyncFilter] = useState("");
+
   const {
     data: suppliers,
     isLoading
   } = useSuppliers();
-  const filteredSuppliers = suppliers?.filter(supplier => supplier.company_name.toLowerCase().includes(searchTerm.toLowerCase()) || supplier.supplier_code.toLowerCase().includes(searchTerm.toLowerCase()) || supplier.contact_person?.toLowerCase().includes(searchTerm.toLowerCase()));
+
+  const filteredSuppliers = useMemo(() => {
+    return suppliers?.filter(supplier => {
+      // Global search
+      const matchesSearch = searchTerm === "" || 
+        supplier.company_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        supplier.supplier_code.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        supplier.contact_person?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      // Column filters
+      const matchesCode = codeFilter === "" || supplier.supplier_code.toLowerCase().includes(codeFilter.toLowerCase());
+      const matchesCompany = companyFilter === "" || supplier.company_name.toLowerCase().includes(companyFilter.toLowerCase());
+      const matchesContact = contactFilter === "" || (supplier.contact_person?.toLowerCase() || "").includes(contactFilter.toLowerCase());
+      const matchesStatus = statusFilter === "" || 
+        (supplier.is_active ? "active" : "inactive").includes(statusFilter.toLowerCase());
+      const matchesSync = syncFilter === "" || 
+        (supplier.autocount_synced ? "synced" : "not synced").includes(syncFilter.toLowerCase());
+
+      return matchesSearch && matchesCode && matchesCompany && matchesContact && matchesStatus && matchesSync;
+    });
+  }, [suppliers, searchTerm, codeFilter, companyFilter, contactFilter, statusFilter, syncFilter]);
   const handleEdit = (id: string) => {
     setSelectedSupplier(id);
     setDialogOpen(true);
@@ -172,13 +202,13 @@ export default function Suppliers() {
               </div> : <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Code</TableHead>
-                    <TableHead>Company Name</TableHead>
-                    <TableHead>Contact Person</TableHead>
+                    <FilterableTableHead value={codeFilter} onChange={setCodeFilter} placeholder="Filter code...">Code</FilterableTableHead>
+                    <FilterableTableHead value={companyFilter} onChange={setCompanyFilter} placeholder="Filter company...">Company Name</FilterableTableHead>
+                    <FilterableTableHead value={contactFilter} onChange={setContactFilter} placeholder="Filter contact...">Contact Person</FilterableTableHead>
                     <TableHead>Phone</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>AutoCount</TableHead>
+                    <FilterableTableHead value={statusFilter} onChange={setStatusFilter} placeholder="Filter status...">Status</FilterableTableHead>
+                    <FilterableTableHead value={syncFilter} onChange={setSyncFilter} placeholder="Filter sync...">AutoCount</FilterableTableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>

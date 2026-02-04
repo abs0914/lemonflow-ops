@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, FileText, Trash2, Edit, RefreshCw, Upload, Download, CheckCircle, Clock, Package } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,6 +21,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { PurchaseOrder } from "@/types/inventory";
+import { FilterableTableHead } from "@/components/ui/filterable-table-head";
 
 export default function Purchasing() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -32,6 +33,12 @@ export default function Purchasing() {
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const { profile } = useAuth();
+
+  // Column filters
+  const [poNumberFilter, setPoNumberFilter] = useState("");
+  const [supplierFilter, setSupplierFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [syncFilter, setSyncFilter] = useState("");
   
   const isFinanceUser = profile?.role === "Finance";
   
@@ -40,25 +47,36 @@ export default function Purchasing() {
     isLoading
   } = usePurchaseOrders();
   
-  const filteredOrders = allOrders?.filter(order => {
-    const matchesSearch = order.po_number.toLowerCase().includes(searchTerm.toLowerCase()) || order.suppliers?.company_name.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    // Finance users only see approved POs
-    if (isFinanceUser) {
-      if (order.status !== "approved") return false;
+  const filteredOrders = useMemo(() => {
+    return allOrders?.filter(order => {
+      const matchesSearch = searchTerm === "" || 
+        order.po_number.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        order.suppliers?.company_name.toLowerCase().includes(searchTerm.toLowerCase());
       
-      // Apply finance-specific filter
-      if (financeFilter === "pending_receipt") {
-        return matchesSearch && !order.goods_received;
-      } else if (financeFilter === "received") {
-        return matchesSearch && order.goods_received;
+      // Column filters
+      const matchesPONumber = poNumberFilter === "" || order.po_number.toLowerCase().includes(poNumberFilter.toLowerCase());
+      const matchesSupplier = supplierFilter === "" || (order.suppliers?.company_name || "").toLowerCase().includes(supplierFilter.toLowerCase());
+      const matchesStatus = statusFilter === "" || order.status.toLowerCase().includes(statusFilter.toLowerCase());
+      const matchesSync = syncFilter === "" || 
+        (order.autocount_synced ? "synced" : "not synced").includes(syncFilter.toLowerCase());
+      
+      // Finance users only see approved POs
+      if (isFinanceUser) {
+        if (order.status !== "approved") return false;
+        
+        // Apply finance-specific filter
+        if (financeFilter === "pending_receipt") {
+          return matchesSearch && matchesPONumber && matchesSupplier && matchesStatus && matchesSync && !order.goods_received;
+        } else if (financeFilter === "received") {
+          return matchesSearch && matchesPONumber && matchesSupplier && matchesStatus && matchesSync && order.goods_received;
+        }
+        return matchesSearch && matchesPONumber && matchesSupplier && matchesStatus && matchesSync;
       }
-      return matchesSearch;
-    }
-    
-    const matchesTab = activeTab === "all" || order.status === activeTab;
-    return matchesSearch && matchesTab;
-  });
+      
+      const matchesTab = activeTab === "all" || order.status === activeTab;
+      return matchesSearch && matchesTab && matchesPONumber && matchesSupplier && matchesStatus && matchesSync;
+    });
+  }, [allOrders, searchTerm, activeTab, financeFilter, isFinanceUser, poNumberFilter, supplierFilter, statusFilter, syncFilter]);
   
   const getFinanceStats = () => {
     const approvedPOs = allOrders?.filter(o => o.status === "approved") || [];
@@ -408,17 +426,17 @@ export default function Purchasing() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>PO Number</TableHead>
-                    <TableHead>Supplier</TableHead>
+                    <FilterableTableHead value={poNumberFilter} onChange={setPoNumberFilter} placeholder="Filter PO...">PO Number</FilterableTableHead>
+                    <FilterableTableHead value={supplierFilter} onChange={setSupplierFilter} placeholder="Filter supplier...">Supplier</FilterableTableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Delivery Date</TableHead>
                     <TableHead>Total Amount</TableHead>
                     {isFinanceUser ? (
                       <TableHead>Goods Receipt</TableHead>
                     ) : (
-                      <TableHead>Status</TableHead>
+                      <FilterableTableHead value={statusFilter} onChange={setStatusFilter} placeholder="Filter status...">Status</FilterableTableHead>
                     )}
-                    <TableHead>AutoCount Sync</TableHead>
+                    <FilterableTableHead value={syncFilter} onChange={setSyncFilter} placeholder="Filter sync...">AutoCount Sync</FilterableTableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
