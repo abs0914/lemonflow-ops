@@ -2,9 +2,9 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ReportCard } from "./ReportCard";
-import { ReportTable } from "./ReportTable";
+import { SalesOrderReportTable } from "./SalesOrderReportTable";
 import { ReportChart } from "./ReportChart";
-import { ShoppingBag, DollarSign, Clock, CheckCircle } from "lucide-react";
+import { ShoppingBag, DollarSign, Clock, TrendingUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -22,7 +22,8 @@ export function SalesOrderReport({ dateRange }: SalesOrderReportProps) {
         .from("sales_orders")
         .select(`
           *,
-          stores(store_name, store_code)
+          stores(store_name, store_code),
+          sales_order_lines(quantity, unit_price, sub_total)
         `)
         .gte("created_at", dateRange.from.toISOString())
         .lte("created_at", dateRange.to.toISOString())
@@ -47,14 +48,39 @@ export function SalesOrderReport({ dateRange }: SalesOrderReportProps) {
     },
   });
 
+  // Fetch components for cost calculation
+  const { data: components } = useQuery({
+    queryKey: ["components-cost"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("components")
+        .select("sku, cost_per_unit");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const componentCostMap = useMemo(() => {
+    if (!components) return new Map<string, number>();
+    return new Map(components.map((c) => [c.sku, c.cost_per_unit || 0]));
+  }, [components]);
+
   const metrics = useMemo(() => {
     if (!orders) return null;
 
     const totalOrders = orders.length;
     const totalSales = orders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
     const draft = orders.filter((o) => o.status === "draft").length;
-    const submitted = orders.filter((o) => o.status === "submitted").length;
-    const synced = orders.filter((o) => o.autocount_synced).length;
+    
+    // Calculate total cost and profit
+    let totalCost = 0;
+    orders.forEach((o) => {
+      (o.sales_order_lines || []).forEach((line: any) => {
+        const unitCost = componentCostMap.get(line.item_code) || 0;
+        totalCost += unitCost * line.quantity;
+      });
+    });
+    const totalProfit = totalSales - totalCost;
 
     const byStatus = orders.reduce((acc, o) => {
       acc[o.status || "unknown"] = (acc[o.status || "unknown"] || 0) + 1;
@@ -70,13 +96,13 @@ export function SalesOrderReport({ dateRange }: SalesOrderReportProps) {
     return {
       totalOrders,
       totalSales,
+      totalCost,
+      totalProfit,
       draft,
-      submitted,
-      synced,
       byStatus,
       byStore,
     };
-  }, [orders]);
+  }, [orders, componentCostMap]);
 
   const statusChartData = useMemo(() => {
     if (!metrics?.byStatus) return [];
@@ -97,24 +123,30 @@ export function SalesOrderReport({ dateRange }: SalesOrderReportProps) {
       }));
   }, [metrics]);
 
-  const tableColumns = [
-    { key: "order_number", label: "Order Number" },
-    { key: "store", label: "Store" },
-    { key: "status", label: "Status" },
-    { key: "total_amount", label: "Amount", format: (v: number) => `₱${v.toLocaleString()}` },
-    { key: "doc_date", label: "Date" },
-  ];
-
   const tableData = useMemo(() => {
     if (!orders) return [];
-    return orders.map((o) => ({
-      order_number: o.order_number,
-      store: o.stores?.store_name || "Unknown",
-      status: o.status || "unknown",
-      total_amount: o.total_amount || 0,
-      doc_date: new Date(o.doc_date).toLocaleDateString(),
-    }));
-  }, [orders]);
+    return orders.map((o) => {
+      // Calculate cost for this order
+      let orderCost = 0;
+      (o.sales_order_lines || []).forEach((line: any) => {
+        const unitCost = componentCostMap.get(line.item_code) || 0;
+        orderCost += unitCost * line.quantity;
+      });
+      const orderAmount = o.total_amount || 0;
+      const orderProfit = orderAmount - orderCost;
+
+      return {
+        id: o.id,
+        order_number: o.order_number,
+        store: o.stores?.store_name || "Unknown",
+        status: o.status || "unknown",
+        total_cost: orderCost,
+        total_amount: orderAmount,
+        profit: orderProfit,
+        doc_date: new Date(o.doc_date).toLocaleDateString(),
+      };
+    });
+  }, [orders, componentCostMap]);
 
   if (isLoading) {
     return (
@@ -143,14 +175,14 @@ export function SalesOrderReport({ dateRange }: SalesOrderReportProps) {
           icon={DollarSign}
         />
         <ReportCard
-          title="Draft Orders"
-          value={metrics?.draft || 0}
+          title="Total Cost"
+          value={`₱${(metrics?.totalCost || 0).toLocaleString()}`}
           icon={Clock}
         />
         <ReportCard
-          title="Submitted"
-          value={metrics?.submitted || 0}
-          icon={CheckCircle}
+          title="Total Profit"
+          value={`₱${(metrics?.totalProfit || 0).toLocaleString()}`}
+          icon={TrendingUp}
         />
       </div>
 
@@ -168,9 +200,7 @@ export function SalesOrderReport({ dateRange }: SalesOrderReportProps) {
         />
       </div>
 
-      <ReportTable
-        title="Sales Orders"
-        columns={tableColumns}
+      <SalesOrderReportTable
         data={tableData}
         exportFileName="sales-orders-report"
       />

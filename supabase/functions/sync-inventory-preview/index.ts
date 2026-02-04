@@ -16,7 +16,7 @@ interface AutoCountStockItem {
   isActive?: boolean;
   standardCost?: number;
   price?: number;
-  stockBalance?: number;
+  stockBalance?: number | null;
   mainSupplier?: string;
   barcode?: string;
   hasBom?: boolean;
@@ -121,13 +121,25 @@ Deno.serve(async (req) => {
         c => c.autocount_item_code === acItem.itemCode || c.sku === acItem.itemCode
       );
 
+      // Get stock balance - check multiple possible field names
+      const stockBalance = (acItem as any).stockBalance 
+        ?? (acItem as any).StockBalance 
+        ?? (acItem as any).totalBalQty 
+        ?? (acItem as any).TotalBalQty
+        ?? (acItem as any).balQty
+        ?? (acItem as any).BalQty;
+      
+      const hasValidStockBalance = stockBalance !== undefined && 
+                                    stockBalance !== null && 
+                                    !isNaN(Number(stockBalance));
+
       if (!localComponent) {
         // New item
         preview.push({
           action: 'create',
           itemCode: acItem.itemCode,
           description: acItem.description,
-          autoCountData: acItem,
+          autoCountData: { ...acItem, stockBalance: hasValidStockBalance ? Number(stockBalance) : null },
         });
       } else {
         // Check for changes
@@ -157,6 +169,10 @@ Deno.serve(async (req) => {
         if (localComponent.price !== acItem.price) {
           changes.price = { old: localComponent.price, new: acItem.price };
         }
+        // Compare stock balance - only if API returns valid value
+        if (hasValidStockBalance && localComponent.stock_quantity !== Number(stockBalance)) {
+          changes.stock_quantity = { old: localComponent.stock_quantity, new: Number(stockBalance) };
+        }
 
         if (Object.keys(changes).length > 0) {
           preview.push({
@@ -165,14 +181,14 @@ Deno.serve(async (req) => {
             description: acItem.description,
             changes,
             localData: localComponent,
-            autoCountData: acItem,
+            autoCountData: { ...acItem, stockBalance: hasValidStockBalance ? Number(stockBalance) : null },
           });
         } else {
           preview.push({
             action: 'none',
             itemCode: acItem.itemCode,
             description: acItem.description,
-            autoCountData: acItem,
+            autoCountData: { ...acItem, stockBalance: hasValidStockBalance ? Number(stockBalance) : null },
           });
         }
       }

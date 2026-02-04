@@ -20,10 +20,6 @@ import {
 } from "@/components/ui/select";
 import { Store } from "@/types/sales-order";
 import { useCreateStore, useUpdateStore } from "@/hooks/useStores";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Check, AlertCircle } from "lucide-react";
 
 const storeSchema = z.object({
   store_code: z.string().trim().min(1, "Store code is required").max(50, "Store code must be less than 50 characters"),
@@ -45,38 +41,37 @@ interface StoreDialogProps {
   store?: Store;
 }
 
+function generateNextStoreCode(stores: Store[] | undefined, storeType: "own_store" | "franchisee"): string {
+  // Use different prefix based on store type
+  const prefix = storeType === "franchisee" ? "FRC-TLC-" : "STR-TLC-";
+  const codePattern = storeType === "franchisee" 
+    ? /^FRC-TLC-(\d{3})$/ 
+    : /^STR-TLC-(\d{3})$/;
+
+  if (!stores || stores.length === 0) {
+    return `${prefix}001`;
+  }
+
+  // Find the highest existing code that matches the pattern for this store type
+  let maxNumber = 0;
+
+  for (const store of stores) {
+    const match = store.store_code?.match(codePattern);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (num > maxNumber) {
+        maxNumber = num;
+      }
+    }
+  }
+
+  const nextNumber = maxNumber + 1;
+  return `${prefix}${nextNumber.toString().padStart(3, '0')}`;
+}
+
 export function StoreDialog({ open, onOpenChange, store }: StoreDialogProps) {
   const createMutation = useCreateStore();
   const updateMutation = useUpdateStore();
-  const [isSyncing, setIsSyncing] = useState(false);
-
-  const handleSyncToAutoCount = async () => {
-    if (!store) return;
-
-    setIsSyncing(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('push-debtor-to-autocount', {
-        body: { storeIds: [store.id], forceUpdate: true }
-      });
-
-      if (error) throw error;
-      if (!data.success) throw new Error(data.error);
-
-      const results = data.results;
-      if (results.success.length > 0) {
-        toast.success("Store synced to AutoCount successfully");
-      } else if (results.skipped.length > 0) {
-        toast.info("Store already exists in AutoCount");
-      } else if (results.failed.length > 0) {
-        toast.error(`Sync failed: ${results.failed[0].error}`);
-      }
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      toast.error(`Failed to sync: ${errorMessage}`);
-    } finally {
-      setIsSyncing(false);
-    }
-  };
 
   const form = useForm<StoreFormData>({
     resolver: zodResolver(storeSchema),
@@ -93,7 +88,10 @@ export function StoreDialog({ open, onOpenChange, store }: StoreDialogProps) {
     },
   });
 
-  // Reset form with store data when editing
+  // Watch store_type to regenerate code when it changes
+  const watchedStoreType = form.watch("store_type");
+
+  // Reset form with store data when editing, or generate new code when creating
   useEffect(() => {
     if (store) {
       form.reset({
@@ -107,20 +105,26 @@ export function StoreDialog({ open, onOpenChange, store }: StoreDialogProps) {
         email: store.email || "",
         is_active: store.is_active ?? true,
       });
-    } else {
-      form.reset({
-        store_code: "",
-        store_name: "",
-        store_type: "own_store",
-        debtor_code: "",
-        address: "",
-        contact_person: "",
-        phone: "",
-        email: "",
-        is_active: true,
-      });
+      setGeneratedCode("");
+    } else if (open) {
+      // Generate next store code for new stores based on store type
+      const currentStoreType = form.getValues("store_type") || "own_store";
+      const nextCode = generateNextStoreCode(existingStores, currentStoreType);
+      setGeneratedCode(nextCode);
+      form.setValue("store_code", nextCode);
+      form.setValue("debtor_code", nextCode);
     }
-  }, [store, form]);
+  }, [store, form, existingStores, open]);
+
+  // Regenerate code when store type changes (only for new stores)
+  useEffect(() => {
+    if (!store && open && watchedStoreType) {
+      const nextCode = generateNextStoreCode(existingStores, watchedStoreType);
+      setGeneratedCode(nextCode);
+      form.setValue("store_code", nextCode);
+      form.setValue("debtor_code", nextCode);
+    }
+  }, [watchedStoreType, store, open, existingStores, form]);
 
   const onSubmit = async (data: StoreFormData) => {
     try {
@@ -185,10 +189,15 @@ export function StoreDialog({ open, onOpenChange, store }: StoreDialogProps) {
               <Input
                 id="store_code"
                 {...form.register("store_code")}
-                placeholder="e.g., STORE-001"
+                placeholder="e.g., STR-TLC-001 or FRC-TLC-001"
+                disabled={!store} // Read-only for new stores (auto-generated)
+                className={!store ? "bg-muted" : ""}
               />
               {form.formState.errors.store_code && (
                 <p className="text-sm text-destructive">{form.formState.errors.store_code.message}</p>
+              )}
+              {!store && (
+                <p className="text-xs text-muted-foreground">Auto-generated</p>
               )}
             </div>
 
@@ -198,9 +207,14 @@ export function StoreDialog({ open, onOpenChange, store }: StoreDialogProps) {
                 id="debtor_code"
                 {...form.register("debtor_code")}
                 placeholder="AutoCount debtor code"
+                disabled={!store} // Read-only for new stores (same as store_code)
+                className={!store ? "bg-muted" : ""}
               />
               {form.formState.errors.debtor_code && (
                 <p className="text-sm text-destructive">{form.formState.errors.debtor_code.message}</p>
+              )}
+              {!store && (
+                <p className="text-xs text-muted-foreground">Same as Store Code</p>
               )}
             </div>
           </div>
@@ -292,7 +306,7 @@ export function StoreDialog({ open, onOpenChange, store }: StoreDialogProps) {
               type="checkbox"
               id="is_active"
               {...form.register("is_active")}
-              className="h-4 w-4 rounded border-gray-300"
+              className="h-4 w-4 rounded border-border"
             />
             <Label htmlFor="is_active" className="cursor-pointer">
               Active Store

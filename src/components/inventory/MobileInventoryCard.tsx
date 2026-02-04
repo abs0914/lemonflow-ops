@@ -126,6 +126,7 @@ export function MobileInventoryCard({ component, onAdjustStock, onDelete }: Mobi
           ? "bg-yellow-50 dark:bg-yellow-950/20" 
           : ""
       }
+      onClick={() => onAdjustStock(component)}
     >
       <div className="space-y-3">
         <div className="flex items-start justify-between">

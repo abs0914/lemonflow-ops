@@ -113,6 +113,27 @@ export function StockAdjustmentDialog({
 
       if (movementError) throw movementError;
 
+      // Update local on-hand stock immediately so the Inventory screen reflects the change
+      // (AutoCount sync does not push the latest balance back into our DB)
+      const tableByType = {
+        product: "products",
+        component: "components",
+        raw_material: "raw_materials",
+        finished_good: "finished_goods",
+      } as const;
+
+      const targetTable = tableByType[itemType];
+      const newStockQty = data.movement_type === "adjustment"
+        ? parseFloat(data.quantity)
+        : currentStock + quantity;
+
+      const { error: stockUpdateError } = await (supabase as any)
+        .from(targetTable)
+        .update({ stock_quantity: newStockQty })
+        .eq("id", itemId);
+
+      if (stockUpdateError) throw stockUpdateError;
+
       // Sync to AutoCount if requested
       if (data.sync_to_autocount) {
         setIsSyncing(true);
@@ -166,7 +187,7 @@ export function StockAdjustmentDialog({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["components"] });
-      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "inventory" });
       queryClient.invalidateQueries({ queryKey: ["raw-materials"] });
       queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
       toast({ 

@@ -234,6 +234,7 @@ export type Database = {
           item_group: string | null
           item_type: string | null
           last_synced_at: string | null
+          low_stock_threshold: number | null
           name: string
           price: number | null
           reserved_quantity: number
@@ -253,6 +254,7 @@ export type Database = {
           item_group?: string | null
           item_type?: string | null
           last_synced_at?: string | null
+          low_stock_threshold?: number | null
           name: string
           price?: number | null
           reserved_quantity?: number
@@ -272,6 +274,7 @@ export type Database = {
           item_group?: string | null
           item_type?: string | null
           last_synced_at?: string | null
+          low_stock_threshold?: number | null
           name?: string
           price?: number | null
           reserved_quantity?: number
@@ -657,6 +660,7 @@ export type Database = {
           item_group: string | null
           item_type: string | null
           last_synced_at: string | null
+          low_stock_threshold: number | null
           name: string
           price: number | null
           reserved_quantity: number
@@ -676,6 +680,7 @@ export type Database = {
           item_group?: string | null
           item_type?: string | null
           last_synced_at?: string | null
+          low_stock_threshold?: number | null
           name: string
           price?: number | null
           reserved_quantity?: number
@@ -695,6 +700,7 @@ export type Database = {
           item_group?: string | null
           item_type?: string | null
           last_synced_at?: string | null
+          low_stock_threshold?: number | null
           name?: string
           price?: number | null
           reserved_quantity?: number
@@ -968,44 +974,62 @@ export type Database = {
       stores: {
         Row: {
           address: string | null
+          autocount_synced: boolean | null
+          city: string | null
           contact_person: string | null
           created_at: string | null
           debtor_code: string
           email: string | null
           id: string
           is_active: boolean | null
+          last_synced_at: string | null
+          opened_date: string | null
           phone: string | null
+          region: string | null
           store_code: string
           store_name: string
           store_type: string | null
+          sync_error_message: string | null
           updated_at: string | null
         }
         Insert: {
           address?: string | null
+          autocount_synced?: boolean | null
+          city?: string | null
           contact_person?: string | null
           created_at?: string | null
           debtor_code: string
           email?: string | null
           id?: string
           is_active?: boolean | null
+          last_synced_at?: string | null
+          opened_date?: string | null
           phone?: string | null
+          region?: string | null
           store_code: string
           store_name: string
           store_type?: string | null
+          sync_error_message?: string | null
           updated_at?: string | null
         }
         Update: {
           address?: string | null
+          autocount_synced?: boolean | null
+          city?: string | null
           contact_person?: string | null
           created_at?: string | null
           debtor_code?: string
           email?: string | null
           id?: string
           is_active?: boolean | null
+          last_synced_at?: string | null
+          opened_date?: string | null
           phone?: string | null
+          region?: string | null
           store_code?: string
           store_name?: string
           store_type?: string | null
+          sync_error_message?: string | null
           updated_at?: string | null
         }
         Relationships: []

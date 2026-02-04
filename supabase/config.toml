@@ -65,3 +65,12 @@ verify_jwt = true
 
 [functions.sales-api-proxy]
 verify_jwt = true
+
+[functions.retry-failed-sync]
+verify_jwt = true
+
+[functions.push-store-to-autocount]
+verify_jwt = true
+
+[functions.pull-stores-from-autocount]
+verify_jwt = true

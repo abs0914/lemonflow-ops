@@ -16,7 +16,7 @@ interface AutoCountStockItem {
   isActive?: boolean;
   standardCost?: number;
   price?: number;
-  stockBalance?: number;
+  stockBalance?: number | null;
   mainSupplier?: string;
   barcode?: string;
   hasBom?: boolean;
@@ -107,21 +107,28 @@ Deno.serve(async (req) => {
 
     for (const acItem of autoCountItems) {
       try {
-        console.log(`[sync-inventory-execute] Processing item ${acItem.itemCode}, stockBalance:`, acItem.stockBalance);
+        // Handle multiple possible field names for stock balance
+        // Note: API currently returns stockBalance: null because ItemEntity doesn't expose it
+        const rawStockBalance = (acItem as any).stockBalance 
+          ?? (acItem as any).StockBalance 
+          ?? (acItem as any).totalBalQty 
+          ?? (acItem as any).TotalBalQty
+          ?? (acItem as any).balQty
+          ?? (acItem as any).BalQty;
+        
+        // Check if we have a valid stock balance from API
+        const hasValidStockBalance = rawStockBalance !== undefined && 
+                                      rawStockBalance !== null && 
+                                      !isNaN(Number(rawStockBalance));
+        
+        console.log(`[sync-inventory-execute] Processing item ${acItem.itemCode}, rawStockBalance:`, rawStockBalance, 'hasValid:', hasValidStockBalance);
         
         const existingComponent = existingComponents?.find(
           c => c.autocount_item_code === acItem.itemCode || c.sku === acItem.itemCode
         );
 
-        // Determine stock_quantity with explicit null handling
-        let stockQty = 0;
-        if (acItem.stockBalance !== undefined && acItem.stockBalance !== null) {
-          stockQty = acItem.stockBalance;
-        } else if (existingComponent?.stock_quantity !== undefined && existingComponent?.stock_quantity !== null) {
-          stockQty = existingComponent.stock_quantity;
-        }
-
-        const componentData = {
+        // Base component data WITHOUT stock_quantity
+        const baseComponentData = {
           sku: acItem.itemCode,
           name: acItem.description,
           description: acItem.description,
@@ -133,29 +140,37 @@ Deno.serve(async (req) => {
           has_batch_no: acItem.hasBatchNo ?? false,
           cost_per_unit: acItem.standardCost || null,
           price: acItem.price || null,
-          stock_quantity: stockQty,
           last_synced_at: new Date().toISOString(),
         };
 
-        console.log(`[sync-inventory-execute] Component data for ${acItem.itemCode}:`, componentData);
-
         if (existingComponent) {
-          // Update existing
+          // Update existing - only include stock_quantity if API provides valid value
+          const updateData = hasValidStockBalance 
+            ? { ...baseComponentData, stock_quantity: Number(rawStockBalance) }
+            : baseComponentData; // Don't touch stock_quantity if API returns null
+          
           const { error } = await supabaseClient
             .from('components')
-            .update(componentData)
+            .update(updateData)
             .eq('id', existingComponent.id);
 
           if (error) throw error;
           updated++;
+          console.log(`[sync-inventory-execute] Updated ${acItem.itemCode}, stock_quantity ${hasValidStockBalance ? 'set to ' + rawStockBalance : 'unchanged'}`);
         } else {
-          // Create new
+          // Create new - default stock to 0 if not provided
+          const insertData = {
+            ...baseComponentData,
+            stock_quantity: hasValidStockBalance ? Number(rawStockBalance) : 0,
+          };
+          
           const { error } = await supabaseClient
             .from('components')
-            .insert(componentData);
+            .insert(insertData);
 
           if (error) throw error;
           created++;
+          console.log(`[sync-inventory-execute] Created ${acItem.itemCode} with stock_quantity=${insertData.stock_quantity}`);
         }
       } catch (error: any) {
         console.error(`Error syncing item ${acItem.itemCode}:`, error);

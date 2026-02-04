@@ -5,6 +5,7 @@ import {
   Factory, 
   Barcode, 
   Warehouse,
+  Store,
   Database,
   Users,
   UserCheck,
@@ -19,7 +20,9 @@ import {
   ChevronRight,
   Plus,
   ClipboardPaste,
-  List
+  List,
+  Truck,
+  RefreshCw
 } from "lucide-react";
 import tlcLogo from "@/assets/tlc-logo.png";
 import {
@@ -67,25 +70,19 @@ export function AppSidebar() {
       title: "Dashboard",
       url: "/dashboard",
       icon: LayoutDashboard,
-      roles: ["Admin", "CEO", "Production", "Warehouse"],
+      roles: ["Admin", "CEO", "Production", "Warehouse", "Fulfillment"],
     },
     {
       title: "BOM Manager",
       url: "/bom",
       icon: Package,
-      roles: ["Admin"],
+      roles: ["Admin", "Warehouse", "Fulfillment", "Production"],
     },
     {
       title: "Production",
       url: "/production",
       icon: Factory,
-      roles: ["Admin", "Production"],
-    },
-    {
-      title: "Commissary",
-      url: "/warehouse",
-      icon: Warehouse,
-      roles: ["Admin", "Warehouse"],
+      roles: ["Admin", "Production", "Warehouse", "Fulfillment"],
     },
     {
       title: "Raw Materials",
@@ -97,7 +94,7 @@ export function AppSidebar() {
       title: "Inventory",
       url: "/inventory",
       icon: Database,
-      roles: ["Admin", "Warehouse"],
+      roles: ["Admin", "Warehouse", "Fulfillment", "Production"],
     },
     {
       title: "Suppliers",
@@ -106,16 +103,28 @@ export function AppSidebar() {
       roles: ["Admin", "Warehouse"],
     },
     {
+      title: "Stores",
+      url: "/stores",
+      icon: Store,
+      roles: ["Admin", "Warehouse"],
+    },
+    {
       title: "Purchasing",
       url: "/purchasing",
       icon: ShoppingCart,
-      roles: ["Admin", "CEO", "Warehouse"],
+      roles: ["Admin", "CEO", "Warehouse", "Finance"],
+    },
+    {
+      title: "Incoming Inventory",
+      url: "/incoming-inventory",
+      icon: Truck,
+      roles: ["Admin", "Warehouse", "Fulfillment", "Production"],
     },
     {
       title: "Store Orders",
       url: "/store/orders",
       icon: ShoppingBag,
-      roles: ["Admin", "Store"],
+      roles: ["Admin", "Store", "Warehouse", "Fulfillment", "Production"],
       subItems: [
         { title: "All Orders", url: "/store/orders", icon: List },
         { title: "New Order", url: "/store/orders/create", icon: Plus },
@@ -126,7 +135,7 @@ export function AppSidebar() {
       title: "Fulfillment",
       url: "/fulfillment",
       icon: ClipboardList,
-      roles: ["Admin", "Fulfillment"],
+      roles: ["Admin", "Fulfillment", "Warehouse", "Production", "Finance"],
     },
     {
       title: "Finance",
@@ -144,7 +153,13 @@ export function AppSidebar() {
       title: "Reports",
       url: "/reports",
       icon: BarChart3,
-      roles: ["Admin", "CEO", "Production", "Warehouse", "Store"],
+      roles: ["Admin", "CEO", "Production", "Warehouse", "Store", "Fulfillment"],
+    },
+    {
+      title: "Sync Monitor",
+      url: "/sync-monitor",
+      icon: RefreshCw,
+      roles: ["Admin"],
     },
     {
       title: "Settings",

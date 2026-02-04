@@ -12,10 +12,12 @@ import { SyncInventoryDialog } from "@/components/inventory/SyncInventoryDialog"
 import { PushInventoryDialog } from "@/components/inventory/PushInventoryDialog";
 import { DeleteInventoryDialog } from "@/components/inventory/DeleteInventoryDialog";
 import { AddInventoryDialog } from "@/components/inventory/AddInventoryDialog";
+import { EditInventoryDialog } from "@/components/inventory/EditInventoryDialog";
+import { ImportInventoryDialog } from "@/components/inventory/ImportInventoryDialog";
 import { FloatingActionButton } from "@/components/ui/floating-action-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, AlertCircle, Database, Plus, RefreshCw } from "lucide-react";
+import { Package, AlertCircle, Database, Plus, RefreshCw, Download, Upload } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { Component } from "@/types/inventory";
@@ -42,6 +44,9 @@ export default function Inventory() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [selectedComponent, setSelectedComponent] = useState<Component | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [itemToEdit, setItemToEdit] = useState<Component | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   // Redirect if not authenticated or not authorized
   if (!user) {
@@ -76,9 +81,17 @@ export default function Inventory() {
 
       let filteredData = data || [];
       if (stockStatusFilter === "in-stock") {
-        filteredData = filteredData.filter(c => c.stock_quantity - c.reserved_quantity > 0);
+        filteredData = filteredData.filter(c => {
+          const available = c.stock_quantity - c.reserved_quantity;
+          const threshold = c.low_stock_threshold ?? 10;
+          return available > threshold;
+        });
       } else if (stockStatusFilter === "low-stock") {
-        filteredData = filteredData.filter(c => c.stock_quantity - c.reserved_quantity > 0 && c.stock_quantity - c.reserved_quantity < 10);
+        filteredData = filteredData.filter(c => {
+          const available = c.stock_quantity - c.reserved_quantity;
+          const threshold = c.low_stock_threshold ?? 10;
+          return available > 0 && available <= threshold;
+        });
       } else if (stockStatusFilter === "out-of-stock") {
         filteredData = filteredData.filter(c => c.stock_quantity - c.reserved_quantity <= 0);
       }
@@ -114,15 +127,72 @@ export default function Inventory() {
     }
   });
 
-  // Calculate KPIs
+  // Calculate KPIs using individual thresholds
   const totalItems = components?.length || 0;
-  const lowStockCount = components?.filter(c => c.stock_quantity - c.reserved_quantity > 0 && c.stock_quantity - c.reserved_quantity < 10).length || 0;
+  const lowStockCount = components?.filter(c => {
+    const available = c.stock_quantity - c.reserved_quantity;
+    const threshold = c.low_stock_threshold ?? 10;
+    return available > 0 && available <= threshold;
+  }).length || 0;
   const outOfStockCount = components?.filter(c => c.stock_quantity - c.reserved_quantity <= 0).length || 0;
 
   const handleAdjustStock = (component: Component) => {
     setSelectedComponent(component);
     setAdjustmentDialogOpen(true);
   };
+
+  const handleEdit = (component: Component) => {
+    setItemToEdit(component);
+    setEditDialogOpen(true);
+  };
+
+  const handleExport = () => {
+    if (!components || components.length === 0) {
+      toast({
+        title: "No Data",
+        description: "No inventory data to export",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const headers = ["SKU", "AutoCount Code", "Name", "Item Group", "Item Type", "Stock Qty", "Reserved", "Available", "Unit", "Low Stock Threshold"];
+    const csvRows = [headers.join(",")];
+
+    components.forEach((item) => {
+      const available = item.stock_quantity - item.reserved_quantity;
+      const row = [
+        item.sku,
+        item.autocount_item_code || "",
+        `"${(item.name || "").replace(/"/g, '""')}"`,
+        item.item_group || "",
+        item.item_type || "",
+        item.stock_quantity,
+        item.reserved_quantity,
+        available,
+        item.unit,
+        item.low_stock_threshold ?? 10
+      ];
+      csvRows.push(row.join(","));
+    });
+
+    const csvContent = csvRows.join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `inventory-export-${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Export Complete",
+      description: `Exported ${components.length} items to CSV`
+    });
+  };
+
   const handleSyncComplete = () => {
     queryClient.invalidateQueries({
       queryKey: ["inventory"]
@@ -187,6 +257,14 @@ export default function Inventory() {
                 <Plus className="mr-2 h-4 w-4" />
                 Add Item
               </Button>
+              <Button variant="outline" onClick={handleExport}>
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </Button>
+              <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+                <Upload className="mr-2 h-4 w-4" />
+                Import
+              </Button>
               <Button variant="outline" onClick={() => setSyncDialogOpen(true)}>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Pull from AutoCount
@@ -212,25 +290,35 @@ export default function Inventory() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card 
+            className={`cursor-pointer transition-all hover:shadow-md hover:border-yellow-400 ${stockStatusFilter === "low-stock" ? "ring-2 ring-yellow-400 border-yellow-400" : ""}`}
+            onClick={() => setStockStatusFilter(stockStatusFilter === "low-stock" ? "all" : "low-stock")}
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Low Stock</CardTitle>
               <AlertCircle className="h-4 w-4 text-yellow-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{lowStockCount}</div>
-              <p className="text-xs text-muted-foreground">Items below threshold</p>
+              <p className="text-xs text-muted-foreground">
+                {stockStatusFilter === "low-stock" ? "Click to clear filter" : "Click to filter"}
+              </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card 
+            className={`cursor-pointer transition-all hover:shadow-md hover:border-red-400 ${stockStatusFilter === "out-of-stock" ? "ring-2 ring-red-400 border-red-400" : ""}`}
+            onClick={() => setStockStatusFilter(stockStatusFilter === "out-of-stock" ? "all" : "out-of-stock")}
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Out of Stock</CardTitle>
               <Database className="h-4 w-4 text-red-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{outOfStockCount}</div>
-              <p className="text-xs text-muted-foreground">Items unavailable</p>
+              <p className="text-xs text-muted-foreground">
+                {stockStatusFilter === "out-of-stock" ? "Click to clear filter" : "Click to filter"}
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -344,6 +432,17 @@ export default function Inventory() {
         onConfirm={handleConfirmDelete}
         itemCount={1}
         isDeleting={deleteMutation.isPending}
+      />
+
+      <EditInventoryDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        component={itemToEdit}
+      />
+
+      <ImportInventoryDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
       />
     </DashboardLayout>;
 }
