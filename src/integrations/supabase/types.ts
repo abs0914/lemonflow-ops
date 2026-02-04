@@ -975,6 +975,7 @@ export type Database = {
         Row: {
           address: string | null
           autocount_synced: boolean | null
+          city: string | null
           contact_person: string | null
           created_at: string | null
           debtor_code: string
@@ -982,15 +983,19 @@ export type Database = {
           id: string
           is_active: boolean | null
           last_synced_at: string | null
+          opened_date: string | null
           phone: string | null
+          region: string | null
           store_code: string
           store_name: string
           store_type: string | null
+          sync_error_message: string | null
           updated_at: string | null
         }
         Insert: {
           address?: string | null
           autocount_synced?: boolean | null
+          city?: string | null
           contact_person?: string | null
           created_at?: string | null
           debtor_code: string
@@ -998,15 +1003,19 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           last_synced_at?: string | null
+          opened_date?: string | null
           phone?: string | null
+          region?: string | null
           store_code: string
           store_name: string
           store_type?: string | null
+          sync_error_message?: string | null
           updated_at?: string | null
         }
         Update: {
           address?: string | null
           autocount_synced?: boolean | null
+          city?: string | null
           contact_person?: string | null
           created_at?: string | null
           debtor_code?: string
@@ -1014,10 +1023,13 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           last_synced_at?: string | null
+          opened_date?: string | null
           phone?: string | null
+          region?: string | null
           store_code?: string
           store_name?: string
           store_type?: string | null
+          sync_error_message?: string | null
           updated_at?: string | null
         }
         Relationships: []
