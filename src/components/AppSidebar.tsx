@@ -308,9 +308,9 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-1">
-        <div className="flex items-center gap-1">
-          <SidebarTrigger />
-          {state === "expanded" && (
+        {state === "expanded" ? (
+          <div className="flex items-center gap-1">
+            <SidebarTrigger />
             <Button
               onClick={signOut}
               variant="ghost"
@@ -320,8 +320,20 @@ export function AppSidebar() {
               <LogOut className="mr-2 h-4 w-4" />
               Logout
             </Button>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-1">
+            <SidebarTrigger />
+            <Button
+              onClick={signOut}
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-primary"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </SidebarFooter>
     </Sidebar>
   );
