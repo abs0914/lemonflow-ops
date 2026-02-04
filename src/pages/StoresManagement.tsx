@@ -27,7 +27,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FilterableTableHead } from "@/components/ui/filterable-table-head";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
+import { useTableSort } from "@/hooks/useTableSort";
 
 export default function StoresManagement() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -36,13 +37,6 @@ export default function StoresManagement() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [storeToDelete, setStoreToDelete] = useState<Store | null>(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
-
-  // Column filters
-  const [codeFilter, setCodeFilter] = useState("");
-  const [nameFilter, setNameFilter] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
-  const [debtorFilter, setDebtorFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
 
   const { data: stores, isLoading } = useStores();
   const deleteMutation = useDeleteStore();
@@ -54,18 +48,11 @@ export default function StoresManagement() {
         (store.store_name?.toLowerCase() || '').includes(search) ||
         (store.store_code?.toLowerCase() || '').includes(search) ||
         (store.debtor_code?.toLowerCase() || '').includes(search);
-
-      const matchesCode = codeFilter === "" || (store.store_code?.toLowerCase() || '').includes(codeFilter.toLowerCase());
-      const matchesName = nameFilter === "" || (store.store_name?.toLowerCase() || '').includes(nameFilter.toLowerCase());
-      const matchesType = typeFilter === "" || 
-        (store.store_type === "own_store" ? "own store" : "franchisee").includes(typeFilter.toLowerCase());
-      const matchesDebtor = debtorFilter === "" || (store.debtor_code?.toLowerCase() || '').includes(debtorFilter.toLowerCase());
-      const matchesStatus = statusFilter === "" || 
-        (store.is_active ? "active" : "inactive").includes(statusFilter.toLowerCase());
-
-      return matchesSearch && matchesCode && matchesName && matchesType && matchesDebtor && matchesStatus;
+      return matchesSearch;
     });
-  }, [stores, searchTerm, codeFilter, nameFilter, typeFilter, debtorFilter, statusFilter]);
+  }, [stores, searchTerm]);
+
+  const { sortKey, sortDirection, handleSort, sortedData } = useTableSort(filteredStores);
 
   const handleEdit = (store: Store) => {
     setSelectedStore(store);
@@ -132,7 +119,7 @@ export default function StoresManagement() {
               <Skeleton key={i} className="h-16 w-full" />
             ))}
           </div>
-        ) : filteredStores?.length === 0 ? (
+        ) : sortedData?.length === 0 ? (
           <div className="text-center py-12 border rounded-lg bg-muted/30">
             <p className="text-muted-foreground">No stores found</p>
           </div>
@@ -141,17 +128,17 @@ export default function StoresManagement() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <FilterableTableHead value={codeFilter} onChange={setCodeFilter} placeholder="Filter code...">Store Code</FilterableTableHead>
-                  <FilterableTableHead value={nameFilter} onChange={setNameFilter} placeholder="Filter name...">Store Name</FilterableTableHead>
-                  <FilterableTableHead value={typeFilter} onChange={setTypeFilter} placeholder="Filter type...">Type</FilterableTableHead>
-                  <FilterableTableHead value={debtorFilter} onChange={setDebtorFilter} placeholder="Filter debtor...">Debtor Code</FilterableTableHead>
+                  <SortableTableHead sortKey="store_code" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Store Code</SortableTableHead>
+                  <SortableTableHead sortKey="store_name" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Store Name</SortableTableHead>
+                  <SortableTableHead sortKey="store_type" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Type</SortableTableHead>
+                  <SortableTableHead sortKey="debtor_code" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Debtor Code</SortableTableHead>
                   <TableHead>Contact</TableHead>
-                  <FilterableTableHead value={statusFilter} onChange={setStatusFilter} placeholder="Filter status...">Status</FilterableTableHead>
+                  <SortableTableHead sortKey="is_active" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Status</SortableTableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredStores?.map((store) => (
+                {sortedData?.map((store) => (
                   <TableRow key={store.id}>
                     <TableCell className="font-medium">{store.store_code}</TableCell>
                     <TableCell>{store.store_name}</TableCell>
