@@ -20,6 +20,7 @@ import RawMaterials from "./pages/RawMaterials";
 import IncomingInventory from "./pages/IncomingInventory";
 import CEODashboard from "./pages/CEODashboard";
 import Settings from "./pages/Settings";
+import MyAccount from "./pages/MyAccount";
 import StoreOrders from "./pages/StoreOrders";
 import StoreOrderCreate from "./pages/StoreOrderCreate";
 import StoreOrderQuickEntry from "./pages/StoreOrderQuickEntry";
@@ -68,6 +69,7 @@ const App = () => (
             <Route path="/incoming-inventory" element={<IncomingInventory />} />
             <Route path="/ceo-dashboard" element={<CEODashboard />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/my-account" element={<MyAccount />} />
             <Route path="/store/orders" element={<StoreOrders />} />
             <Route path="/store/orders/create" element={<StoreOrderCreate />} />
             <Route path="/store/orders/quick-entry" element={<StoreOrderQuickEntry />} />
