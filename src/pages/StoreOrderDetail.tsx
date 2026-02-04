@@ -13,12 +13,12 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
-const statusColors = {
-  draft: "bg-gray-100 text-gray-800",
-  submitted: "bg-blue-100 text-blue-800",
-  processing: "bg-yellow-100 text-yellow-800",
-  completed: "bg-green-100 text-green-800",
-  cancelled: "bg-red-100 text-red-800",
+const statusColors: Record<string, string> = {
+  draft: "bg-muted text-muted-foreground",
+  submitted: "bg-primary/10 text-primary",
+  processing: "bg-accent text-accent-foreground",
+  completed: "bg-primary/20 text-primary",
+  cancelled: "bg-destructive/10 text-destructive",
 };
 
 export default function StoreOrderDetail() {
@@ -70,11 +70,20 @@ export default function StoreOrderDetail() {
         throw new Error(data?.error || "Sync failed");
       }
     } catch (error: any) {
-      toast.error(`Sync failed: ${error.message}`);
+      // Extract clean error message, stripping HTML if present
+      let errorMessage = error.message || "Unknown sync error";
+      if (errorMessage.includes("<!DOCTYPE") || errorMessage.includes("<html")) {
+        // Extract HTTP status if present, otherwise show generic message
+        const statusMatch = errorMessage.match(/(\d{3})\s*-?\s*<!DOCTYPE/);
+        errorMessage = statusMatch 
+          ? `AutoCount API error (HTTP ${statusMatch[1]}): The sales order endpoint may not be configured on the backend.`
+          : "AutoCount API error: Received invalid response from server. Please contact support.";
+      }
+      toast.error(`Sync failed: ${errorMessage}`);
       await updateMutation.mutateAsync({
         id: order.id,
         updates: {
-          sync_error_message: error.message,
+          sync_error_message: errorMessage,
         },
       });
     } finally {
@@ -171,7 +180,7 @@ export default function StoreOrderDetail() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <div className="text-sm text-muted-foreground">Status</div>
-                  <Badge className={statusColors[order.status]}>
+                  <Badge className={statusColors[order.status] || statusColors.draft}>
                     {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                   </Badge>
                 </div>
@@ -203,7 +212,7 @@ export default function StoreOrderDetail() {
               {order.autocount_synced && (
                 <div>
                   <div className="text-sm text-muted-foreground mb-1">AutoCount Status</div>
-                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
                     Synced - {order.autocount_doc_no}
                   </Badge>
                 </div>
