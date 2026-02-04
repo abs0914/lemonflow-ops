@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Download, FileSpreadsheet, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +15,7 @@ import { toast } from "sonner";
 import { formatCurrency } from "@/lib/currency";
 
 interface SalesOrderData {
+  id: string;
   order_number: string;
   store: string;
   status: string;
@@ -30,6 +32,11 @@ interface SalesOrderReportTableProps {
 
 export function SalesOrderReportTable({ data, exportFileName }: SalesOrderReportTableProps) {
   const tableRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+
+  const handleRowClick = (orderId: string) => {
+    navigate(`/fulfillment/${orderId}`);
+  };
 
   const columns = [
     { key: "order_number", label: "Order Number" },
@@ -240,7 +247,11 @@ export function SalesOrderReportTable({ data, exportFileName }: SalesOrderReport
               </TableHeader>
               <TableBody>
                 {data.map((row, i) => (
-                  <TableRow key={i}>
+                  <TableRow 
+                    key={i}
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => handleRowClick(row.id)}
+                  >
                     {columns.map((column) => (
                       <TableCell
                         key={column.key}
