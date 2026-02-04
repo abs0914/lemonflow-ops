@@ -307,22 +307,21 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border">
-        <div className="p-2">
-          <SidebarTrigger className="w-full" />
-        </div>
-        {state === "expanded" && (
-          <div className="p-2">
+      <SidebarFooter className="border-t border-sidebar-border p-1">
+        <div className="flex items-center gap-1">
+          <SidebarTrigger />
+          {state === "expanded" && (
             <Button
               onClick={signOut}
               variant="ghost"
-              className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-primary"
+              size="sm"
+              className="flex-1 justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-primary h-8"
             >
               <LogOut className="mr-2 h-4 w-4" />
               Logout
             </Button>
-          </div>
-        )}
+          )}
+        </div>
       </SidebarFooter>
     </Sidebar>
   );
