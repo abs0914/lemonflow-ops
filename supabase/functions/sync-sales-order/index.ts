@@ -178,11 +178,27 @@ Deno.serve(async (req) => {
       const errorText = await response.text();
       console.error('[sync-sales-order] AutoCount API error:', errorText);
 
+      // Parse error for better messaging
+      let errorMessage = `HTTP ${response.status}`;
+      if (response.status === 404) {
+        errorMessage = 'AutoCount API endpoint not found (404). The sales-orders endpoint may not be deployed on the backend server. Please redeploy the AutoCount Backend API.';
+      } else if (errorText.includes('<!DOCTYPE') || errorText.includes('<html')) {
+        // Server returned HTML error page
+        errorMessage = `Server error (HTTP ${response.status}): The AutoCount API returned an error page instead of JSON. Please check the backend deployment.`;
+      } else {
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.message || errorJson.error || errorText;
+        } catch {
+          errorMessage = errorText.substring(0, 200); // Truncate long error messages
+        }
+      }
+
       // Update order with error
       await supabaseClient
         .from('sales_orders')
         .update({
-          sync_error_message: `AutoCount error: ${response.status} - ${errorText}`,
+          sync_error_message: errorMessage,
         })
         .eq('id', so.id);
 
@@ -194,10 +210,10 @@ Deno.serve(async (req) => {
           reference_type: 'sales_order',
           sync_type: 'create',
           sync_status: 'failed',
-          error_message: `AutoCount error: ${response.status} - ${errorText}`,
+          error_message: errorMessage,
         });
 
-      throw new Error(`AutoCount API error: ${response.status} - ${errorText}`);
+      throw new Error(errorMessage);
     }
 
     const result = await response.json();
