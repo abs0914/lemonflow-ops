@@ -8,6 +8,7 @@ import {
   Store,
   Database,
   Users,
+  User,
   UserCheck,
   ShoppingCart,
   Settings as SettingsIcon,
@@ -166,6 +167,12 @@ export function AppSidebar() {
       url: "/settings",
       icon: SettingsIcon,
       roles: ["Admin"],
+    },
+    {
+      title: "My Account",
+      url: "/my-account",
+      icon: User,
+      roles: ["Store", "Admin", "CEO", "Finance", "Production", "Warehouse", "Fulfillment"],
     },
   ];
 
