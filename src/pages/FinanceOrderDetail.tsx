@@ -17,7 +17,8 @@ import {
 import { useSalesOrder, useSalesOrderLines } from "@/hooks/useSalesOrders";
 import { useConfirmPayment, useRejectPayment } from "@/hooks/useFinanceOrders";
 import { format } from "date-fns";
-import { ArrowLeft, Check, X, Package, Store, Calendar as CalendarIcon, DollarSign } from "lucide-react";
+import { ArrowLeft, Check, X, Package, Store, Calendar as CalendarIcon, DollarSign, Truck, ShoppingBag } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -52,6 +53,7 @@ export default function FinanceOrderDetail() {
   const [deliveryFee, setDeliveryFee] = useState<string>("0");
   const [shippingFee, setShippingFee] = useState<string>("0");
   const [deliveryDate, setDeliveryDate] = useState<Date | undefined>(undefined);
+  const [orderType, setOrderType] = useState<"delivery" | "pickup">("delivery");
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
 
@@ -86,7 +88,8 @@ export default function FinanceOrderDetail() {
     }
 
     if (!deliveryDate) {
-      toast.error("Please set a delivery date before confirming payment");
+      const label = orderType === "pickup" ? "pickup date" : "delivery date";
+      toast.error(`Please set a ${label} before confirming payment`);
       return;
     }
 
@@ -386,9 +389,39 @@ export default function FinanceOrderDetail() {
               </div>
             </div>
 
+            {/* Order Type Selection */}
+            <div className="space-y-3">
+              <Label>Order Fulfillment Type <span className="text-destructive">*</span></Label>
+              <RadioGroup
+                value={orderType}
+                onValueChange={(val) => {
+                  setOrderType(val as "delivery" | "pickup");
+                  setDeliveryDate(undefined);
+                }}
+                className="flex gap-4"
+              >
+                <div className="flex items-center gap-2 rounded-lg border px-4 py-3 cursor-pointer flex-1 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5">
+                  <RadioGroupItem value="delivery" id="type-delivery" />
+                  <label htmlFor="type-delivery" className="flex items-center gap-2 cursor-pointer font-medium">
+                    <Truck className="h-4 w-4 text-muted-foreground" />
+                    Delivery
+                  </label>
+                </div>
+                <div className="flex items-center gap-2 rounded-lg border px-4 py-3 cursor-pointer flex-1 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5">
+                  <RadioGroupItem value="pickup" id="type-pickup" />
+                  <label htmlFor="type-pickup" className="flex items-center gap-2 cursor-pointer font-medium">
+                    <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+                    Pickup
+                  </label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            {/* Date Picker — label changes based on type */}
             <div className="space-y-2">
               <Label>
-                Delivery Date <span className="text-destructive">*</span>
+                {orderType === "pickup" ? "Pickup Date" : "Delivery Date"}{" "}
+                <span className="text-destructive">*</span>
               </Label>
               <Popover>
                 <PopoverTrigger asChild>
@@ -400,7 +433,9 @@ export default function FinanceOrderDetail() {
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {deliveryDate ? format(deliveryDate, "PPP") : "Select delivery date"}
+                    {deliveryDate
+                      ? format(deliveryDate, "PPP")
+                      : `Select ${orderType === "pickup" ? "pickup" : "delivery"} date`}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -416,7 +451,7 @@ export default function FinanceOrderDetail() {
               </Popover>
               {!deliveryDate && (
                 <p className="text-xs text-muted-foreground">
-                  Set delivery date before confirming payment
+                  Set {orderType === "pickup" ? "pickup" : "delivery"} date before confirming payment
                 </p>
               )}
             </div>
