@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using AutoCount;
+using AutoCount.Const;
 using AutoCount.Invoicing.Sales.SalesOrder;
 using Backend.Domain;
 using DomainSalesOrder = Backend.Domain.SalesOrder;
@@ -192,7 +193,7 @@ namespace Backend.Infrastructure.AutoCount
                     // Header fields
                     doc.DebtorCode = salesOrder.DebtorCode;
                     doc.DocNo = string.IsNullOrWhiteSpace(salesOrder.DocNo)
-                        ? Const.AppConst.NewDocumentNo
+                        ? AppConst.NewDocumentNo
                         : salesOrder.DocNo;
                     doc.DocDate = salesOrder.DocDate == default(DateTime)
                         ? DateTime.Today.Date
@@ -226,14 +227,35 @@ namespace Backend.Infrastructure.AutoCount
                             dtl.Location = line.Location;
 
                         dtl.Qty = line.Quantity;
-                        dtl.UOM = string.IsNullOrWhiteSpace(line.UOM) ? "UNIT" : line.UOM;
+
+                        // Look up the item's base UOM from AutoCount to ensure FK constraint is satisfied
+                        string itemUom = line.UOM;
+                        if (string.IsNullOrWhiteSpace(itemUom) || !string.IsNullOrWhiteSpace(line.ItemCode))
+                        {
+                            // Query the item's base UOM from the database
+                            string uomSql = "SELECT BaseUOM FROM Item WHERE ItemCode = @ItemCode";
+                            var uomParam = new System.Data.SqlClient.SqlParameter("@ItemCode", line.ItemCode);
+                            DataTable uomTable = userSession.DBSetting.GetDataTable(uomSql, false, new[] { uomParam });
+
+                            if (uomTable.Rows.Count > 0 && uomTable.Rows[0]["BaseUOM"] != DBNull.Value)
+                            {
+                                itemUom = uomTable.Rows[0]["BaseUOM"].ToString();
+                            }
+                            else if (string.IsNullOrWhiteSpace(itemUom))
+                            {
+                                // Fallback to UNIT only if item not found and no UOM provided
+                                itemUom = "UNIT";
+                            }
+                        }
+                        dtl.UOM = itemUom;
+
                         dtl.UnitPrice = line.UnitPrice;
 
                         if (!string.IsNullOrWhiteSpace(line.Discount))
                             dtl.Discount = line.Discount;
 
                         if (!string.IsNullOrWhiteSpace(line.TaxCode))
-                            dtl.TaxType = line.TaxCode;
+                            dtl.TaxCode = line.TaxCode;
                     }
 
                     doc.Save();

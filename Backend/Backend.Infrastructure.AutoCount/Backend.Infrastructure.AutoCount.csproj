@@ -100,6 +100,8 @@
 	    <Compile Include="AutoCountDailySalesService.cs" />
 	    <Compile Include="IAutoCountStoreService.cs" />
 	    <Compile Include="AutoCountStoreService.cs" />
+	    <Compile Include="IAutoCountSalesOrderService.cs" />
+	    <Compile Include="AutoCountSalesOrderService.cs" />
 	  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -23,17 +23,19 @@ Deno.serve(async (req) => {
 
     // Authenticate with LemonCo API
     console.log('[push-inventory-to-autocount] Authenticating');
-    const authResponse = await fetch(`${apiUrl}/api/auth/login`, {
+    const authResponse = await fetch(`${apiUrl}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: username, password }),
+      body: JSON.stringify({ username, password }),
     });
 
     if (!authResponse.ok) {
-      throw new Error(`Authentication failed: ${authResponse.status}`);
+      const authError = await authResponse.text();
+      throw new Error(`Authentication failed: ${authResponse.status} - ${authError}`);
     }
 
     const authData = await authResponse.json();
+    const jwtToken = authData.token;
 
     // Initialize Supabase client
     const supabaseClient = createClient(
@@ -85,7 +87,7 @@ Deno.serve(async (req) => {
         const createResponse = await fetch(`${apiUrl}/autocount/items`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${authData.AccessToken}`,
+            'Authorization': `Bearer ${jwtToken}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(itemPayload),
@@ -96,13 +98,13 @@ Deno.serve(async (req) => {
           console.log(`[push-inventory-to-autocount] Created ${itemPayload.ItemCode}`);
         } else {
           const createError = await createResponse.text();
-          console.log(`[push-inventory-to-autocount] Create failed for ${itemPayload.ItemCode}, trying update`);
-          
+          console.log(`[push-inventory-to-autocount] Create failed for ${itemPayload.ItemCode}: ${createError}, trying update`);
+
           // If create failed, try to update
-          const updateResponse = await fetch(`${apiUrl}/autocount/items/${itemPayload.ItemCode}`, {
+          const updateResponse = await fetch(`${apiUrl}/autocount/items/${encodeURIComponent(itemPayload.ItemCode)}`, {
             method: 'PUT',
             headers: {
-              'Authorization': `Bearer ${authData.AccessToken}`,
+              'Authorization': `Bearer ${jwtToken}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(itemPayload),
@@ -115,7 +117,8 @@ Deno.serve(async (req) => {
             const updateError = await updateResponse.text();
             console.error(`[push-inventory-to-autocount] Both create and update failed for ${itemPayload.ItemCode}`);
             failed++;
-            errors.push(`${itemPayload.ItemCode}: ${updateError}`);
+            // Include BOTH create and update errors for better debugging
+            errors.push(`${itemPayload.ItemCode}: CREATE: ${createError} | UPDATE: ${updateError}`);
           }
         }
 

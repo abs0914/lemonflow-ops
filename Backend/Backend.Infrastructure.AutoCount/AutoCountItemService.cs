@@ -219,7 +219,10 @@ namespace Backend.Infrastructure.AutoCount
                 }
                 catch (Exception ex)
                 {
-                    throw new InvalidOperationException("Failed to update stock item '" + item.ItemCode + "' in AutoCount.", ex);
+                    // Include full exception chain for debugging
+                    string innerMsg = ex.InnerException != null ? " | Inner: " + ex.InnerException.Message : "";
+                    string inner2Msg = ex.InnerException?.InnerException != null ? " | Inner2: " + ex.InnerException.InnerException.Message : "";
+                    throw new InvalidOperationException("Failed to update stock item '" + item.ItemCode + "' in AutoCount." + innerMsg + inner2Msg, ex);
                 }
             }
         }
@@ -339,8 +342,10 @@ namespace Backend.Infrastructure.AutoCount
                 target.ItemType = source.ItemType;
 
             // UOM & pricing
+            // NOTE: AutoCount does NOT allow changing UOM during edit (similar to ItemCode).
+            // UOM setup should only happen during CREATE, not UPDATE.
             var baseUom = target.BaseUomRecord;
-            if (baseUom == null && !string.IsNullOrWhiteSpace(source.BaseUom))
+            if (!isUpdate && baseUom == null && !string.IsNullOrWhiteSpace(source.BaseUom))
             {
                 // When creating a new item, AutoCount auto-initialises a default UOM.
                 // If present, we reset it to our desired base UOM.
@@ -350,9 +355,11 @@ namespace Backend.Infrastructure.AutoCount
 
             if (baseUom != null)
             {
-                if (!string.IsNullOrWhiteSpace(source.BaseUom))
+                // Only set UOM name during CREATE - AutoCount doesn't allow changing UOM during edit
+                if (!isUpdate && !string.IsNullOrWhiteSpace(source.BaseUom))
                     baseUom.Uom = source.BaseUom;
 
+                // Cost and price can always be updated
                 if (source.StandardCost.HasValue)
                     baseUom.StandardCost = source.StandardCost.Value;
 

@@ -111,46 +111,23 @@ namespace Backend.Infrastructure.AutoCount
                 {
                     var userSession = _sessionProvider.GetUserSession();
                     var dbSetting = userSession.DBSetting;
-                    var cmd = DebtorDataAccess.Create(userSession, dbSetting);
 
-                    // Check if debtor already exists (handle "not found" exception as normal case)
-                    DebtorEntity existing = null;
-                    try
-                    {
-                        existing = cmd.GetDebtor(debtor.Code);
-                    }
-                    catch (DebtorRecordNotFoundException)
-                    {
-                        // Debtor does not exist - this is expected for create, proceed normally
-                        existing = null;
-                    }
-
-                    if (existing != null)
+                    // Check if debtor already exists using raw SQL
+                    if (DebtorExistsInDatabase(dbSetting, debtor.Code))
                     {
                         throw new InvalidOperationException("Debtor '" + debtor.Code + "' already exists in AutoCount.");
                     }
 
-                    var acDebtor = cmd.NewDebtor();
-                    MapDomainDebtorToEntity(debtor, acDebtor, userSession);
+                    // Insert debtor using raw SQL to handle all NOT NULL columns including SGEInvoicePeppolFormat
+                    // The AutoCount SDK's SaveDebtor() fails because it doesn't set SGEInvoicePeppolFormat
+                    InsertDebtorWithAllRequiredFields(dbSetting, debtor, userSession.LoginUserID);
 
-                    // SGEInvoicePeppolFormat is required by AutoCount database (Singapore e-invoicing).
-                    // The field is not exposed in DebtorEntity API.
-                    // Try to save, and if it fails due to SGEInvoicePeppolFormat, insert via raw SQL.
-                    try
+                    // Reload the debtor using AutoCount API to return the proper entity
+                    var cmd = DebtorDataAccess.Create(userSession, dbSetting);
+                    var acDebtor = cmd.GetDebtor(debtor.Code);
+                    if (acDebtor == null)
                     {
-                        cmd.SaveDebtor(acDebtor, userSession.LoginUserID);
-                    }
-                    catch (Exception saveEx) when (ContainsSGEError(saveEx))
-                    {
-                        // AutoCount API doesn't expose this field - insert via raw SQL
-                        InsertDebtorWithSGEField(dbSetting, debtor, userSession.LoginUserID);
-
-                        // Reload the debtor to return the proper entity
-                        acDebtor = cmd.GetDebtor(debtor.Code);
-                        if (acDebtor == null)
-                        {
-                            throw new InvalidOperationException("Debtor was inserted but could not be retrieved.");
-                        }
+                        throw new InvalidOperationException("Debtor was inserted but could not be retrieved.");
                     }
 
                     return MapAutoCountDebtorToDomain(acDebtor);
@@ -162,6 +139,130 @@ namespace Backend.Infrastructure.AutoCount
                 catch (Exception ex)
                 {
                     throw new InvalidOperationException("Failed to create debtor in AutoCount.", ex);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Checks if a debtor exists in the database using raw SQL.
+        /// </summary>
+        private bool DebtorExistsInDatabase(global::AutoCount.Data.DBSetting dbSetting, string debtorCode)
+        {
+            string connStr = dbSetting.ConnectionString;
+            using (var conn = new SqlConnection(connStr))
+            {
+                conn.Open();
+                string sql = "SELECT COUNT(1) FROM Debtor WHERE AccNo = @AccNo";
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@AccNo", debtorCode);
+                    int count = (int)cmd.ExecuteScalar();
+                    return count > 0;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Inserts a debtor directly via SQL with all required NOT NULL columns.
+        /// This is required because the AutoCount SDK's SaveDebtor() does not set SGEInvoicePeppolFormat.
+        ///
+        /// AutoCount requires a GL account in GLMast before creating a Debtor (FK constraint).
+        /// GLMast NOT NULL columns: AccNo, AccType, CurrencyCode, Guid
+        /// Debtor NOT NULL columns: AccNo, DisplayTerm, CurrencyCode, AllowExceedCreditLimit,
+        ///   DiscountPercent, LastModified, LastModifiedUserID, CreatedTimeStamp, CreatedUserID,
+        ///   HasBonusPoint, IsGroupCompany, IsActive, LastUpdate, InclusiveTax, RoundingMethod,
+        ///   Guid, SGEInvoicePeppolFormat
+        /// </summary>
+        private void InsertDebtorWithAllRequiredFields(global::AutoCount.Data.DBSetting dbSetting, Debtor debtor, string userId)
+        {
+            string connStr = dbSetting.ConnectionString;
+            string currencyCode = debtor.CurrencyCode ?? "PHP";
+
+            using (var conn = new SqlConnection(connStr))
+            {
+                conn.Open();
+
+                // Use a transaction to ensure both inserts succeed or fail together
+                using (var transaction = conn.BeginTransaction())
+                {
+                    try
+                    {
+                        // Step 1: Insert GL account in GLMast (required by FK constraint)
+                        // AccType 'CA' = Current Asset (Trade Debtors)
+                        string insertGLSql = @"
+                            INSERT INTO GLMast (AccNo, Description, AccType, CurrencyCode, [Guid])
+                            VALUES (@AccNo, @Description, @AccType, @CurrencyCode, @Guid)";
+
+                        using (var cmd = new SqlCommand(insertGLSql, conn, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@AccNo", debtor.Code ?? string.Empty);
+                            cmd.Parameters.AddWithValue("@Description", debtor.Name ?? debtor.Code ?? string.Empty);
+                            cmd.Parameters.AddWithValue("@AccType", "CA");  // Current Asset - Trade Debtors
+                            cmd.Parameters.AddWithValue("@CurrencyCode", currencyCode);
+                            cmd.Parameters.AddWithValue("@Guid", Guid.NewGuid());
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        // Step 2: Insert Debtor record
+                        string insertDebtorSql = @"
+                            INSERT INTO Debtor (
+                                AccNo, CompanyName, Address1, Address2, Attention, Phone1, EmailAddress,
+                                DisplayTerm, CurrencyCode, AllowExceedCreditLimit, DiscountPercent,
+                                HasBonusPoint, IsGroupCompany, IsActive, LastUpdate,
+                                InclusiveTax, RoundingMethod, [Guid], SGEInvoicePeppolFormat,
+                                CreatedUserID, CreatedTimeStamp, LastModifiedUserID, LastModified
+                            ) VALUES (
+                                @AccNo, @CompanyName, @Address1, @Address2, @Attention, @Phone1, @EmailAddress,
+                                @DisplayTerm, @CurrencyCode, @AllowExceedCreditLimit, @DiscountPercent,
+                                @HasBonusPoint, @IsGroupCompany, @IsActive, @LastUpdate,
+                                @InclusiveTax, @RoundingMethod, @Guid, @SGEInvoicePeppolFormat,
+                                @CreatedUserID, @CreatedTimeStamp, @LastModifiedUserID, @LastModified
+                            )";
+
+                        using (var cmd = new SqlCommand(insertDebtorSql, conn, transaction))
+                        {
+                            // Required fields
+                            cmd.Parameters.AddWithValue("@AccNo", debtor.Code ?? string.Empty);
+                            cmd.Parameters.AddWithValue("@CompanyName", (object)debtor.Name ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@Address1", (object)debtor.Address1 ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@Address2", (object)debtor.Address2 ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@Attention", (object)debtor.ContactPerson ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@Phone1", (object)debtor.Phone ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@EmailAddress", (object)debtor.Email ?? DBNull.Value);
+
+                            // NOT NULL columns with default values
+                            cmd.Parameters.AddWithValue("@DisplayTerm", "C.O.D.");
+                            cmd.Parameters.AddWithValue("@CurrencyCode", currencyCode);
+                            cmd.Parameters.AddWithValue("@AllowExceedCreditLimit", "F");
+                            cmd.Parameters.AddWithValue("@DiscountPercent", 0m);
+                            cmd.Parameters.AddWithValue("@HasBonusPoint", "F");
+                            cmd.Parameters.AddWithValue("@IsGroupCompany", "F");
+                            cmd.Parameters.AddWithValue("@IsActive", debtor.IsActive ? "T" : "F");
+                            cmd.Parameters.AddWithValue("@LastUpdate", 0);
+                            cmd.Parameters.AddWithValue("@InclusiveTax", "F");
+                            cmd.Parameters.AddWithValue("@RoundingMethod", 0);
+                            cmd.Parameters.AddWithValue("@Guid", Guid.NewGuid());
+                            // SGEInvoicePeppolFormat is nvarchar(10) - use empty string as default
+                            cmd.Parameters.AddWithValue("@SGEInvoicePeppolFormat", "");
+
+                            // Audit fields
+                            DateTime now = DateTime.Now;
+                            string user = userId ?? "SYSTEM";
+                            cmd.Parameters.AddWithValue("@CreatedUserID", user);
+                            cmd.Parameters.AddWithValue("@CreatedTimeStamp", now);
+                            cmd.Parameters.AddWithValue("@LastModifiedUserID", user);
+                            cmd.Parameters.AddWithValue("@LastModified", now);
+
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        transaction.Commit();
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
                 }
             }
         }
@@ -476,49 +577,6 @@ namespace Backend.Infrastructure.AutoCount
                 {
                     // If we can't add the constraint, continue anyway - the save might still work
                     // or fail with a more specific error
-                }
-            }
-        }
-
-        /// <summary>
-        /// Inserts a debtor directly via SQL when the AutoCount API fails due to SGEInvoicePeppolFormat.
-        /// This is a workaround for AutoCount databases that have Singapore e-invoicing fields.
-        /// </summary>
-        private void InsertDebtorWithSGEField(global::AutoCount.Data.DBSetting dbSetting, Debtor debtor, string userId)
-        {
-            string connStr = dbSetting.ConnectionString;
-            using (var conn = new SqlConnection(connStr))
-            {
-                conn.Open();
-
-                // Insert minimal debtor record with SGEInvoicePeppolFormat set to empty string
-                // SGEInvoicePeppolFormat requires 'SG-Peppol-1.0' for Singapore IMDA standard
-                string insertSql = @"
-                    INSERT INTO AR_Customer (
-                        AccNo, CompanyName, IsActive, CurrencyCode,
-                        Contact, Phone1, Email, Address1,
-                        SGEInvoicePeppolFormat,
-                        CreatedUserID, CreatedTimeStamp, LastModifiedUserID, LastModifiedTimeStamp
-                    ) VALUES (
-                        @AccNo, @CompanyName, @IsActive, @CurrencyCode,
-                        @Contact, @Phone1, @Email, @Address1,
-                        'SG-Peppol-1.0',
-                        @UserID, GETDATE(), @UserID, GETDATE()
-                    )";
-
-                using (var cmd = new SqlCommand(insertSql, conn))
-                {
-                    cmd.Parameters.AddWithValue("@AccNo", debtor.Code ?? string.Empty);
-                    cmd.Parameters.AddWithValue("@CompanyName", debtor.Name ?? string.Empty);
-                    cmd.Parameters.AddWithValue("@IsActive", debtor.IsActive ? "T" : "F");
-                    cmd.Parameters.AddWithValue("@CurrencyCode", debtor.CurrencyCode ?? "PHP");
-                    cmd.Parameters.AddWithValue("@Contact", debtor.ContactPerson ?? string.Empty);
-                    cmd.Parameters.AddWithValue("@Phone1", debtor.Phone ?? string.Empty);
-                    cmd.Parameters.AddWithValue("@Email", debtor.Email ?? string.Empty);
-                    cmd.Parameters.AddWithValue("@Address1", debtor.Address1 ?? string.Empty);
-                    cmd.Parameters.AddWithValue("@UserID", userId ?? "ABORJA");
-
-                    cmd.ExecuteNonQuery();
                 }
             }
         }

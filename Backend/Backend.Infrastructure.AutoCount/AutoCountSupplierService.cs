@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.SqlClient;
 using Backend.Domain;
 using AutoCount.ARAP.Creditor;
 using AutoCount.SearchFilter;
@@ -243,30 +244,120 @@ namespace Backend.Infrastructure.AutoCount
                         throw new InvalidOperationException("Supplier '" + supplier.Code + "' already exists in AutoCount.");
                     }
 
-                    var acCreditor = cmd.NewCreditor();
-                    MapDomainToCreditorEntity(supplier, acCreditor, userSession);
+                    // Insert creditor using raw SQL to handle GLMast FK constraint
+                    // The AutoCount SDK's SaveCreditor() fails because GLMast record doesn't exist
+                    InsertCreditorWithAllRequiredFields(dbSetting, supplier, userSession.LoginUserID);
 
-                    // Also set currency code in GLMastTable DataTable if present
-                    if (acCreditor.GLMastTable != null && acCreditor.GLMastTable.Rows.Count > 0)
-                    {
-                        foreach (System.Data.DataRow row in acCreditor.GLMastTable.Rows)
-                        {
-                            if (acCreditor.GLMastTable.Columns.Contains("CurrencyCode"))
-                            {
-                                row["CurrencyCode"] = "PHP";
-                            }
-                        }
-                    }
-
-                    cmd.SaveCreditor(acCreditor, userSession.LoginUserID);
-
-                    // Reload to get any AutoCount-assigned values
+                    // Reload the creditor using AutoCount API to return the proper entity
                     var reloaded = cmd.GetCreditor(supplier.Code);
                     return MapAutoCountCreditorToDomain(reloaded);
                 }
                 catch (Exception ex)
                 {
                     throw new InvalidOperationException("Failed to create supplier in AutoCount.", ex);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Inserts a new Creditor (Supplier) record using raw SQL with transaction.
+        /// This is needed because AutoCount requires GLMast record to exist before Creditor can be created.
+        /// AccType 'CL' = Current Liability (Trade Creditors/Suppliers)
+        /// </summary>
+        private void InsertCreditorWithAllRequiredFields(global::AutoCount.Data.DBSetting dbSetting, Supplier supplier, string userId)
+        {
+            string connStr = dbSetting.ConnectionString;
+            string currencyCode = "PHP";
+
+            using (var conn = new SqlConnection(connStr))
+            {
+                conn.Open();
+
+                // Use a transaction to ensure both inserts succeed or fail together
+                using (var transaction = conn.BeginTransaction())
+                {
+                    try
+                    {
+                        // Step 1: Insert GL account in GLMast (required by FK constraint)
+                        // AccType 'CL' = Current Liability (Trade Creditors)
+                        string insertGLSql = @"
+                            INSERT INTO GLMast (AccNo, Description, AccType, CurrencyCode, [Guid])
+                            VALUES (@AccNo, @Description, @AccType, @CurrencyCode, @Guid)";
+
+                        using (var cmd = new SqlCommand(insertGLSql, conn, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@AccNo", supplier.Code ?? string.Empty);
+                            cmd.Parameters.AddWithValue("@Description", supplier.CompanyName ?? supplier.Code ?? string.Empty);
+                            cmd.Parameters.AddWithValue("@AccType", "CL");  // Current Liability - Trade Creditors
+                            cmd.Parameters.AddWithValue("@CurrencyCode", currencyCode);
+                            cmd.Parameters.AddWithValue("@Guid", Guid.NewGuid());
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        // Step 2: Insert Creditor record
+                        string insertCreditorSql = @"
+                            INSERT INTO Creditor (
+                                AccNo, CompanyName, Address1, Address2, Attention, Phone1, EmailAddress,
+                                DisplayTerm, CurrencyCode, AllowExceedCreditLimit, DiscountPercent,
+                                IsActive, LastUpdate, InclusiveTax, RoundingMethod, [Guid],
+                                CreatedUserID, CreatedTimeStamp, LastModifiedUserID, LastModified
+                            ) VALUES (
+                                @AccNo, @CompanyName, @Address1, @Address2, @Attention, @Phone1, @EmailAddress,
+                                @DisplayTerm, @CurrencyCode, @AllowExceedCreditLimit, @DiscountPercent,
+                                @IsActive, @LastUpdate, @InclusiveTax, @RoundingMethod, @Guid,
+                                @CreatedUserID, @CreatedTimeStamp, @LastModifiedUserID, @LastModified
+                            )";
+
+                        using (var cmd = new SqlCommand(insertCreditorSql, conn, transaction))
+                        {
+                            // Parse address into Address1 and Address2
+                            string address1 = supplier.Address ?? "";
+                            string address2 = "";
+                            if (!string.IsNullOrEmpty(supplier.Address) && supplier.Address.Contains(","))
+                            {
+                                var parts = supplier.Address.Split(new[] { ',' }, 2);
+                                address1 = parts[0].Trim();
+                                address2 = parts.Length > 1 ? parts[1].Trim() : "";
+                            }
+
+                            // Required fields
+                            cmd.Parameters.AddWithValue("@AccNo", supplier.Code ?? string.Empty);
+                            cmd.Parameters.AddWithValue("@CompanyName", (object)supplier.CompanyName ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@Address1", (object)address1 ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@Address2", (object)address2 ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@Attention", (object)supplier.ContactPerson ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@Phone1", (object)supplier.Phone ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@EmailAddress", (object)supplier.Email ?? DBNull.Value);
+
+                            // NOT NULL columns with default values
+                            cmd.Parameters.AddWithValue("@DisplayTerm", "C.O.D.");
+                            cmd.Parameters.AddWithValue("@CurrencyCode", currencyCode);
+                            cmd.Parameters.AddWithValue("@AllowExceedCreditLimit", "F");
+                            cmd.Parameters.AddWithValue("@DiscountPercent", 0m);
+                            cmd.Parameters.AddWithValue("@IsActive", supplier.IsActive ? "T" : "F");
+                            cmd.Parameters.AddWithValue("@LastUpdate", 0);
+                            cmd.Parameters.AddWithValue("@InclusiveTax", "F");
+                            cmd.Parameters.AddWithValue("@RoundingMethod", 0);
+                            cmd.Parameters.AddWithValue("@Guid", Guid.NewGuid());
+
+                            // Audit fields
+                            DateTime now = DateTime.Now;
+                            string user = userId ?? "SYSTEM";
+                            cmd.Parameters.AddWithValue("@CreatedUserID", user);
+                            cmd.Parameters.AddWithValue("@CreatedTimeStamp", now);
+                            cmd.Parameters.AddWithValue("@LastModifiedUserID", user);
+                            cmd.Parameters.AddWithValue("@LastModified", now);
+
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        transaction.Commit();
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
                 }
             }
         }
