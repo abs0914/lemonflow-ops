@@ -50,6 +50,7 @@ export default function FinanceOrderDetail() {
   const [paymentAmount, setPaymentAmount] = useState<string>("");
   const [paymentReference, setPaymentReference] = useState("");
   const [deliveryFee, setDeliveryFee] = useState<string>("0");
+  const [shippingFee, setShippingFee] = useState<string>("0");
   const [deliveryDate, setDeliveryDate] = useState<Date | undefined>(undefined);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
@@ -67,7 +68,8 @@ export default function FinanceOrderDetail() {
   }
 
   const deliveryFeeAmount = parseFloat(deliveryFee) || 0;
-  const grandTotal = (order?.total_amount || 0) + deliveryFeeAmount;
+  const shippingFeeAmount = parseFloat(shippingFee) || 0;
+  const grandTotal = (order?.total_amount || 0) + deliveryFeeAmount + shippingFeeAmount;
 
   const handleConfirmPayment = async () => {
     if (!id) return;
@@ -95,6 +97,7 @@ export default function FinanceOrderDetail() {
         paymentReference: paymentReference || undefined,
         deliveryDate: deliveryDate,
         deliveryFee: deliveryFeeAmount,
+        shippingFee: shippingFeeAmount,
       });
       
       if (result?.syncSuccess) {
@@ -313,15 +316,31 @@ export default function FinanceOrderDetail() {
                   onChange={(e) => {
                     setDeliveryFee(e.target.value);
                     const fee = parseFloat(e.target.value) || 0;
-                    const total = (order.total_amount || 0) + fee;
-                    setPaymentAmount(total.toString());
+                    const shipping = parseFloat(shippingFee) || 0;
+                    setPaymentAmount(((order.total_amount || 0) + fee + shipping).toString());
                   }}
                   placeholder="0.00"
                 />
-                <p className="text-xs text-muted-foreground">
-                  Additional delivery charge on top of order total
-                </p>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="shippingFee">Shipping Fee (₱)</Label>
+                <Input
+                  id="shippingFee"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={shippingFee}
+                  onChange={(e) => {
+                    setShippingFee(e.target.value);
+                    const shipping = parseFloat(e.target.value) || 0;
+                    const delivery = parseFloat(deliveryFee) || 0;
+                    setPaymentAmount(((order.total_amount || 0) + delivery + shipping).toString());
+                  }}
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="paymentReference">Payment Reference (Optional)</Label>
                 <Input
@@ -342,6 +361,10 @@ export default function FinanceOrderDetail() {
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Delivery Fee</span>
                 <span>₱{deliveryFeeAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Shipping Fee</span>
+                <span>₱{shippingFeeAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between font-bold border-t pt-2">
                 <span>Grand Total</span>
