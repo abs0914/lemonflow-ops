@@ -340,18 +340,6 @@ export default function FinanceOrderDetail() {
                 />
               </div>
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="paymentReference">Payment Reference (Optional)</Label>
-                <Input
-                  id="paymentReference"
-                  value={paymentReference}
-                  onChange={(e) => setPaymentReference(e.target.value)}
-                  placeholder="Bank transfer ref, receipt number, etc."
-                />
-              </div>
-            </div>
-
             {/* Grand Total Summary */}
             <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
               <div className="flex justify-between text-sm">
@@ -386,6 +374,15 @@ export default function FinanceOrderDetail() {
                 <p className="text-xs text-muted-foreground">
                   Must equal grand total of ₱{grandTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                 </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="paymentReference">Payment Reference (Optional)</Label>
+                <Input
+                  id="paymentReference"
+                  value={paymentReference}
+                  onChange={(e) => setPaymentReference(e.target.value)}
+                  placeholder="Bank transfer ref, receipt number, etc."
+                />
               </div>
             </div>
 
