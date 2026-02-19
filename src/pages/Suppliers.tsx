@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Plus, Search, RefreshCw, Upload, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -18,6 +18,9 @@ import { SyncSuppliersDialog } from "@/components/suppliers/SyncSuppliersDialog"
 import { DeleteSupplierDialog } from "@/components/suppliers/DeleteSupplierDialog";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { Supplier } from "@/types/inventory";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
+import { useTableSort } from "@/hooks/useTableSort";
+
 export default function Suppliers() {
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -27,26 +30,35 @@ export default function Suppliers() {
   const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
-  const {
-    data: suppliers,
-    isLoading
-  } = useSuppliers();
-  const filteredSuppliers = suppliers?.filter(supplier => supplier.company_name.toLowerCase().includes(searchTerm.toLowerCase()) || supplier.supplier_code.toLowerCase().includes(searchTerm.toLowerCase()) || supplier.contact_person?.toLowerCase().includes(searchTerm.toLowerCase()));
+
+  const { data: suppliers, isLoading } = useSuppliers();
+
+  const filteredSuppliers = useMemo(() => {
+    return suppliers?.filter(supplier => {
+      const matchesSearch = searchTerm === "" || 
+        supplier.company_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        supplier.supplier_code.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        supplier.contact_person?.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesSearch;
+    });
+  }, [suppliers, searchTerm]);
+
+  const { sortKey, sortDirection, handleSort, sortedData } = useTableSort(filteredSuppliers);
+
   const handleEdit = (id: string) => {
     setSelectedSupplier(id);
     setDialogOpen(true);
   };
+
   const handleCreate = () => {
     setSelectedSupplier(undefined);
     setDialogOpen(true);
   };
+
   const handleSyncComplete = () => {
-    queryClient.invalidateQueries({
-      queryKey: ["suppliers"]
-    });
+    queryClient.invalidateQueries({ queryKey: ["suppliers"] });
   };
 
-  // Query to check related POs for a supplier
   const { data: relatedPOCount } = useQuery({
     queryKey: ["supplier-po-count", supplierToDelete?.id],
     queryFn: async () => {
@@ -66,7 +78,6 @@ export default function Suppliers() {
         .from("suppliers")
         .delete()
         .eq("id", supplierId);
-      
       if (error) throw error;
     },
     onSuccess: () => {
@@ -133,14 +144,17 @@ export default function Suppliers() {
       toast.error(`Failed to sync all suppliers. Check sync logs for details.`);
     }
   };
-  return <DashboardLayout>
+
+  return (
+    <DashboardLayout>
       <div className="space-y-6">
         <div className="flex flex-col gap-4 md:items-center md:justify-between py-[24px] px-[28px] md:flex md:flex-row">
           <div>
             <h1 className="text-3xl font-bold">Suppliers</h1>
             <p className="text-muted-foreground">Manage your suppliers and creditors</p>
           </div>
-          {!isMobile && <div className="flex gap-2">
+          {!isMobile && (
+            <div className="flex gap-2">
               <Button variant="outline" onClick={() => setSyncDialogOpen(true)}>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Sync from AutoCount
@@ -153,37 +167,58 @@ export default function Suppliers() {
                 <Plus className="mr-2 h-4 w-4" />
                 Add Supplier
               </Button>
-            </div>}
+            </div>
+          )}
         </div>
 
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
               <Search className="h-5 w-5 text-muted-foreground" />
-              <Input placeholder="Search suppliers..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="max-w-sm" />
+              <Input
+                placeholder="Search suppliers..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="max-w-sm"
+              />
             </div>
           </CardHeader>
           <CardContent>
-            {isLoading ? <div className="space-y-2">
+            {isLoading ? (
+              <div className="space-y-2">
                 {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
-              </div> : isMobile ? <div className="space-y-4">
-                {filteredSuppliers?.map(supplier => <MobileSupplierCard key={supplier.id} supplier={supplier} onEdit={() => handleEdit(supplier.id)} onDelete={() => handleDeleteClick(supplier)} />)}
-                {filteredSuppliers?.length === 0 && <p className="text-center text-muted-foreground py-8">No suppliers found</p>}
-              </div> : <Table>
+              </div>
+            ) : isMobile ? (
+              <div className="space-y-4">
+                {sortedData?.map(supplier => (
+                  <MobileSupplierCard
+                    key={supplier.id}
+                    supplier={supplier}
+                    onEdit={() => handleEdit(supplier.id)}
+                    onDelete={() => handleDeleteClick(supplier)}
+                  />
+                ))}
+                {sortedData?.length === 0 && (
+                  <p className="text-center text-muted-foreground py-8">No suppliers found</p>
+                )}
+              </div>
+            ) : (
+              <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Code</TableHead>
-                    <TableHead>Company Name</TableHead>
-                    <TableHead>Contact Person</TableHead>
+                    <SortableTableHead sortKey="supplier_code" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Code</SortableTableHead>
+                    <SortableTableHead sortKey="company_name" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Company Name</SortableTableHead>
+                    <SortableTableHead sortKey="contact_person" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Contact Person</SortableTableHead>
                     <TableHead>Phone</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>AutoCount</TableHead>
+                    <SortableTableHead sortKey="is_active" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Status</SortableTableHead>
+                    <SortableTableHead sortKey="autocount_synced" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>AutoCount</SortableTableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredSuppliers?.map(supplier => <TableRow key={supplier.id}>
+                  {sortedData?.map(supplier => (
+                    <TableRow key={supplier.id}>
                       <TableCell className="font-mono">{supplier.supplier_code}</TableCell>
                       <TableCell className="font-medium">{supplier.company_name}</TableCell>
                       <TableCell>{supplier.contact_person || "-"}</TableCell>
@@ -214,23 +249,25 @@ export default function Suppliers() {
                           </Button>
                         </div>
                       </TableCell>
-                    </TableRow>)}
-                  {filteredSuppliers?.length === 0 && <TableRow>
+                    </TableRow>
+                  ))}
+                  {sortedData?.length === 0 && (
+                    <TableRow>
                       <TableCell colSpan={8} className="text-center text-muted-foreground">
                         No suppliers found
                       </TableCell>
-                    </TableRow>}
+                    </TableRow>
+                  )}
                 </TableBody>
-              </Table>}
+              </Table>
+            )}
           </CardContent>
         </Card>
 
         {isMobile && <FloatingActionButton onClick={handleCreate} icon={Plus} />}
 
         <SupplierDialog open={dialogOpen} onOpenChange={setDialogOpen} supplierId={selectedSupplier} />
-
         <SyncSuppliersDialog open={syncDialogOpen} onOpenChange={setSyncDialogOpen} onSyncComplete={handleSyncComplete} />
-
         <DeleteSupplierDialog
           open={deleteDialogOpen}
           onOpenChange={setDeleteDialogOpen}
@@ -240,5 +277,6 @@ export default function Suppliers() {
           isDeleting={deleteMutation.isPending}
         />
       </div>
-    </DashboardLayout>;
+    </DashboardLayout>
+  );
 }

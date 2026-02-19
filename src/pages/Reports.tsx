@@ -10,6 +10,7 @@ import { StockMovementReport } from "@/components/reports/StockMovementReport";
 import { AssemblyOrderReport } from "@/components/reports/AssemblyOrderReport";
 import { SalesOrderReport } from "@/components/reports/SalesOrderReport";
 import { SalesDashboardReport } from "@/components/reports/SalesDashboardReport";
+import { StoreInventoryReport } from "@/components/reports/StoreInventoryReport";
 import { BarChart3 } from "lucide-react";
 
 interface ReportConfig {
@@ -25,36 +26,43 @@ const reportConfigs: ReportConfig[] = [
     id: "purchase-orders",
     title: "Purchase Orders",
     description: "Summary of purchase orders by status, supplier, and spending",
-    roles: ["Admin", "CEO", "Warehouse"],
+    roles: ["Admin", "CEO", "Finance", "Warehouse"],
     component: PurchaseOrderReport,
   },
   {
     id: "stock-movements",
     title: "Stock Movements",
     description: "Inventory receipts, adjustments, and movement history",
-    roles: ["Admin", "Warehouse"],
+    roles: ["Admin", "CEO", "Finance", "Warehouse"],
     component: StockMovementReport,
   },
   {
     id: "assembly-orders",
     title: "Assembly Orders",
     description: "Production assembly orders and completion metrics",
-    roles: ["Admin", "Production"],
+    roles: ["Admin", "CEO", "Finance", "Production"],
     component: AssemblyOrderReport,
   },
   {
     id: "sales-orders",
     title: "Sales Orders",
     description: "Store orders summary and sales metrics",
-    roles: ["Admin", "Store"],
+    roles: ["Admin", "CEO", "Finance"],
     component: SalesOrderReport,
   },
   {
     id: "sales-dashboard",
     title: "Sales Dashboard",
     description: "POS and order sales overview with trends and store performance",
-    roles: ["Admin", "CEO"],
+    roles: ["Admin", "CEO", "Finance"],
     component: SalesDashboardReport,
+  },
+  {
+    id: "store-inventory",
+    title: "Store Inventory",
+    description: "Summary of items ordered from central inventory",
+    roles: ["Store"],
+    component: StoreInventoryReport,
   },
 ];
 

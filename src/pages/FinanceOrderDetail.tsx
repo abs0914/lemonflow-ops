@@ -49,6 +49,8 @@ export default function FinanceOrderDetail() {
 
   const [paymentAmount, setPaymentAmount] = useState<string>("");
   const [paymentReference, setPaymentReference] = useState("");
+  const [deliveryFee, setDeliveryFee] = useState<string>("0");
+  const [shippingFee, setShippingFee] = useState<string>("0");
   const [deliveryDate, setDeliveryDate] = useState<Date | undefined>(undefined);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
@@ -65,6 +67,10 @@ export default function FinanceOrderDetail() {
     setPaymentAmount((order.total_amount || 0).toString());
   }
 
+  const deliveryFeeAmount = parseFloat(deliveryFee) || 0;
+  const shippingFeeAmount = parseFloat(shippingFee) || 0;
+  const grandTotal = (order?.total_amount || 0) + deliveryFeeAmount + shippingFeeAmount;
+
   const handleConfirmPayment = async () => {
     if (!id) return;
 
@@ -74,8 +80,8 @@ export default function FinanceOrderDetail() {
       return;
     }
 
-    if (amount !== order?.total_amount) {
-      toast.error("Payment amount must equal the order total (no partial payments)");
+    if (amount !== grandTotal) {
+      toast.error(`Payment amount must equal the grand total of ₱${grandTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })} (order total + delivery fee)`);
       return;
     }
 
@@ -90,6 +96,8 @@ export default function FinanceOrderDetail() {
         paymentAmount: amount,
         paymentReference: paymentReference || undefined,
         deliveryDate: deliveryDate,
+        deliveryFee: deliveryFeeAmount,
+        shippingFee: shippingFeeAmount,
       });
       
       if (result?.syncSuccess) {
@@ -298,6 +306,62 @@ export default function FinanceOrderDetail() {
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
+                <Label htmlFor="deliveryFee">Delivery Fee (₱)</Label>
+                <Input
+                  id="deliveryFee"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={deliveryFee}
+                  onChange={(e) => {
+                    setDeliveryFee(e.target.value);
+                    const fee = parseFloat(e.target.value) || 0;
+                    const shipping = parseFloat(shippingFee) || 0;
+                    setPaymentAmount(((order.total_amount || 0) + fee + shipping).toString());
+                  }}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="shippingFee">Shipping Fee (₱)</Label>
+                <Input
+                  id="shippingFee"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={shippingFee}
+                  onChange={(e) => {
+                    setShippingFee(e.target.value);
+                    const shipping = parseFloat(e.target.value) || 0;
+                    const delivery = parseFloat(deliveryFee) || 0;
+                    setPaymentAmount(((order.total_amount || 0) + delivery + shipping).toString());
+                  }}
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+            {/* Grand Total Summary */}
+            <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Order Total</span>
+                <span>₱{(order.total_amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Delivery Fee</span>
+                <span>₱{deliveryFeeAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Shipping Fee</span>
+                <span>₱{shippingFeeAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex justify-between font-bold border-t pt-2">
+                <span>Grand Total</span>
+                <span className="text-lg">₱{grandTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
                 <Label htmlFor="paymentAmount">Payment Amount (₱)</Label>
                 <Input
                   id="paymentAmount"
@@ -308,7 +372,7 @@ export default function FinanceOrderDetail() {
                   placeholder="Enter payment amount"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Must equal order total of ₱{(order.total_amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                  Must equal grand total of ₱{grandTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                 </p>
               </div>
               <div className="space-y-2">

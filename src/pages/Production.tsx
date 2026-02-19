@@ -4,9 +4,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, RefreshCw } from "lucide-react";
-import { useProductionLogs } from "@/hooks/useProductionLogs";
-import { LogProductionDialog } from "@/components/production/LogProductionDialog";
+import { Plus, RefreshCw, Pencil } from "lucide-react";
+import { useProductionLogs, ProductionLog } from "@/hooks/useProductionLogs";
+import { LogProductionDialog, ProductionLogData } from "@/components/production/LogProductionDialog";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -31,6 +31,7 @@ export default function Production() {
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
   const [showLogDialog, setShowLogDialog] = useState(false);
+  const [editingLog, setEditingLog] = useState<ProductionLogData | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
 
   const { data: productionLogs, isLoading } = useProductionLogs();
@@ -132,6 +133,70 @@ export default function Production() {
     },
   });
 
+  const updateProductionMutation = useMutation({
+    mutationFn: async (data: {
+      id: string;
+      component_id: string;
+      quantity: number;
+      oldQuantity: number;
+      notes?: string;
+    }) => {
+      if (!user) throw new Error("User not authenticated");
+
+      // Update stock movement
+      const { error: movementError } = await supabase
+        .from("stock_movements")
+        .update({
+          quantity: data.quantity,
+          notes: data.notes || null,
+        })
+        .eq("id", data.id);
+
+      if (movementError) throw movementError;
+
+      // Calculate quantity difference and update component stock
+      const quantityDiff = data.quantity - data.oldQuantity;
+      if (quantityDiff !== 0) {
+        const { data: component, error: fetchError } = await supabase
+          .from("components")
+          .select("stock_quantity")
+          .eq("id", data.component_id)
+          .single();
+
+        if (fetchError) throw fetchError;
+
+        const { error: updateError } = await supabase
+          .from("components")
+          .update({
+            stock_quantity: (component?.stock_quantity || 0) + quantityDiff,
+          })
+          .eq("id", data.component_id);
+
+        if (updateError) throw updateError;
+      }
+
+      return { id: data.id };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["production-logs"] });
+      queryClient.invalidateQueries({ queryKey: ["components"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      setShowLogDialog(false);
+      setEditingLog(null);
+      toast({
+        title: "Production log updated",
+        description: "The production log has been updated successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to update production log",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const retrySyncMutation = useMutation({
     mutationFn: async (movementId: string) => {
       setRetryingId(movementId);
@@ -165,6 +230,37 @@ export default function Production() {
       setRetryingId(null);
     },
   });
+
+  const handleEdit = (log: ProductionLog) => {
+    setEditingLog({
+      id: log.id,
+      item_id: log.item_id,
+      quantity: log.quantity,
+      notes: log.notes,
+    });
+    setShowLogDialog(true);
+  };
+
+  const handleSubmit = (data: { component_id: string; quantity: number; notes?: string }) => {
+    if (editingLog) {
+      updateProductionMutation.mutate({
+        id: editingLog.id,
+        component_id: data.component_id,
+        quantity: data.quantity,
+        oldQuantity: editingLog.quantity,
+        notes: data.notes,
+      });
+    } else {
+      logProductionMutation.mutate(data);
+    }
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    setShowLogDialog(open);
+    if (!open) {
+      setEditingLog(null);
+    }
+  };
 
   const pendingSyncCount = productionLogs?.filter(log => !log.autocount_synced).length || 0;
 
@@ -208,6 +304,7 @@ export default function Production() {
                     <TableHead>Logged By</TableHead>
                     <TableHead>Sync Status</TableHead>
                     <TableHead>Notes</TableHead>
+                    <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -252,6 +349,21 @@ export default function Production() {
                       <TableCell className="text-muted-foreground">
                         {log.notes || "-"}
                       </TableCell>
+                      <TableCell>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8"
+                              onClick={() => handleEdit(log)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Edit</TooltipContent>
+                        </Tooltip>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -262,9 +374,10 @@ export default function Production() {
 
         <LogProductionDialog
           open={showLogDialog}
-          onOpenChange={setShowLogDialog}
-          onSubmit={(data) => logProductionMutation.mutate(data)}
-          isLoading={logProductionMutation.isPending}
+          onOpenChange={handleDialogClose}
+          onSubmit={handleSubmit}
+          isLoading={logProductionMutation.isPending || updateProductionMutation.isPending}
+          editingLog={editingLog}
         />
       </div>
     </DashboardLayout>

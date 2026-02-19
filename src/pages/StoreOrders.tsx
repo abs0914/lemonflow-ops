@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,8 @@ import { MobileOrderCard } from "@/components/store-orders/MobileOrderCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
+import { useTableSort } from "@/hooks/useTableSort";
 
 const statusColors = {
   draft: "bg-gray-100 text-gray-800",
@@ -39,12 +41,17 @@ export default function StoreOrders() {
   const storeIds = userStores?.map(s => s.store_id);
   const { data: orders, isLoading, refetch } = useSalesOrders(storeIds?.[0]);
 
-  const filteredOrders = orders?.filter((order) => {
-    const matchesSearch = order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.stores?.store_name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesTab = activeTab === "all" || order.status === activeTab;
-    return matchesSearch && matchesTab;
-  });
+  const filteredOrders = useMemo(() => {
+    return orders?.filter((order) => {
+      const matchesSearch = searchTerm === "" ||
+        order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.stores?.store_name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesTab = activeTab === "all" || order.status === activeTab;
+      return matchesSearch && matchesTab;
+    });
+  }, [orders, searchTerm, activeTab]);
+
+  const { sortKey, sortDirection, handleSort, sortedData } = useTableSort(filteredOrders);
 
   const getStatusBadge = (status: string) => (
     <Badge className={statusColors[status as keyof typeof statusColors]}>
@@ -125,13 +132,13 @@ export default function StoreOrders() {
                   <Skeleton key={i} className="h-24 w-full" />
                 ))}
               </div>
-            ) : filteredOrders?.length === 0 ? (
+            ) : sortedData?.length === 0 ? (
               <div className="text-center py-12 border rounded-lg bg-muted/30">
                 <p className="text-muted-foreground">No orders found</p>
               </div>
             ) : isMobile ? (
               <div className="space-y-4">
-                {filteredOrders?.map((order) => (
+                {sortedData?.map((order) => (
                   <MobileOrderCard
                     key={order.id}
                     order={order}
@@ -144,16 +151,16 @@ export default function StoreOrders() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Order Number</TableHead>
-                      <TableHead>Store</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
-                      <TableHead>AutoCount</TableHead>
+                      <SortableTableHead sortKey="order_number" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Order Number</SortableTableHead>
+                      <SortableTableHead sortKey="stores.store_name" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Store</SortableTableHead>
+                      <SortableTableHead sortKey="doc_date" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Date</SortableTableHead>
+                      <SortableTableHead sortKey="status" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Status</SortableTableHead>
+                      <SortableTableHead sortKey="total_amount" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort} className="text-right">Total</SortableTableHead>
+                      <SortableTableHead sortKey="autocount_synced" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>AutoCount</SortableTableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredOrders?.map((order) => (
+                    {sortedData?.map((order) => (
                       <TableRow
                         key={order.id}
                         className="cursor-pointer hover:bg-muted/50"

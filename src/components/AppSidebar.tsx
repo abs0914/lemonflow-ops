@@ -8,6 +8,7 @@ import {
   Store,
   Database,
   Users,
+  User,
   UserCheck,
   ShoppingCart,
   Settings as SettingsIcon,
@@ -167,6 +168,12 @@ export function AppSidebar() {
       icon: SettingsIcon,
       roles: ["Admin"],
     },
+    {
+      title: "My Account",
+      url: "/my-account",
+      icon: User,
+      roles: ["Store", "Admin", "CEO", "Finance", "Production", "Warehouse", "Fulfillment"],
+    },
   ];
 
   const filteredItems = menuItems.filter((item) =>
@@ -186,11 +193,11 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
-        <div className="flex items-center gap-2 px-2 py-4">
+        <div className={`flex items-center gap-2 py-3 ${state === "expanded" ? "px-2" : "justify-center px-1"}`}>
           <img 
             src={tlcLogo} 
             alt="The Lemon Co Logo" 
-            className="h-10 w-10 rounded-lg"
+            className={`rounded-lg ${state === "expanded" ? "h-10 w-10" : "h-8 w-8"}`}
           />
           {state === "expanded" && (
             <div className="flex flex-col">
@@ -307,19 +314,30 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border">
-        <div className="p-2">
-          <SidebarTrigger className="w-full" />
-        </div>
-        {state === "expanded" && (
-          <div className="p-2">
+      <SidebarFooter className="border-t border-sidebar-border p-1">
+        {state === "expanded" ? (
+          <div className="flex items-center gap-1">
+            <SidebarTrigger />
             <Button
               onClick={signOut}
               variant="ghost"
-              className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-primary"
+              size="sm"
+              className="flex-1 justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-primary h-8"
             >
               <LogOut className="mr-2 h-4 w-4" />
               Logout
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-1">
+            <SidebarTrigger />
+            <Button
+              onClick={signOut}
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-primary"
+            >
+              <LogOut className="h-4 w-4" />
             </Button>
           </div>
         )}

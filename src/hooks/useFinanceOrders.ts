@@ -30,11 +30,15 @@ export function useConfirmPayment() {
       paymentAmount,
       paymentReference,
       deliveryDate,
+      deliveryFee,
+      shippingFee,
     }: {
       orderId: string;
       paymentAmount: number;
       paymentReference?: string;
       deliveryDate: Date;
+      deliveryFee?: number;
+      shippingFee?: number;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
@@ -78,7 +82,9 @@ export function useConfirmPayment() {
           autocount_doc_no: documentNo,
           synced_at: syncSuccess ? new Date().toISOString() : null,
           sync_error_message: syncErrorMessage,
-        })
+          delivery_fee: deliveryFee ?? 0,
+          shipping_fee: shippingFee ?? 0,
+        } as any)
         .eq("id", orderId);
 
       if (error) throw error;
@@ -88,7 +94,7 @@ export function useConfirmPayment() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["finance-orders"] });
       queryClient.invalidateQueries({ queryKey: ["fulfillment-orders"] });
-      queryClient.invalidateQueries({ queryKey: ["sales-order"] });
+      queryClient.invalidateQueries({ queryKey: ["sales-orders"] });
     },
   });
 }
@@ -126,7 +132,7 @@ export function useRejectPayment() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["finance-orders"] });
       queryClient.invalidateQueries({ queryKey: ["fulfillment-orders"] });
-      queryClient.invalidateQueries({ queryKey: ["sales-order"] });
+      queryClient.invalidateQueries({ queryKey: ["sales-orders"] });
     },
   });
 }

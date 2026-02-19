@@ -782,6 +782,7 @@ export type Database = {
           created_by: string | null
           debtor_code: string
           delivery_date: string | null
+          delivery_fee: number | null
           delivery_notes: string | null
           description: string | null
           doc_date: string
@@ -793,6 +794,7 @@ export type Database = {
           payment_confirmed_at: string | null
           payment_confirmed_by: string | null
           payment_reference: string | null
+          shipping_fee: number | null
           status: string | null
           stock_reserved: boolean | null
           store_id: string | null
@@ -813,6 +815,7 @@ export type Database = {
           created_by?: string | null
           debtor_code: string
           delivery_date?: string | null
+          delivery_fee?: number | null
           delivery_notes?: string | null
           description?: string | null
           doc_date?: string
@@ -824,6 +827,7 @@ export type Database = {
           payment_confirmed_at?: string | null
           payment_confirmed_by?: string | null
           payment_reference?: string | null
+          shipping_fee?: number | null
           status?: string | null
           stock_reserved?: boolean | null
           store_id?: string | null
@@ -844,6 +848,7 @@ export type Database = {
           created_by?: string | null
           debtor_code?: string
           delivery_date?: string | null
+          delivery_fee?: number | null
           delivery_notes?: string | null
           description?: string | null
           doc_date?: string
@@ -855,6 +860,7 @@ export type Database = {
           payment_confirmed_at?: string | null
           payment_confirmed_by?: string | null
           payment_reference?: string | null
+          shipping_fee?: number | null
           status?: string | null
           stock_reserved?: boolean | null
           store_id?: string | null

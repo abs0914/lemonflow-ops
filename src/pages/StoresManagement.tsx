@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
+import { useTableSort } from "@/hooks/useTableSort";
 
 export default function StoresManagement() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -39,14 +41,18 @@ export default function StoresManagement() {
   const { data: stores, isLoading } = useStores();
   const deleteMutation = useDeleteStore();
 
-  const filteredStores = stores?.filter((store) => {
-    const search = searchTerm.toLowerCase();
-    return (
-      (store.store_name?.toLowerCase() || '').includes(search) ||
-      (store.store_code?.toLowerCase() || '').includes(search) ||
-      (store.debtor_code?.toLowerCase() || '').includes(search)
-    );
-  });
+  const filteredStores = useMemo(() => {
+    return stores?.filter((store) => {
+      const search = searchTerm.toLowerCase();
+      const matchesSearch = searchTerm === "" ||
+        (store.store_name?.toLowerCase() || '').includes(search) ||
+        (store.store_code?.toLowerCase() || '').includes(search) ||
+        (store.debtor_code?.toLowerCase() || '').includes(search);
+      return matchesSearch;
+    });
+  }, [stores, searchTerm]);
+
+  const { sortKey, sortDirection, handleSort, sortedData } = useTableSort(filteredStores);
 
   const handleEdit = (store: Store) => {
     setSelectedStore(store);
@@ -113,7 +119,7 @@ export default function StoresManagement() {
               <Skeleton key={i} className="h-16 w-full" />
             ))}
           </div>
-        ) : filteredStores?.length === 0 ? (
+        ) : sortedData?.length === 0 ? (
           <div className="text-center py-12 border rounded-lg bg-muted/30">
             <p className="text-muted-foreground">No stores found</p>
           </div>
@@ -122,17 +128,17 @@ export default function StoresManagement() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Store Code</TableHead>
-                  <TableHead>Store Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Debtor Code</TableHead>
+                  <SortableTableHead sortKey="store_code" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Store Code</SortableTableHead>
+                  <SortableTableHead sortKey="store_name" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Store Name</SortableTableHead>
+                  <SortableTableHead sortKey="store_type" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Type</SortableTableHead>
+                  <SortableTableHead sortKey="debtor_code" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Debtor Code</SortableTableHead>
                   <TableHead>Contact</TableHead>
-                  <TableHead>Status</TableHead>
+                  <SortableTableHead sortKey="is_active" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Status</SortableTableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredStores?.map((store) => (
+                {sortedData?.map((store) => (
                   <TableRow key={store.id}>
                     <TableCell className="font-medium">{store.store_code}</TableCell>
                     <TableCell>{store.store_name}</TableCell>

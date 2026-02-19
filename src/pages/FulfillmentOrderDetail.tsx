@@ -58,6 +58,10 @@ export default function FulfillmentOrderDetail() {
 
       if (error) throw error;
 
+      if (!data?.success) {
+        throw new Error(data?.error || "Sync failed");
+      }
+
       await updateMutation.mutateAsync({
         id: order.id,
         updates: {
@@ -65,9 +69,9 @@ export default function FulfillmentOrderDetail() {
           delivery_date: deliveryDate.toISOString(),
           approved_by: user.id,
           approved_at: new Date().toISOString(),
-          autocount_synced: data?.success ? true : order.autocount_synced,
+          autocount_synced: true,
           autocount_doc_no: data?.documentNo || order.autocount_doc_no,
-          synced_at: data?.success ? new Date().toISOString() : order.synced_at,
+          synced_at: new Date().toISOString(),
         },
       });
 
@@ -222,7 +226,7 @@ export default function FulfillmentOrderDetail() {
                 {order.autocount_synced && (
                   <div>
                     <div className="text-sm text-muted-foreground mb-1">AutoCount Status</div>
-                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
                       Synced - {order.autocount_doc_no}
                     </Badge>
                   </div>
@@ -252,7 +256,7 @@ export default function FulfillmentOrderDetail() {
                 {order.stock_reserved && (
                   <div>
                     <div className="text-sm text-muted-foreground mb-1">Stock Status</div>
-                    <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                    <Badge variant="outline" className="bg-accent text-accent-foreground border-border">
                       Stock Reserved
                     </Badge>
                   </div>
@@ -261,7 +265,7 @@ export default function FulfillmentOrderDetail() {
                 {isPendingPayment && (
                   <div>
                     <div className="text-sm text-muted-foreground mb-1">Payment Status</div>
-                    <Badge className="bg-orange-100 text-orange-800">
+                    <Badge className="bg-accent text-accent-foreground">
                       Awaiting Payment Confirmation
                     </Badge>
                     <p className="text-xs text-muted-foreground mt-1">

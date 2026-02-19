@@ -1,5 +1,8 @@
 project_id = "pukezienbcenozlqmunf"
 
+[functions.sync-sales-order]
+verify_jwt = false
+
 [functions.pull-po-from-autocount]
 verify_jwt = false
 

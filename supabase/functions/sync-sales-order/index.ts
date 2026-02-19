@@ -16,7 +16,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 interface SyncSalesOrderRequest {
@@ -59,6 +59,10 @@ Deno.serve(async (req) => {
   try {
     console.log('[sync-sales-order] Starting sync...');
 
+    // --- Auth (verify_jwt=false in config, validate here) ---
+    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
     // Get environment variables
     const apiUrl = Deno.env.get('LEMONCO_API_URL');
     const username = Deno.env.get('LEMONCO_USERNAME');
@@ -73,6 +77,22 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
+
+    if (!token) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized: missing Bearer token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
+    if (userError || !userData?.user) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized: invalid session' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    console.log('[sync-sales-order] Request user:', userData.user.id);
 
     // Parse request
     const requestBody: SyncSalesOrderRequest = await req.json();
@@ -178,11 +198,27 @@ Deno.serve(async (req) => {
       const errorText = await response.text();
       console.error('[sync-sales-order] AutoCount API error:', errorText);
 
+      // Parse error for better messaging
+      let errorMessage = `HTTP ${response.status}`;
+      if (response.status === 404) {
+        errorMessage = 'AutoCount API endpoint not found (404). The sales-orders endpoint may not be deployed on the backend server. Please redeploy the AutoCount Backend API.';
+      } else if (errorText.includes('<!DOCTYPE') || errorText.includes('<html')) {
+        // Server returned HTML error page
+        errorMessage = `Server error (HTTP ${response.status}): The AutoCount API returned an error page instead of JSON. Please check the backend deployment.`;
+      } else {
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.message || errorJson.error || errorText;
+        } catch {
+          errorMessage = errorText.substring(0, 200); // Truncate long error messages
+        }
+      }
+
       // Update order with error
       await supabaseClient
         .from('sales_orders')
         .update({
-          sync_error_message: `AutoCount error: ${response.status} - ${errorText}`,
+          sync_error_message: errorMessage,
         })
         .eq('id', so.id);
 
@@ -194,10 +230,15 @@ Deno.serve(async (req) => {
           reference_type: 'sales_order',
           sync_type: 'create',
           sync_status: 'failed',
-          error_message: `AutoCount error: ${response.status} - ${errorText}`,
+          error_message: errorMessage,
         });
 
-      throw new Error(`AutoCount API error: ${response.status} - ${errorText}`);
+      // IMPORTANT: return 200 so supabase-js doesn't surface this as a transport error
+      // (frontend should handle success=false)
+      return new Response(
+        JSON.stringify({ success: false, error: errorMessage }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const result = await response.json();
@@ -239,15 +280,13 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('[sync-sales-order] Error:', error);
+    // Return 200 with success=false to avoid "non-2xx" transport errors in the UI.
     return new Response(
       JSON.stringify({
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred',
       }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
