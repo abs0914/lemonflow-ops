@@ -782,6 +782,7 @@ export type Database = {
           created_by: string | null
           debtor_code: string
           delivery_date: string | null
+          delivery_fee: number | null
           delivery_notes: string | null
           description: string | null
           doc_date: string
@@ -813,6 +814,7 @@ export type Database = {
           created_by?: string | null
           debtor_code: string
           delivery_date?: string | null
+          delivery_fee?: number | null
           delivery_notes?: string | null
           description?: string | null
           doc_date?: string
@@ -844,6 +846,7 @@ export type Database = {
           created_by?: string | null
           debtor_code?: string
           delivery_date?: string | null
+          delivery_fee?: number | null
           delivery_notes?: string | null
           description?: string | null
           doc_date?: string
