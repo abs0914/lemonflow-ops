@@ -31,12 +31,14 @@ export function useConfirmPayment() {
       paymentReference,
       deliveryDate,
       deliveryFee,
+      shippingFee,
     }: {
       orderId: string;
       paymentAmount: number;
       paymentReference?: string;
       deliveryDate: Date;
       deliveryFee?: number;
+      shippingFee?: number;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
@@ -81,6 +83,7 @@ export function useConfirmPayment() {
           synced_at: syncSuccess ? new Date().toISOString() : null,
           sync_error_message: syncErrorMessage,
           delivery_fee: deliveryFee ?? 0,
+          shipping_fee: shippingFee ?? 0,
         } as any)
         .eq("id", orderId);
 
