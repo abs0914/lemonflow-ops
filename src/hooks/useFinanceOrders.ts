@@ -94,7 +94,7 @@ export function useConfirmPayment() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["finance-orders"] });
       queryClient.invalidateQueries({ queryKey: ["fulfillment-orders"] });
-      queryClient.invalidateQueries({ queryKey: ["sales-order"] });
+      queryClient.invalidateQueries({ queryKey: ["sales-orders"] });
     },
   });
 }
@@ -132,7 +132,7 @@ export function useRejectPayment() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["finance-orders"] });
       queryClient.invalidateQueries({ queryKey: ["fulfillment-orders"] });
-      queryClient.invalidateQueries({ queryKey: ["sales-order"] });
+      queryClient.invalidateQueries({ queryKey: ["sales-orders"] });
     },
   });
 }
