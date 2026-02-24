@@ -91,7 +91,9 @@ export default function StoreOrderCreate() {
       return;
     }
 
-    if (!deliveryDate) {
+    const isFranchisee = selectedStore?.store_type === "franchisee";
+
+    if (!isFranchisee && !deliveryDate) {
       const label = orderType === "pickup" ? "pickup date" : "delivery date";
       toast.error(`Please set a ${label} before submitting`);
       return;
@@ -104,8 +106,6 @@ export default function StoreOrderCreate() {
       description: description || undefined,
       lines,
     });
-
-    const isFranchisee = selectedStore?.store_type === "franchisee";
 
     if (isFranchisee) {
       // Franchisee: Reserve stock and send to Finance for payment confirmation
@@ -130,7 +130,7 @@ export default function StoreOrderCreate() {
         updates: { 
           status: "pending_payment", 
           submitted_at: new Date().toISOString(),
-          delivery_date: format(deliveryDate, "yyyy-MM-dd"),
+          delivery_date: deliveryDate ? format(deliveryDate, "yyyy-MM-dd") : undefined,
           delivery_notes: orderType === "pickup" ? "Pickup order" : undefined,
         },
       });
@@ -249,44 +249,46 @@ export default function StoreOrderCreate() {
                 </RadioGroup>
               </div>
 
-              {/* Date Picker — label changes based on type */}
-              <div className="space-y-2">
-                <Label>
-                  {orderType === "pickup" ? "Pickup Date" : "Delivery Date"}{" "}
-                  <span className="text-destructive">*</span>
-                </Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full md:w-[280px] justify-start text-left font-normal",
-                        !deliveryDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {deliveryDate
-                        ? format(deliveryDate, "PPP")
-                        : `Select ${orderType === "pickup" ? "pickup" : "delivery"} date`}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={deliveryDate}
-                      onSelect={setDeliveryDate}
-                      disabled={(date) => date < new Date()}
-                      initialFocus
-                      className="p-3 pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-                {!deliveryDate && (
-                  <p className="text-xs text-muted-foreground">
-                    Set {orderType === "pickup" ? "pickup" : "delivery"} date before submitting
-                  </p>
-                )}
-              </div>
+              {/* Date Picker — hidden for franchisee stores (set during Finance/Accounting approval) */}
+              {selectedStore?.store_type !== "franchisee" && (
+                <div className="space-y-2">
+                  <Label>
+                    {orderType === "pickup" ? "Pickup Date" : "Delivery Date"}{" "}
+                    <span className="text-destructive">*</span>
+                  </Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full md:w-[280px] justify-start text-left font-normal",
+                          !deliveryDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {deliveryDate
+                          ? format(deliveryDate, "PPP")
+                          : `Select ${orderType === "pickup" ? "pickup" : "delivery"} date`}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={deliveryDate}
+                        onSelect={setDeliveryDate}
+                        disabled={(date) => date < new Date()}
+                        initialFocus
+                        className="p-3 pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  {!deliveryDate && (
+                    <p className="text-xs text-muted-foreground">
+                      Set {orderType === "pickup" ? "pickup" : "delivery"} date before submitting
+                    </p>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
