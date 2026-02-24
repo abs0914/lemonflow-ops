@@ -156,7 +156,7 @@ export default function Inventory() {
       return;
     }
 
-    const headers = ["SKU", "AutoCount Code", "Name", "Item Group", "Item Type", "Stock Qty", "Reserved", "Available", "Unit", "Low Stock Threshold"];
+    const headers = ["SKU", "AutoCount Code", "Name", "Item Group", "Item Type", "Stock Qty", "Reserved", "Available", "Unit", "Price", "Cost Per Unit", "Low Stock Threshold"];
     const csvRows = [headers.join(",")];
 
     components.forEach((item) => {
@@ -171,6 +171,8 @@ export default function Inventory() {
         item.reserved_quantity,
         available,
         item.unit,
+        item.price ?? "",
+        item.cost_per_unit ?? "",
         item.low_stock_threshold ?? 10
       ];
       csvRows.push(row.join(","));
