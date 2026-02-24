@@ -207,7 +207,7 @@ export default function FulfillmentDashboard() {
                           <div className="text-right">
                             <div className="text-sm text-muted-foreground">Total</div>
                             <div className="font-bold">
-                              ₱{order.total_amount?.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                              ₱{((order.total_amount || 0) + (order.delivery_fee || 0) + (order.shipping_fee || 0)).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
                             </div>
                           </div>
                           {getStatusBadge(order.status)}
