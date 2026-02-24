@@ -27,6 +27,8 @@ interface ParsedItem {
   item_type?: string;
   stock_quantity: number;
   unit: string;
+  price?: number;
+  cost_per_unit?: number;
   low_stock_threshold?: number;
 }
 
@@ -80,6 +82,8 @@ export function ImportInventoryDialog({ open, onOpenChange }: ImportInventoryDia
         const typeIndex = header.findIndex(h => h.includes("type"));
         const qtyIndex = header.findIndex(h => h.includes("stock") && h.includes("qty"));
         const unitIndex = header.findIndex(h => h === "unit");
+        const priceIndex = header.findIndex(h => h === "price");
+        const costIndex = header.findIndex(h => h.includes("cost"));
         const thresholdIndex = header.findIndex(h => h.includes("threshold"));
 
         if (skuIndex === -1 || nameIndex === -1) {
@@ -105,6 +109,8 @@ export function ImportInventoryDialog({ open, onOpenChange }: ImportInventoryDia
             item_type: typeIndex !== -1 ? values[typeIndex]?.trim() : undefined,
             stock_quantity: qtyIndex !== -1 ? parseFloat(values[qtyIndex]) || 0 : 0,
             unit: unitIndex !== -1 ? values[unitIndex]?.trim() || "pcs" : "pcs",
+            price: priceIndex !== -1 ? parseFloat(values[priceIndex]) || undefined : undefined,
+            cost_per_unit: costIndex !== -1 ? parseFloat(values[costIndex]) || undefined : undefined,
             low_stock_threshold: thresholdIndex !== -1 ? parseInt(values[thresholdIndex]) || undefined : undefined,
           });
         }
@@ -173,6 +179,8 @@ export function ImportInventoryDialog({ open, onOpenChange }: ImportInventoryDia
               item_type: item.item_type || null,
               stock_quantity: item.stock_quantity,
               unit: item.unit,
+              price: item.price ?? null,
+              cost_per_unit: item.cost_per_unit ?? null,
               low_stock_threshold: item.low_stock_threshold || null,
               updated_at: new Date().toISOString(),
             })
@@ -196,6 +204,8 @@ export function ImportInventoryDialog({ open, onOpenChange }: ImportInventoryDia
               stock_quantity: item.stock_quantity,
               reserved_quantity: 0,
               unit: item.unit,
+              price: item.price ?? null,
+              cost_per_unit: item.cost_per_unit ?? null,
               low_stock_threshold: item.low_stock_threshold || null,
             });
 
@@ -241,7 +251,7 @@ export function ImportInventoryDialog({ open, onOpenChange }: ImportInventoryDia
         <DialogHeader>
           <DialogTitle>Import Inventory</DialogTitle>
           <DialogDescription>
-            Upload a CSV file to import inventory items. Required columns: SKU, Name.
+            Upload a CSV file to import inventory items. Required columns: SKU, Name. Optional: Price, Cost Per Unit.
           </DialogDescription>
         </DialogHeader>
 
