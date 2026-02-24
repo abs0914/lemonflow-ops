@@ -36,7 +36,9 @@ type POFormData = z.infer<typeof poSchema>;
 
 interface POLine {
   id?: string;
-  component_id: string;
+  component_id?: string | null;
+  raw_material_id?: string | null;
+  item_type: string;
   component_name?: string;
   quantity: number;
   unit_price: number;
