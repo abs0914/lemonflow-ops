@@ -72,7 +72,7 @@ export function useConfirmPayment() {
       const { error } = await supabase
         .from("sales_orders")
         .update({
-          status: "processing",
+          status: "pending_accounting",
           delivery_date: deliveryDate.toISOString(),
           payment_amount: paymentAmount,
           payment_reference: paymentReference || null,
@@ -93,6 +93,7 @@ export function useConfirmPayment() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["finance-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["accounting-orders"] });
       queryClient.invalidateQueries({ queryKey: ["fulfillment-orders"] });
       queryClient.invalidateQueries({ queryKey: ["sales-orders"] });
     },

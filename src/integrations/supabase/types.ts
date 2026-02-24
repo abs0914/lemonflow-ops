@@ -1227,6 +1227,7 @@ export type Database = {
       get_next_item_code: { Args: never; Returns: string }
       get_next_raw_material_code: { Args: never; Returns: string }
       get_next_supplier_code: { Args: never; Returns: string }
+      is_accounting: { Args: { user_id: string }; Returns: boolean }
       is_admin: { Args: { user_id: string }; Returns: boolean }
       is_ceo: { Args: { user_id: string }; Returns: boolean }
       is_finance: { Args: { user_id: string }; Returns: boolean }

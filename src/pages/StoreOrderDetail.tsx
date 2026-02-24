@@ -16,6 +16,8 @@ import { supabase } from "@/integrations/supabase/client";
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
   submitted: "bg-primary/10 text-primary",
+  pending_payment: "bg-orange-100 text-orange-800",
+  pending_accounting: "bg-purple-100 text-purple-800",
   processing: "bg-accent text-accent-foreground",
   completed: "bg-primary/20 text-primary",
   cancelled: "bg-destructive/10 text-destructive",

@@ -31,6 +31,8 @@ import FulfillmentDashboard from "./pages/FulfillmentDashboard";
 import FulfillmentOrderDetail from "./pages/FulfillmentOrderDetail";
 import FinanceDashboard from "./pages/FinanceDashboard";
 import FinanceOrderDetail from "./pages/FinanceOrderDetail";
+import AccountingDashboard from "./pages/AccountingDashboard";
+import AccountingOrderDetail from "./pages/AccountingOrderDetail";
 import Reports from "./pages/Reports";
 import SyncMonitor from "./pages/SyncMonitor";
 import Stores from "./pages/Stores";
@@ -81,6 +83,8 @@ const App = () => (
             <Route path="/fulfillment/orders/:id" element={<FulfillmentOrderDetail />} />
             <Route path="/finance" element={<FinanceDashboard />} />
             <Route path="/finance/orders/:id" element={<FinanceOrderDetail />} />
+            <Route path="/accounting" element={<AccountingDashboard />} />
+            <Route path="/accounting/orders/:id" element={<AccountingOrderDetail />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/sync-monitor" element={<SyncMonitor />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

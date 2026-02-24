@@ -172,6 +172,7 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
                   <SelectItem value="Store">Store</SelectItem>
                   <SelectItem value="Fulfillment">Fulfillment</SelectItem>
                   <SelectItem value="Finance">Finance</SelectItem>
+                  <SelectItem value="Accounting">Accounting</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -137,13 +137,19 @@ export function AppSidebar() {
       title: "Fulfillment",
       url: "/fulfillment",
       icon: ClipboardList,
-      roles: ["Admin", "Fulfillment", "Warehouse", "Production", "Finance"],
+      roles: ["Admin", "Fulfillment", "Warehouse", "Production", "Finance", "Accounting"],
     },
     {
       title: "Finance",
       url: "/finance",
       icon: DollarSign,
       roles: ["Admin", "Finance"],
+    },
+    {
+      title: "Accounting",
+      url: "/accounting",
+      icon: ClipboardList,
+      roles: ["Admin", "Accounting"],
     },
     {
       title: "CEO Approvals",
@@ -155,7 +161,7 @@ export function AppSidebar() {
       title: "Reports",
       url: "/reports",
       icon: BarChart3,
-      roles: ["Admin", "CEO", "Production", "Warehouse", "Store", "Fulfillment"],
+      roles: ["Admin", "CEO", "Production", "Warehouse", "Store", "Fulfillment", "Accounting"],
     },
     {
       title: "Sync Monitor",
@@ -173,7 +179,7 @@ export function AppSidebar() {
       title: "My Account",
       url: "/my-account",
       icon: User,
-      roles: ["Store", "Admin", "CEO", "Finance", "Production", "Warehouse", "Fulfillment"],
+      roles: ["Store", "Admin", "CEO", "Finance", "Production", "Warehouse", "Fulfillment", "Accounting"],
     },
   ];
 
