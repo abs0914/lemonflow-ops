@@ -37,7 +37,7 @@ export default function Production() {
   const { data: productionLogs, isLoading } = useProductionLogs();
 
   // Check if user has permission (Admin or Production role)
-  if (user && profile && !["Admin", "Production"].includes(profile.role)) {
+  if (user && profile && !["Admin", "Production", "Warehouse", "Fulfillment"].includes(profile.role)) {
     navigate("/");
     return null;
   }
