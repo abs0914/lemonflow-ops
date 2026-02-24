@@ -33,6 +33,7 @@ const liquidUnits: Record<string, number> = {
   ml: 1,
   cl: 10,
   l: 1000,
+  gal: 3785.41,
 };
 
 const getUnitType = (unit: string): "weight" | "liquid" | "unknown" => {

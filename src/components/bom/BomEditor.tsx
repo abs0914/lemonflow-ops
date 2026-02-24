@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, Check, ChevronsUpDown } from "lucide-react";
+import { Plus, Trash2, Check, ChevronsUpDown, FlaskConical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/currency";
 import { ConversionHelper } from "./ConversionHelper";
+import { AddFromRawMaterialDialog } from "./AddFromRawMaterialDialog";
 
 interface BomEditorProps {
   productId?: string;
@@ -57,6 +58,7 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
   const [notes, setNotes] = useState("");
   const [open, setOpen] = useState(false);
   const [itemTypeFilter, setItemTypeFilter] = useState<"all" | "raw_material" | "component">("all");
+  const [addFromRmOpen, setAddFromRmOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -186,7 +188,18 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="border rounded-md p-4 space-y-4">
-          <h3 className="font-semibold">Add Item</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold">Add Item</h3>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAddFromRmOpen(true)}
+              className="gap-1"
+            >
+              <FlaskConical className="h-4 w-4" />
+              Add from Raw Materials
+            </Button>
+          </div>
           <div className="grid gap-4">
             <div>
               <Label>Item Type Filter</Label>
@@ -391,6 +404,12 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
           </Table>
         </div>
       </CardContent>
+
+      <AddFromRawMaterialDialog
+        open={addFromRmOpen}
+        onOpenChange={setAddFromRmOpen}
+        productId={productId}
+      />
     </Card>
   );
 }
