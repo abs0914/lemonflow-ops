@@ -421,6 +421,42 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          is_read: boolean
+          message: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_read?: boolean
+          message: string
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_read?: boolean
+          message?: string
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           component_id: string | null
@@ -1195,6 +1231,17 @@ export type Database = {
       is_ceo: { Args: { user_id: string }; Returns: boolean }
       is_finance: { Args: { user_id: string }; Returns: boolean }
       is_fulfillment: { Args: { user_id: string }; Returns: boolean }
+      notify_roles: {
+        Args: {
+          p_entity_id?: string
+          p_entity_type?: string
+          p_message: string
+          p_roles: string[]
+          p_title: string
+          p_type?: string
+        }
+        Returns: undefined
+      }
       release_sales_order_stock: {
         Args: { p_sales_order_id: string }
         Returns: undefined
