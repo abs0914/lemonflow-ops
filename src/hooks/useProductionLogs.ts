@@ -32,15 +32,29 @@ export function useProductionLogs() {
 
       if (error) throw error;
 
-      // Fetch components separately
-      const componentIds = [...new Set(movements?.map(m => m.item_id) || [])];
-      let componentMap = new Map<string, { id: string; name: string; sku: string }>();
-      if (componentIds.length > 0) {
+      // Fetch components and products separately
+      const itemIds = [...new Set(movements?.map(m => m.item_id) || [])];
+      let itemMap = new Map<string, { id: string; name: string; sku: string }>();
+      if (itemIds.length > 0) {
         const { data: components } = await supabase
           .from("components")
           .select("id, name, sku")
-          .in("id", componentIds);
-        componentMap = new Map(components?.map(c => [c.id, c]) || []);
+          .in("id", itemIds);
+        for (const c of components || []) {
+          itemMap.set(c.id, c);
+        }
+
+        // Fallback: check products table for any unmatched IDs
+        const unmatchedIds = itemIds.filter(id => !itemMap.has(id));
+        if (unmatchedIds.length > 0) {
+          const { data: products } = await supabase
+            .from("products")
+            .select("id, name, sku")
+            .in("id", unmatchedIds);
+          for (const p of products || []) {
+            itemMap.set(p.id, p);
+          }
+        }
       }
 
       // Fetch user profiles separately
@@ -56,7 +70,7 @@ export function useProductionLogs() {
 
       return movements?.map(movement => ({
         ...movement,
-        components: componentMap.get(movement.item_id),
+        components: itemMap.get(movement.item_id),
         user_profiles: profileMap.get(movement.performed_by),
       })) as ProductionLog[];
     },
