@@ -1,35 +1,51 @@
 
 
-## Include Pricing in Inventory Export and Import
+## Add Recommended Cost Price Field to Edit Inventory Dialog
 
 ### What Changes
 
-Add **Price** and **Cost Per Unit** columns to both the inventory CSV export and CSV import so that pricing data can be bulk-managed alongside other inventory fields.
+Add a read-only "Recommended Cost Price" field in the Edit Inventory Dialog, positioned between the "Cost per Unit" row and the existing "Note" box (as shown in the screenshot). This field displays the highest cost ever recorded for the item but does **not** auto-update the cost per unit -- users must manually change it if desired.
 
-### Changes
+### Database Changes
 
-#### 1. Export (src/pages/Inventory.tsx)
-- Add "Price" and "Cost Per Unit" to the CSV header row
-- Include `item.price` and `item.cost_per_unit` values in each exported row
+**Migration**: Add `recommended_cost_price` column to `components` and `raw_materials` tables.
 
-#### 2. Import (src/components/inventory/ImportInventoryDialog.tsx)
-- Add `price` and `cost_per_unit` to the `ParsedItem` interface
-- Detect "price" and "cost per unit" (or "cost_per_unit") columns during header parsing
-- Parse the numeric values from the CSV data rows
-- Include `price` and `cost_per_unit` in both the update and insert operations to Supabase
-- Update the dialog description to mention the new optional columns
-
-### Technical Details
-
-**Export header change:**
-```
-Before: SKU, AutoCount Code, Name, Item Group, Item Type, Stock Qty, Reserved, Available, Unit, Low Stock Threshold
-After:  SKU, AutoCount Code, Name, Item Group, Item Type, Stock Qty, Reserved, Available, Unit, Price, Cost Per Unit, Low Stock Threshold
+```text
+ALTER TABLE components ADD COLUMN recommended_cost_price numeric DEFAULT NULL;
+ALTER TABLE raw_materials ADD COLUMN recommended_cost_price numeric DEFAULT NULL;
 ```
 
-**Import header detection:** Will match columns named "price" and headers containing "cost" (e.g., "cost per unit", "cost_per_unit").
+**Backfill**: Set initial values from the highest of `cost_per_unit` or max `unit_cost` from `stock_movements`.
 
-**Files modified:**
-- `src/pages/Inventory.tsx` -- export function
-- `src/components/inventory/ImportInventoryDialog.tsx` -- import parsing and upsert logic
+**Trigger**: Create a trigger on `stock_movements` INSERT that updates `recommended_cost_price` on the parent item if the new `unit_cost` is higher. This only updates the recommended field -- it never touches `cost_per_unit`.
+
+### UI Changes
+
+**`src/components/inventory/EditInventoryDialog.tsx`**:
+- Add a read-only "Recommended Cost Price" field in the grid row after "Cost per Unit", right before the Note box
+- Display it with a muted background and a helper text: "Highest recorded purchase cost"
+- The field is not editable -- it is informational only
+
+**`src/types/inventory.ts`**:
+- Add `recommended_cost_price: number | null` to `Component` and `RawMaterial` interfaces
+
+### Layout (Edit Dialog)
+
+```text
+Unit *              | Cost per Unit
+--------------------|--------------------
+[Pcs]               | [8.1]
+
+Recommended Cost Price
+[8.1]  (read-only, muted background)
+"Highest recorded purchase cost"
+
+Note: Stock quantities cannot be changed here...
+```
+
+### Files Modified
+- New database migration (schema + trigger + backfill)
+- `src/types/inventory.ts` -- add field to interfaces
+- `src/components/inventory/EditInventoryDialog.tsx` -- add read-only display field
+- `src/integrations/supabase/types.ts` -- will auto-update with new column
 
