@@ -52,6 +52,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useAuth } from "@/contexts/AuthContext";
+import { NotificationBell } from "./NotificationBell";
 
 interface MenuItem {
   title: string;
@@ -200,7 +201,7 @@ export function AppSidebar() {
             className={`rounded-lg ${state === "expanded" ? "h-10 w-10" : "h-8 w-8"}`}
           />
           {state === "expanded" && (
-            <div className="flex flex-col">
+            <div className="flex flex-col flex-1">
               <span className="text-lg font-bold text-sidebar-foreground">
                 The Lemon Co
               </span>
@@ -209,6 +210,7 @@ export function AppSidebar() {
               </span>
             </div>
           )}
+          <NotificationBell />
         </div>
       </SidebarHeader>
 
