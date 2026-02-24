@@ -180,33 +180,46 @@ export type Database = {
       }
       bom_items: {
         Row: {
+          component_id: string | null
           created_at: string
           id: string
+          item_type: string
           notes: string | null
           product_id: string
           quantity: number
-          raw_material_id: string
+          raw_material_id: string | null
           updated_at: string
         }
         Insert: {
+          component_id?: string | null
           created_at?: string
           id?: string
+          item_type?: string
           notes?: string | null
           product_id: string
           quantity: number
-          raw_material_id: string
+          raw_material_id?: string | null
           updated_at?: string
         }
         Update: {
+          component_id?: string | null
           created_at?: string
           id?: string
+          item_type?: string
           notes?: string | null
           product_id?: string
           quantity?: number
-          raw_material_id?: string
+          raw_material_id?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "bom_items_component_id_fkey"
+            columns: ["component_id"]
+            isOneToOne: false
+            referencedRelation: "components"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "bom_items_product_id_fkey"
             columns: ["product_id"]
