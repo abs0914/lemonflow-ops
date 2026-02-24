@@ -164,12 +164,6 @@ export function AppSidebar() {
       roles: ["Admin", "CEO", "Production", "Warehouse", "Store", "Fulfillment", "Accounting"],
     },
     {
-      title: "Sync Monitor",
-      url: "/sync-monitor",
-      icon: RefreshCw,
-      roles: ["Admin"],
-    },
-    {
       title: "Settings",
       url: "/settings",
       icon: SettingsIcon,
