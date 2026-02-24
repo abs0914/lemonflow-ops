@@ -72,7 +72,7 @@ export function AppSidebar() {
       title: "Dashboard",
       url: "/dashboard",
       icon: LayoutDashboard,
-      roles: ["Admin", "CEO", "Production", "Warehouse", "Fulfillment"],
+      roles: ["Admin", "CEO", "Production", "Warehouse", "Fulfillment", "Accounting"],
     },
     {
       title: "BOM Manager",
@@ -96,7 +96,7 @@ export function AppSidebar() {
       title: "Inventory",
       url: "/inventory",
       icon: Database,
-      roles: ["Admin", "Warehouse", "Fulfillment", "Production"],
+      roles: ["Admin", "Warehouse", "Fulfillment", "Production", "Accounting"],
     },
     {
       title: "Suppliers",
@@ -114,7 +114,7 @@ export function AppSidebar() {
       title: "Purchasing",
       url: "/purchasing",
       icon: ShoppingCart,
-      roles: ["Admin", "CEO", "Warehouse", "Finance"],
+      roles: ["Admin", "CEO", "Warehouse", "Finance", "Accounting"],
     },
     {
       title: "Incoming Inventory",
@@ -126,7 +126,7 @@ export function AppSidebar() {
       title: "Store Orders",
       url: "/store/orders",
       icon: ShoppingBag,
-      roles: ["Admin", "Store", "Warehouse", "Fulfillment", "Production"],
+      roles: ["Admin", "Store", "Warehouse", "Fulfillment", "Production", "Accounting"],
       subItems: [
         { title: "All Orders", url: "/store/orders", icon: List },
         { title: "New Order", url: "/store/orders/create", icon: Plus },
@@ -143,7 +143,7 @@ export function AppSidebar() {
       title: "Finance",
       url: "/finance",
       icon: DollarSign,
-      roles: ["Admin", "Finance"],
+      roles: ["Admin", "Finance", "Accounting"],
     },
     {
       title: "Accounting",
