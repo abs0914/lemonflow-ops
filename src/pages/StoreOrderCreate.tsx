@@ -13,7 +13,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Save, Send } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { ArrowLeft, Save, Send, CalendarIcon, Truck, ShoppingBag } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useUserStores, usePrimaryStore } from "@/hooks/useUserStore";
 import { useStores } from "@/hooks/useStores";
 import { useAuth } from "@/contexts/AuthContext";
@@ -42,6 +50,8 @@ export default function StoreOrderCreate() {
   const [docDate, setDocDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [description, setDescription] = useState<string>("");
   const [lines, setLines] = useState<Omit<SalesOrderLine, 'id' | 'sales_order_id' | 'created_at' | 'updated_at'>[]>([]);
+  const [orderType, setOrderType] = useState<"delivery" | "pickup">("delivery");
+  const [deliveryDate, setDeliveryDate] = useState<Date | undefined>(undefined);
 
   // Get selected store info from either all stores or user stores
   const selectedStore = isOperationalRole 
@@ -81,6 +91,12 @@ export default function StoreOrderCreate() {
       return;
     }
 
+    if (!deliveryDate) {
+      const label = orderType === "pickup" ? "pickup date" : "delivery date";
+      toast.error(`Please set a ${label} before submitting`);
+      return;
+    }
+
     const order = await createMutation.mutateAsync({
       store_id: storeId,
       debtor_code: selectedStore?.debtor_code || "",
@@ -113,7 +129,9 @@ export default function StoreOrderCreate() {
         id: order.id,
         updates: { 
           status: "pending_payment", 
-          submitted_at: new Date().toISOString() 
+          submitted_at: new Date().toISOString(),
+          delivery_date: format(deliveryDate, "yyyy-MM-dd"),
+          delivery_notes: orderType === "pickup" ? "Pickup order" : undefined,
         },
       });
 
@@ -124,7 +142,9 @@ export default function StoreOrderCreate() {
         id: order.id,
         updates: { 
           status: "submitted", 
-          submitted_at: new Date().toISOString() 
+          submitted_at: new Date().toISOString(),
+          delivery_date: format(deliveryDate, "yyyy-MM-dd"),
+          delivery_notes: orderType === "pickup" ? "Pickup order" : undefined,
         },
       });
 
@@ -199,6 +219,73 @@ export default function StoreOrderCreate() {
                   onChange={(e) => setDescription(e.target.value)}
                   rows={3}
                 />
+              </div>
+
+              {/* Order Type Selection */}
+              <div className="space-y-3">
+                <Label>Order Fulfillment Type <span className="text-destructive">*</span></Label>
+                <RadioGroup
+                  value={orderType}
+                  onValueChange={(val) => {
+                    setOrderType(val as "delivery" | "pickup");
+                    setDeliveryDate(undefined);
+                  }}
+                  className="flex gap-4"
+                >
+                  <div className="flex items-center gap-2 rounded-lg border px-4 py-3 cursor-pointer flex-1 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5">
+                    <RadioGroupItem value="delivery" id="create-type-delivery" />
+                    <label htmlFor="create-type-delivery" className="flex items-center gap-2 cursor-pointer font-medium">
+                      <Truck className="h-4 w-4 text-muted-foreground" />
+                      Delivery
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-lg border px-4 py-3 cursor-pointer flex-1 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5">
+                    <RadioGroupItem value="pickup" id="create-type-pickup" />
+                    <label htmlFor="create-type-pickup" className="flex items-center gap-2 cursor-pointer font-medium">
+                      <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+                      Pickup
+                    </label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {/* Date Picker — label changes based on type */}
+              <div className="space-y-2">
+                <Label>
+                  {orderType === "pickup" ? "Pickup Date" : "Delivery Date"}{" "}
+                  <span className="text-destructive">*</span>
+                </Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full md:w-[280px] justify-start text-left font-normal",
+                        !deliveryDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {deliveryDate
+                        ? format(deliveryDate, "PPP")
+                        : `Select ${orderType === "pickup" ? "pickup" : "delivery"} date`}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={deliveryDate}
+                      onSelect={setDeliveryDate}
+                      disabled={(date) => date < new Date()}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+                {!deliveryDate && (
+                  <p className="text-xs text-muted-foreground">
+                    Set {orderType === "pickup" ? "pickup" : "delivery"} date before submitting
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
