@@ -34,21 +34,25 @@ export function useProductionLogs() {
 
       // Fetch components separately
       const componentIds = [...new Set(movements?.map(m => m.item_id) || [])];
-      const { data: components } = await supabase
-        .from("components")
-        .select("id, name, sku")
-        .in("id", componentIds);
-
-      const componentMap = new Map(components?.map(c => [c.id, c]) || []);
+      let componentMap = new Map<string, { id: string; name: string; sku: string }>();
+      if (componentIds.length > 0) {
+        const { data: components } = await supabase
+          .from("components")
+          .select("id, name, sku")
+          .in("id", componentIds);
+        componentMap = new Map(components?.map(c => [c.id, c]) || []);
+      }
 
       // Fetch user profiles separately
       const userIds = [...new Set(movements?.map(m => m.performed_by) || [])];
-      const { data: profiles } = await supabase
-        .from("user_profiles")
-        .select("id, full_name")
-        .in("id", userIds);
-
-      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+      let profileMap = new Map<string, { id: string; full_name: string }>();
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("user_profiles")
+          .select("id, full_name")
+          .in("id", userIds);
+        profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+      }
 
       return movements?.map(movement => ({
         ...movement,
