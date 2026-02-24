@@ -34,7 +34,7 @@ import FinanceOrderDetail from "./pages/FinanceOrderDetail";
 import AccountingDashboard from "./pages/AccountingDashboard";
 import AccountingOrderDetail from "./pages/AccountingOrderDetail";
 import Reports from "./pages/Reports";
-import SyncMonitor from "./pages/SyncMonitor";
+
 import Stores from "./pages/Stores";
 import NotFound from "./pages/NotFound";
 
@@ -86,7 +86,7 @@ const App = () => (
             <Route path="/accounting" element={<AccountingDashboard />} />
             <Route path="/accounting/orders/:id" element={<AccountingOrderDetail />} />
             <Route path="/reports" element={<Reports />} />
-            <Route path="/sync-monitor" element={<SyncMonitor />} />
+            
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
