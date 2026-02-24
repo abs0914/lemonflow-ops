@@ -109,6 +109,8 @@ export default function PurchasingEdit() {
         existingLines.map((line) => ({
           id: line.id,
           component_id: line.component_id,
+          raw_material_id: line.raw_material_id,
+          item_type: line.item_type || "component",
           component_name: line.components?.name,
           quantity: line.quantity,
           unit_price: line.unit_price,
@@ -200,6 +202,7 @@ export default function PurchasingEdit() {
       ...lines,
       {
         component_id: selectedComponent,
+        item_type: "component",
         component_name: component.name,
         quantity: 1,
         unit_price: component.cost_per_unit || 0,
