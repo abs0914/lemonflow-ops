@@ -15,6 +15,7 @@ export interface Component {
   autocount_item_code: string | null;
   last_synced_at: string | null;
   low_stock_threshold: number | null;
+  recommended_cost_price: number | null;
 }
 
 export interface RawMaterial {
@@ -34,6 +35,7 @@ export interface RawMaterial {
   autocount_item_code: string | null;
   last_synced_at: string | null;
   low_stock_threshold: number | null;
+  recommended_cost_price: number | null;
   created_at: string;
   updated_at: string;
 }

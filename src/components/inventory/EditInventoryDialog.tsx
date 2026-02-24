@@ -290,6 +290,18 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
             </div>
           </div>
 
+          <div className="space-y-2">
+            <Label>Recommended Cost Price</Label>
+            <Input
+              value={component?.recommended_cost_price != null ? component.recommended_cost_price.toFixed(2) : "-"}
+              readOnly
+              className="bg-muted cursor-not-allowed"
+            />
+            <p className="text-xs text-muted-foreground">
+              Highest recorded purchase cost
+            </p>
+          </div>
+
           <div className="bg-muted p-3 rounded-lg text-sm">
             <p className="text-muted-foreground">
               <strong>Note:</strong> Stock quantities cannot be changed here. Use the "Adjust Stock" feature to properly record stock movements.

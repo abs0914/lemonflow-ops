@@ -250,6 +250,7 @@ export type Database = {
           low_stock_threshold: number | null
           name: string
           price: number | null
+          recommended_cost_price: number | null
           reserved_quantity: number
           sku: string
           stock_control: boolean | null
@@ -270,6 +271,7 @@ export type Database = {
           low_stock_threshold?: number | null
           name: string
           price?: number | null
+          recommended_cost_price?: number | null
           reserved_quantity?: number
           sku: string
           stock_control?: boolean | null
@@ -290,6 +292,7 @@ export type Database = {
           low_stock_threshold?: number | null
           name?: string
           price?: number | null
+          recommended_cost_price?: number | null
           reserved_quantity?: number
           sku?: string
           stock_control?: boolean | null
@@ -712,6 +715,7 @@ export type Database = {
           low_stock_threshold: number | null
           name: string
           price: number | null
+          recommended_cost_price: number | null
           reserved_quantity: number
           sku: string
           stock_control: boolean | null
@@ -732,6 +736,7 @@ export type Database = {
           low_stock_threshold?: number | null
           name: string
           price?: number | null
+          recommended_cost_price?: number | null
           reserved_quantity?: number
           sku: string
           stock_control?: boolean | null
@@ -752,6 +757,7 @@ export type Database = {
           low_stock_threshold?: number | null
           name?: string
           price?: number | null
+          recommended_cost_price?: number | null
           reserved_quantity?: number
           sku?: string
           stock_control?: boolean | null
