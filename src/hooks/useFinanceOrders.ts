@@ -43,53 +43,22 @@ export function useConfirmPayment() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // Sync to AutoCount first - handle both invoke errors and API errors gracefully
-      let syncSuccess = false;
-      let documentNo: string | null = null;
-      let syncErrorMessage: string | null = null;
-
-      try {
-        const { data: syncData, error: syncError } = await supabase.functions.invoke(
-          "sync-sales-order",
-          { body: { salesOrderId: orderId } }
-        );
-
-        if (syncError) {
-          console.error("AutoCount sync error:", syncError);
-          syncErrorMessage = syncError.message || "AutoCount sync failed";
-        } else if (syncData?.success) {
-          syncSuccess = true;
-          documentNo = syncData.documentNo || null;
-        } else if (syncData?.error) {
-          syncErrorMessage = syncData.error;
-        }
-      } catch (err) {
-        console.error("AutoCount sync exception:", err);
-        syncErrorMessage = err instanceof Error ? err.message : "AutoCount sync failed";
-      }
-
-      // Update order with payment confirmation, delivery date, and sync status
+      // Update order with fees and send to franchisee for proof of payment
       const { error } = await supabase
         .from("sales_orders")
         .update({
-          status: "pending_accounting",
+          status: "awaiting_proof",
           delivery_date: deliveryDate.toISOString(),
           payment_amount: paymentAmount,
           payment_reference: paymentReference || null,
           payment_confirmed_by: user.id,
           payment_confirmed_at: new Date().toISOString(),
-          autocount_synced: syncSuccess,
-          autocount_doc_no: documentNo,
-          synced_at: syncSuccess ? new Date().toISOString() : null,
-          sync_error_message: syncErrorMessage,
           delivery_fee: deliveryFee ?? 0,
           shipping_fee: shippingFee ?? 0,
         } as any)
         .eq("id", orderId);
 
       if (error) throw error;
-
-      return { syncSuccess, documentNo };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["finance-orders"] });

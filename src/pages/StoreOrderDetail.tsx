@@ -1,14 +1,15 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Trash2, Send, RefreshCw } from "lucide-react";
+import { ArrowLeft, Trash2, Send, RefreshCw, Upload, Image } from "lucide-react";
 import { useSalesOrder, useSalesOrderLines, useUpdateSalesOrder, useDeleteSalesOrder } from "@/hooks/useSalesOrders";
 import { DeleteOrderDialog } from "@/components/store-orders/DeleteOrderDialog";
 import { OrderLineForm } from "@/components/store-orders/OrderLineForm";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ProofImage } from "@/components/store-orders/ProofImage";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +18,7 @@ const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
   submitted: "bg-primary/10 text-primary",
   pending_payment: "bg-orange-100 text-orange-800",
+  awaiting_proof: "bg-amber-100 text-amber-800",
   pending_accounting: "bg-purple-100 text-purple-800",
   processing: "bg-accent text-accent-foreground",
   completed: "bg-primary/20 text-primary",
@@ -28,6 +30,8 @@ export default function StoreOrderDetail() {
   const navigate = useNavigate();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isUploadingProof, setIsUploadingProof] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: order, isLoading } = useSalesOrder(id);
   const { data: lines } = useSalesOrderLines(id);
@@ -122,7 +126,38 @@ export default function StoreOrderDetail() {
 
   const isDraft = order.status === "draft";
   const isSubmitted = order.status === "submitted";
+  const isAwaitingProof = order.status === "awaiting_proof";
   const canSync = isSubmitted && !order.autocount_synced;
+
+  const handleUploadProof = async (file: File) => {
+    if (!order) return;
+    setIsUploadingProof(true);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const filePath = `${order.id}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("payment-proofs")
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Update order with proof URL and move to pending_accounting
+      await updateMutation.mutateAsync({
+        id: order.id,
+        updates: {
+          proof_of_payment_url: filePath,
+          status: "pending_accounting",
+        } as any,
+      });
+
+      toast.success("Proof of payment uploaded successfully!");
+    } catch (error: any) {
+      toast.error(`Upload failed: ${error.message}`);
+    } finally {
+      setIsUploadingProof(false);
+    }
+  };
 
   return (
     <DashboardLayout>
@@ -237,6 +272,83 @@ export default function StoreOrderDetail() {
               <OrderLineForm lines={lines || []} onRemoveLine={() => {}} readOnly />
             </CardContent>
           </Card>
+
+          {/* Proof of Payment Upload - shown when awaiting_proof */}
+          {isAwaitingProof && (
+            <Card className="border-amber-200 bg-amber-50/30">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Upload className="h-5 w-5" />
+                  Upload Proof of Payment
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Order Total</span>
+                    <span>₱{(order.total_amount || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  {(order.delivery_fee || 0) > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Delivery Fee</span>
+                      <span>₱{(order.delivery_fee || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+                  {(order.shipping_fee || 0) > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Shipping Fee</span>
+                      <span>₱{(order.shipping_fee || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-bold border-t pt-2">
+                    <span>Grand Total to Pay</span>
+                    <span className="text-lg">
+                      ₱{((order.total_amount || 0) + (order.delivery_fee || 0) + (order.shipping_fee || 0)).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-sm text-muted-foreground">
+                  Please upload a screenshot of your payment receipt or bank transfer confirmation.
+                </p>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleUploadProof(file);
+                  }}
+                />
+
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploadingProof}
+                  className="w-full"
+                >
+                  <Upload className={`mr-2 h-4 w-4 ${isUploadingProof ? "animate-spin" : ""}`} />
+                  {isUploadingProof ? "Uploading..." : "Select & Upload Proof of Payment"}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Show uploaded proof if exists */}
+          {order.proof_of_payment_url && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Image className="h-5 w-5" />
+                  Proof of Payment
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ProofImage filePath={order.proof_of_payment_url} />
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 

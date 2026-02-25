@@ -11,7 +11,8 @@ import { useSalesOrder, useSalesOrderLines } from "@/hooks/useSalesOrders";
 import { useAccountingApprove, useAccountingNotePayment } from "@/hooks/useAccountingOrders";
 import { formatCurrency } from "@/lib/currency";
 import { format } from "date-fns";
-import { ArrowLeft, Check, FileText, Package, Store, DollarSign } from "lucide-react";
+import { ArrowLeft, Check, FileText, Package, Store, DollarSign, Image } from "lucide-react";
+import { ProofImage } from "@/components/store-orders/ProofImage";
 import { toast } from "sonner";
 import {
   Table,
@@ -246,6 +247,21 @@ export default function AccountingOrderDetail() {
             </Table>
           </CardContent>
         </Card>
+
+        {/* Proof of Payment */}
+        {order.proof_of_payment_url && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Image className="h-5 w-5" />
+                Proof of Payment
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ProofImage filePath={order.proof_of_payment_url} />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Accounting Actions */}
         {order.status === "pending_accounting" && (
