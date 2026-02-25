@@ -849,6 +849,7 @@ export type Database = {
           payment_confirmed_at: string | null
           payment_confirmed_by: string | null
           payment_reference: string | null
+          proof_of_payment_url: string | null
           shipping_fee: number | null
           status: string | null
           stock_reserved: boolean | null
@@ -882,6 +883,7 @@ export type Database = {
           payment_confirmed_at?: string | null
           payment_confirmed_by?: string | null
           payment_reference?: string | null
+          proof_of_payment_url?: string | null
           shipping_fee?: number | null
           status?: string | null
           stock_reserved?: boolean | null
@@ -915,6 +917,7 @@ export type Database = {
           payment_confirmed_at?: string | null
           payment_confirmed_by?: string | null
           payment_reference?: string | null
+          proof_of_payment_url?: string | null
           shipping_fee?: number | null
           status?: string | null
           stock_reserved?: boolean | null

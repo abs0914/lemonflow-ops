@@ -94,7 +94,7 @@ export default function FinanceOrderDetail() {
     }
 
     try {
-      const result = await confirmPayment.mutateAsync({
+      await confirmPayment.mutateAsync({
         orderId: id,
         paymentAmount: amount,
         paymentReference: paymentReference || undefined,
@@ -103,14 +103,10 @@ export default function FinanceOrderDetail() {
         shippingFee: shippingFeeAmount,
       });
       
-      if (result?.syncSuccess) {
-        toast.success(`Payment confirmed and synced to AutoCount (${result.documentNo})`);
-      } else {
-        toast.success("Payment confirmed (AutoCount sync pending)");
-      }
+      toast.success("Fees set. Order sent to franchisee for proof of payment upload.");
       navigate("/finance");
     } catch (error) {
-      toast.error("Failed to confirm payment");
+      toast.error("Failed to process order");
     }
   };
 
@@ -303,7 +299,7 @@ export default function FinanceOrderDetail() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <DollarSign className="h-5 w-5" />
-              Payment Confirmation
+              Set Fees & Send for Proof of Payment
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -463,7 +459,7 @@ export default function FinanceOrderDetail() {
                 className="flex-1"
               >
                 <Check className="h-4 w-4 mr-2" />
-                {confirmPayment.isPending ? "Confirming..." : "Confirm Payment"}
+                {confirmPayment.isPending ? "Processing..." : "Set Fees & Send for Proof"}
               </Button>
               <Button
                 variant="destructive"
