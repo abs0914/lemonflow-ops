@@ -33,6 +33,27 @@ Deno.serve(async (req) => {
   try {
     console.log('[sync-suppliers-preview] Starting preview');
 
+    // --- Auth Guard: require authenticated Admin/Warehouse user ---
+    const authHeader = req.headers.get('Authorization');
+    const token = authHeader?.replace('Bearer ', '');
+    if (!token) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader! } } }
+    );
+    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token);
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const { data: profile } = await supabaseAuth.from('user_profiles').select('role').eq('id', user.id).single();
+    if (!profile || !['Admin', 'Warehouse'].includes(profile.role)) {
+      return new Response(JSON.stringify({ error: 'Admin or Warehouse access required' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    // --- End Auth Guard ---
+
     const apiUrl = Deno.env.get('LEMONCO_API_URL');
     const username = Deno.env.get('LEMONCO_USERNAME');
     const password = Deno.env.get('LEMONCO_PASSWORD');
@@ -60,30 +81,23 @@ Deno.serve(async (req) => {
     const acResponse = await fetch(`${apiUrl}/autocount/suppliers`, {
       method: 'GET',
       headers: {
-        // Backend returns PascalCase: AccessToken
         'Authorization': `Bearer ${authData.AccessToken}`,
         'Content-Type': 'application/json',
       },
     });
 
     console.log('[sync-suppliers-preview] Response status:', acResponse.status);
-    console.log('[sync-suppliers-preview] Response headers:', JSON.stringify([...acResponse.headers]));
 
     if (!acResponse.ok) {
       const errorText = await acResponse.text();
       console.error('[sync-suppliers-preview] API Error Response:', errorText);
-      console.error('[sync-suppliers-preview] Full error details:', {
-        status: acResponse.status,
-        statusText: acResponse.statusText,
-        url: `${apiUrl}/autocount/suppliers`,
-      });
       throw new Error(`Failed to fetch AutoCount suppliers: ${acResponse.status} - ${errorText}`);
     }
 
     const autoCountSuppliers: AutoCountSupplier[] = await acResponse.json();
     console.log(`[sync-suppliers-preview] Found ${autoCountSuppliers.length} AutoCount suppliers`);
 
-    // Get local suppliers
+    // Get local suppliers using service role
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -108,7 +122,6 @@ Deno.serve(async (req) => {
       );
 
       if (!localSupplier) {
-        // New supplier
         preview.push({
           action: 'create',
           supplierCode: acSupplier.code,
@@ -116,7 +129,6 @@ Deno.serve(async (req) => {
           autoCountData: acSupplier,
         });
       } else {
-        // Check for changes
         const changes: Record<string, { old: any; new: any }> = {};
 
         if (localSupplier.company_name !== acSupplier.companyName) {

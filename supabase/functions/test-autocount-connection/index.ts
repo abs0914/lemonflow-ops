@@ -18,6 +18,27 @@ Deno.serve(async (req) => {
   try {
     console.log('[test-autocount-connection] Starting connection test');
 
+    // --- Auth Guard: require authenticated Admin user ---
+    const authHeader = req.headers.get('Authorization');
+    const token = authHeader?.replace('Bearer ', '');
+    if (!token) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader! } } }
+    );
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const { data: profile } = await supabaseClient.from('user_profiles').select('role').eq('id', user.id).single();
+    if (!profile || !['Admin', 'Warehouse'].includes(profile.role)) {
+      return new Response(JSON.stringify({ error: 'Admin or Warehouse access required' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    // --- End Auth Guard ---
+
     const apiUrl = Deno.env.get('LEMONCO_API_URL');
     const username = Deno.env.get('LEMONCO_USERNAME');
     const password = Deno.env.get('LEMONCO_PASSWORD');

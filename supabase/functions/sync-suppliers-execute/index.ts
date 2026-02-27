@@ -24,6 +24,27 @@ Deno.serve(async (req) => {
   try {
     console.log('[sync-suppliers-execute] Starting sync execution');
 
+    // --- Auth Guard: require authenticated Admin/Warehouse user ---
+    const authHeader = req.headers.get('Authorization');
+    const token = authHeader?.replace('Bearer ', '');
+    if (!token) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader! } } }
+    );
+    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token);
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const { data: profile } = await supabaseAuth.from('user_profiles').select('role').eq('id', user.id).single();
+    if (!profile || !['Admin', 'Warehouse'].includes(profile.role)) {
+      return new Response(JSON.stringify({ error: 'Admin or Warehouse access required' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    // --- End Auth Guard ---
+
     const apiUrl = Deno.env.get('LEMONCO_API_URL');
     const username = Deno.env.get('LEMONCO_USERNAME');
     const password = Deno.env.get('LEMONCO_PASSWORD');
@@ -51,7 +72,6 @@ Deno.serve(async (req) => {
     const acResponse = await fetch(`${apiUrl}/autocount/suppliers`, {
       method: 'GET',
       headers: {
-        // Backend returns PascalCase: AccessToken
         'Authorization': `Bearer ${authData.AccessToken}`,
         'Content-Type': 'application/json',
       },
@@ -64,7 +84,7 @@ Deno.serve(async (req) => {
     const autoCountSuppliers: AutoCountSupplier[] = await acResponse.json();
     console.log(`[sync-suppliers-execute] Found ${autoCountSuppliers.length} AutoCount suppliers`);
 
-    // Initialize Supabase client
+    // Initialize Supabase client with service role for data operations
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -79,7 +99,6 @@ Deno.serve(async (req) => {
     // Process each supplier
     for (const acSupplier of autoCountSuppliers) {
       try {
-        // Check if supplier exists
         const { data: existing } = await supabaseClient
           .from('suppliers')
           .select('id')
@@ -100,35 +119,28 @@ Deno.serve(async (req) => {
         };
 
         if (existing) {
-          // Update existing supplier
           const { error } = await supabaseClient
             .from('suppliers')
             .update(supplierData)
             .eq('id', existing.id);
 
           if (error) {
-            console.error(`[sync-suppliers-execute] Update error for ${acSupplier.code}:`, error);
             results.errors.push(`Failed to update ${acSupplier.code}: ${error.message}`);
           } else {
             results.updated++;
-            console.log(`[sync-suppliers-execute] Updated supplier: ${acSupplier.code}`);
           }
         } else {
-          // Create new supplier
           const { error } = await supabaseClient
             .from('suppliers')
             .insert(supplierData);
 
           if (error) {
-            console.error(`[sync-suppliers-execute] Insert error for ${acSupplier.code}:`, error);
             results.errors.push(`Failed to create ${acSupplier.code}: ${error.message}`);
           } else {
             results.created++;
-            console.log(`[sync-suppliers-execute] Created supplier: ${acSupplier.code}`);
           }
         }
 
-        // Log sync activity
         await supabaseClient
           .from('autocount_sync_log')
           .insert({
@@ -140,7 +152,6 @@ Deno.serve(async (req) => {
           });
 
       } catch (error) {
-        console.error(`[sync-suppliers-execute] Error processing ${acSupplier.code}:`, error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         results.errors.push(`Error processing ${acSupplier.code}: ${errorMessage}`);
       }

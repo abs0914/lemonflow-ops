@@ -32,8 +32,29 @@ serve(async (req) => {
 
   try {
     console.log('Starting pull-po-from-autocount preview...');
+
+    // --- Auth Guard: require authenticated Admin/Warehouse user ---
+    const authHeader = req.headers.get('Authorization');
+    const token = authHeader?.replace('Bearer ', '');
+    if (!token) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader! } } }
+    );
+    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token);
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const { data: profile } = await supabaseAuth.from('user_profiles').select('role').eq('id', user.id).single();
+    if (!profile || !['Admin', 'Warehouse'].includes(profile.role)) {
+      return new Response(JSON.stringify({ error: 'Admin or Warehouse access required' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    // --- End Auth Guard ---
     
-    // Initialize Supabase client
+    // Initialize Supabase client with service role for data operations
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -59,12 +80,12 @@ serve(async (req) => {
       throw new Error(`Authentication failed: ${loginResponse.statusText}`);
     }
 
-    const { token } = await loginResponse.json();
+    const { token: apiToken } = await loginResponse.json();
 
     // Fetch POs from AutoCount
     console.log('Fetching POs from AutoCount...');
     const posResponse = await fetch(`${apiUrl}/autocount/purchase-orders`, {
-      headers: { 'Authorization': `Bearer ${token}` },
+      headers: { 'Authorization': `Bearer ${apiToken}` },
     });
 
     if (!posResponse.ok) {
@@ -118,7 +139,6 @@ serve(async (req) => {
           lineCount: acPO.Details?.length || 0,
         });
       } else {
-        // Check if update needed (status change)
         const newStatus = acPO.IsCancelled ? 'cancelled' : 'approved';
         if (localPO.status !== newStatus) {
           toUpdate.push({
