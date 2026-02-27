@@ -304,7 +304,7 @@ export default function CEODashboard() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => navigate(`/purchase-orders/${po.id}`)}
+                            onClick={() => navigate(`/purchasing/${po.id}`)}
                           >
                             <Eye className="h-4 w-4 mr-2" />
                             View Details
