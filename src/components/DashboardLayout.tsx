@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
-import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
-
+import tlcLogo from "@/assets/tlc-logo.png";
 interface DashboardLayoutProps {
   children: ReactNode;
 }
@@ -16,25 +16,25 @@ function DashboardLayoutInner({ children }: DashboardLayoutProps) {
   };
 
   return (
-    <>
-      {/* Backdrop overlay - only visible on mobile when sidebar is open */}
-      {isMobile && openMobile && (
-        <div 
-          className="fixed inset-0 bg-black/20 z-40 md:hidden"
-          onClick={() => setOpenMobile(false)}
-        />
-      )}
-      
-      <div className="min-h-screen flex w-full">
-        <AppSidebar />
+    <div className="min-h-screen flex w-full">
+      <AppSidebar />
+      <div className="flex-1 flex flex-col overflow-auto">
+        {/* Mobile header with sidebar trigger */}
+        {isMobile && (
+          <header className="sticky top-0 z-30 flex h-12 items-center gap-2 border-b border-border bg-background px-3 md:hidden">
+            <SidebarTrigger />
+            <img src={tlcLogo} alt="The Lemon Co" className="h-7 w-7 rounded-lg" />
+            <span className="text-sm font-semibold text-foreground">The Lemon Co</span>
+          </header>
+        )}
         <main 
-          className="flex-1 overflow-auto relative z-10 p-6"
+          className="flex-1 p-6"
           onClick={handleMainContentClick}
         >
           {children}
         </main>
       </div>
-    </>
+    </div>
   );
 }
 
