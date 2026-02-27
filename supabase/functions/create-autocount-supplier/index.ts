@@ -22,6 +22,27 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // --- Auth Guard: require authenticated Admin/Warehouse user ---
+    const authHeader = req.headers.get('Authorization');
+    const token = authHeader?.replace('Bearer ', '');
+    if (!token) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader! } } }
+    );
+    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token);
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const { data: profile } = await supabaseAuth.from('user_profiles').select('role').eq('id', user.id).single();
+    if (!profile || !['Admin', 'Warehouse'].includes(profile.role)) {
+      return new Response(JSON.stringify({ error: 'Admin or Warehouse access required' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    // --- End Auth Guard ---
+
     const { supplierId } = await req.json();
     console.log('[create-autocount-supplier] Creating supplier in AutoCount:', supplierId);
 
@@ -29,7 +50,7 @@ Deno.serve(async (req) => {
       throw new Error('Supplier ID is required');
     }
 
-    // Get supplier data from Supabase
+    // Get supplier data from Supabase using service role
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -91,7 +112,6 @@ Deno.serve(async (req) => {
     const createResponse = await fetch(`${apiUrl}/autocount/suppliers`, {
       method: 'POST',
       headers: {
-        // Backend returns PascalCase: AccessToken
         'Authorization': `Bearer ${authData.AccessToken}`,
         'Content-Type': 'application/json',
       },

@@ -39,6 +39,27 @@ Deno.serve(async (req) => {
   try {
     console.log('[sync-inventory-preview] Starting preview');
 
+    // --- Auth Guard: require authenticated Admin/Warehouse user ---
+    const authHeader = req.headers.get('Authorization');
+    const token = authHeader?.replace('Bearer ', '');
+    if (!token) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader! } } }
+    );
+    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token);
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const { data: profile } = await supabaseAuth.from('user_profiles').select('role').eq('id', user.id).single();
+    if (!profile || !['Admin', 'Warehouse'].includes(profile.role)) {
+      return new Response(JSON.stringify({ error: 'Admin or Warehouse access required' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    // --- End Auth Guard ---
+
     const apiUrl = Deno.env.get('LEMONCO_API_URL');
     const username = Deno.env.get('LEMONCO_USERNAME');
     const password = Deno.env.get('LEMONCO_PASSWORD');
@@ -85,7 +106,6 @@ Deno.serve(async (req) => {
 
     const responseData = await acResponse.json();
 
-    // Handle different response structures
     let autoCountItems: AutoCountStockItem[] = [];
     if (Array.isArray(responseData)) {
       autoCountItems = responseData;
@@ -97,7 +117,7 @@ Deno.serve(async (req) => {
 
     console.log(`[sync-inventory-preview] Found ${autoCountItems.length} AutoCount items`);
 
-    // Get local components
+    // Get local components using service role
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -121,7 +141,6 @@ Deno.serve(async (req) => {
         c => c.autocount_item_code === acItem.itemCode || c.sku === acItem.itemCode
       );
 
-      // Get stock balance - check multiple possible field names
       const stockBalance = (acItem as any).stockBalance 
         ?? (acItem as any).StockBalance 
         ?? (acItem as any).totalBalQty 
@@ -134,7 +153,6 @@ Deno.serve(async (req) => {
                                     !isNaN(Number(stockBalance));
 
       if (!localComponent) {
-        // New item
         preview.push({
           action: 'create',
           itemCode: acItem.itemCode,
@@ -142,7 +160,6 @@ Deno.serve(async (req) => {
           autoCountData: { ...acItem, stockBalance: hasValidStockBalance ? Number(stockBalance) : null },
         });
       } else {
-        // Check for changes
         const changes: Record<string, { old: any; new: any }> = {};
 
         if (localComponent.name !== acItem.description) {
@@ -169,7 +186,6 @@ Deno.serve(async (req) => {
         if (localComponent.price !== acItem.price) {
           changes.price = { old: localComponent.price, new: acItem.price };
         }
-        // Compare stock balance - only if API returns valid value
         if (hasValidStockBalance && localComponent.stock_quantity !== Number(stockBalance)) {
           changes.stock_quantity = { old: localComponent.stock_quantity, new: Number(stockBalance) };
         }

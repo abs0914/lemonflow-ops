@@ -13,12 +13,32 @@ interface DemoUser {
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
+    // --- Auth Guard: require authenticated Admin user ---
+    const authHeader = req.headers.get('Authorization')
+    const token = authHeader?.replace('Bearer ', '')
+    if (!token) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader! } } }
+    )
+    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token)
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+    const { data: profile } = await supabaseAuth.from('user_profiles').select('role').eq('id', user.id).single()
+    if (!profile || profile.role !== 'Admin') {
+      return new Response(JSON.stringify({ error: 'Admin access required' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+    // --- End Auth Guard ---
+
     // Create Supabase client with service role to bypass RLS
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -57,12 +77,10 @@ Deno.serve(async (req) => {
     for (const user of demoUsers) {
       console.log(`Creating user: ${user.email}`)
       
-      // Check if user already exists
       const { data: existingUser } = await supabaseAdmin.auth.admin.listUsers()
       const userExists = existingUser?.users?.some((u) => u.email === user.email)
 
       if (userExists) {
-        console.log(`User ${user.email} already exists, skipping...`)
         results.push({
           email: user.email,
           status: 'skipped',
@@ -71,7 +89,6 @@ Deno.serve(async (req) => {
         continue
       }
 
-      // Create user with metadata
       const { data, error } = await supabaseAdmin.auth.admin.createUser({
         email: user.email,
         password: user.password,
@@ -83,14 +100,12 @@ Deno.serve(async (req) => {
       })
 
       if (error) {
-        console.error(`Error creating user ${user.email}:`, error)
         results.push({
           email: user.email,
           status: 'error',
           message: error.message
         })
       } else {
-        console.log(`Successfully created user: ${user.email}`)
         results.push({
           email: user.email,
           status: 'success',
