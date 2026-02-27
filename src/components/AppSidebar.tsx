@@ -155,7 +155,7 @@ export function AppSidebar() {
       title: "CEO Approvals",
       url: "/ceo-dashboard",
       icon: CheckCircle,
-      roles: ["CEO"],
+      roles: ["Admin", "CEO"],
     },
     {
       title: "Reports",
