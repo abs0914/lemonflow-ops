@@ -317,7 +317,12 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border p-1">
+      <SidebarFooter className="border-t border-sidebar-border p-1 space-y-1">
+        {profile?.role === "Admin" && state === "expanded" && (
+          <div className="px-1">
+            <AutoSyncStatusIndicator />
+          </div>
+        )}
         {state === "expanded" ? (
           <div className="flex items-center gap-1">
             <SidebarTrigger />
