@@ -97,10 +97,10 @@ export default function IncomingInventory() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2">
             <Truck className="h-7 w-7 text-primary" />
-            Incoming Inventory
+            Receiving Report
           </h1>
           <p className="text-muted-foreground mt-1">
-            Centralized management for receiving goods, returns, and direct receipts
+            Centralized receiving report for goods, returns, and direct receipts
           </p>
         </div>
 
