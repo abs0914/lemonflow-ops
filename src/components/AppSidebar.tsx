@@ -120,7 +120,7 @@ export function AppSidebar() {
       title: "Incoming Inventory",
       url: "/incoming-inventory",
       icon: Truck,
-      roles: ["Admin", "Warehouse", "Fulfillment", "Production"],
+      roles: ["Admin", "Warehouse", "Fulfillment", "Production", "Accounting"],
     },
     {
       title: "Store Orders",
