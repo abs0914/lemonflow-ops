@@ -44,12 +44,15 @@ export function FulfillmentOrderActions({
   onApprove,
   onReject,
   onComplete,
+  onMarkWithIssues,
   isLoading,
 }: FulfillmentOrderActionsProps) {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [showIssuesDialog, setShowIssuesDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [issuesNotes, setIssuesNotes] = useState("");
   const [deliveryDate, setDeliveryDate] = useState<Date | undefined>(
     order.delivery_date ? new Date(order.delivery_date) : undefined
   );
