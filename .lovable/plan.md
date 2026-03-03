@@ -1,103 +1,84 @@
 
 
-## Add Proof of Payment Upload & Updated Franchisee Workflow
+## Plan: 5-Minute Auto-Sync to AutoCount + Hide Manual Sync Buttons for Non-Admins
 
-### Updated Workflow
+### What This Solves
+Currently all sync operations are manual. Users need automatic background syncing every 5 minutes, and manual sync buttons should only be visible to Admins.
 
-The franchisee order flow changes from:
+### Part 1: Create an Auto-Sync Edge Function
 
-```text
-Current:  submitted → pending_payment (Finance) → pending_accounting (Accounting) → processing (Fulfillment)
+Create a new edge function `auto-sync-to-autocount/index.ts` that runs as a batch job:
 
-New:      submitted → pending_payment (Finance sets fees/dates) → awaiting_proof (Franchisee uploads proof) → pending_accounting (Accounting reviews proof & approves) → processing (Fulfillment)
+1. **Authenticate** with AutoCount backend
+2. **Find unsynced records** across key tables using service role:
+   - `sales_orders` where `autocount_synced = false` and status is `submitted`/`processing`/`completed`
+   - `components` where changes detected (modified after `last_synced_at`)
+   - `stores` where `autocount_synced = false`
+   - `suppliers` where `autocount_synced = false`
+3. **POST each unsynced record** to AutoCount (reusing existing sync logic patterns)
+4. **Log results** to `autocount_sync_log`
+5. Set `verify_jwt = false` in config.toml (will validate via a shared secret or service key internally)
+
+The function will prioritize **POST/create operations** (sales orders, new items) since the frontend is the primary data entry point. Pull/GET operations will be minimal or skipped in the auto-sync.
+
+### Part 2: Schedule with pg_cron
+
+Use `pg_cron` + `pg_net` to call the edge function every 5 minutes:
+
+```sql
+SELECT cron.schedule(
+  'auto-sync-autocount-5min',
+  '*/5 * * * *',
+  $$ SELECT net.http_post(
+    url := 'https://pukezienbcenozlqmunf.supabase.co/functions/v1/auto-sync-to-autocount',
+    headers := '{"Content-Type":"application/json","Authorization":"Bearer <anon_key>"}'::jsonb,
+    body := '{"source":"cron"}'::jsonb
+  ) AS request_id; $$
+);
 ```
 
-Finance no longer confirms payment directly. Instead, Finance sets delivery/shipping fees and delivery date, then sends it back to the franchisee to upload proof of payment. Only after the franchisee uploads the screenshot does it go to Accounting for final approval.
+### Part 3: Hide Manual Sync Buttons for Non-Admins
 
-### Database Changes
+Conditionally render sync buttons based on `profile?.role === 'Admin'` in these pages:
 
-1. **New status value**: Add `awaiting_proof` to the sales order status flow
-2. **New column on `sales_orders`**: `proof_of_payment_url TEXT` to store the uploaded file path
-3. **Storage bucket**: Create `payment-proofs` bucket (private) with RLS policies allowing:
-   - Store users to upload files for their own orders
-   - Finance, Accounting, Admin to view files
-4. **RLS policy updates**: 
-   - Store users can UPDATE orders in `awaiting_proof` status (to set `proof_of_payment_url`)
-   - Finance `WITH CHECK` expression updated to allow transitioning to `awaiting_proof`
+| Page | Buttons to hide |
+|------|----------------|
+| `src/pages/Inventory.tsx` | "Pull from AutoCount", "Sync to AutoCount" |
+| `src/pages/Suppliers.tsx` | "Sync from AutoCount", "Sync to AutoCount" |
+| `src/pages/Stores.tsx` | "Sync from AutoCount", "Sync to AutoCount", per-row sync icon |
+| `src/pages/Purchasing.tsx` | "Pull from AutoCount", "Sync to AutoCount" |
+| `src/pages/StoreOrderDetail.tsx` | "Sync to AutoCount" button |
+| `src/components/inventory/AddInventoryDialog.tsx` | "Sync to AutoCount" checkbox |
+| `src/components/inventory/EditInventoryDialog.tsx` | "Sync to AutoCount" checkbox |
+| `src/components/inventory/StockAdjustmentDialog.tsx` | "Sync to AutoCount" checkbox |
 
-### File Changes
+Each page already has access to `useAuth()` or can import it. The sync buttons will be wrapped in `{profile?.role === 'Admin' && (...)}`.
 
-**`src/types/sales-order.ts`**
-- Add `awaiting_proof` to the status union type
-- Add `proof_of_payment_url?: string` field
+### Part 4: Add Auto-Sync Status Indicator (Optional Enhancement)
 
-**`src/hooks/useFinanceOrders.ts`** (`useConfirmPayment`)
-- Change target status from `pending_accounting` to `awaiting_proof`
-- Remove AutoCount sync from this step (moved to later, or kept at accounting approval)
-
-**`src/pages/FinanceOrderDetail.tsx`**
-- Update button label from "Confirm Payment" to "Send for Proof of Payment" or similar
-- Finance sets fees, dates, and sends order back to franchisee
-
-**`src/pages/StoreOrderDetail.tsx`**
-- When order status is `awaiting_proof`, show:
-  - Order summary with fees set by Finance (grand total)
-  - File upload input for proof of payment screenshot
-  - "Submit Proof" button that uploads file to storage and updates `proof_of_payment_url`, moving status to `pending_accounting`
-
-**`src/pages/StoreOrders.tsx`**
-- Add `awaiting_proof` tab/filter so franchisees can see orders needing their action
-
-**`src/pages/AccountingOrderDetail.tsx`**
-- Display the uploaded proof of payment image
-- Keep existing approve flow (moves to `processing`)
-
-**`src/hooks/useAccountingOrders.ts`** / **`src/hooks/useFinanceOrders.ts`**
-- Update mutation logic for new status transitions
-
-**Status color maps** (multiple files)
-- Add `awaiting_proof: "bg-amber-100 text-amber-800"` entry
-
-**`src/components/store-orders/MobileOrderCard.tsx`**
-- Add `awaiting_proof` status color
-
-**RLS policies** (migration)
-- Store users: allow UPDATE on `awaiting_proof` orders (to upload proof)
-- Finance: update WITH CHECK to include `awaiting_proof` as target status
+Add a small status badge in the sidebar or settings page showing last auto-sync time and result, queried from `autocount_sync_log`.
 
 ### Technical Details
 
-**Storage setup** (SQL migration):
-```sql
-INSERT INTO storage.buckets (id, name, public) VALUES ('payment-proofs', 'payment-proofs', false);
+- The auto-sync function uses `SUPABASE_SERVICE_ROLE_KEY` for DB access (no user context needed for cron)
+- Authentication to AutoCount uses existing `LEMONCO_API_URL`, `LEMONCO_USERNAME`, `LEMONCO_PASSWORD` secrets
+- The function will process records in batches with error handling per record (one failure won't block others)
+- Existing manual sync functions remain functional for Admin fallback
+- The cron SQL must be run via the SQL editor (not migration) since it contains project-specific keys
 
--- Store users can upload to their order folders
-CREATE POLICY "Store users can upload payment proofs"
-ON storage.objects FOR INSERT
-WITH CHECK (bucket_id = 'payment-proofs' AND ...);
+### Files to Create/Modify
 
--- Finance, Accounting, Admin can view
-CREATE POLICY "Authorized users can view payment proofs"
-ON storage.objects FOR SELECT
-USING (bucket_id = 'payment-proofs' AND ...);
-```
+**New:**
+- `supabase/functions/auto-sync-to-autocount/index.ts`
 
-**Upload flow**: File is uploaded to `payment-proofs/{order_id}/{filename}`, then the signed/public URL is stored in `sales_orders.proof_of_payment_url`.
-
-**Sales order column** (SQL migration):
-```sql
-ALTER TABLE sales_orders ADD COLUMN proof_of_payment_url TEXT DEFAULT NULL;
-```
-
-### Files Modified
-- New database migration (column + storage bucket + RLS)
-- `src/types/sales-order.ts`
-- `src/hooks/useFinanceOrders.ts`
-- `src/hooks/useAccountingOrders.ts`
-- `src/pages/StoreOrderDetail.tsx`
-- `src/pages/StoreOrders.tsx`
-- `src/pages/FinanceOrderDetail.tsx`
-- `src/pages/AccountingOrderDetail.tsx`
-- `src/components/store-orders/MobileOrderCard.tsx`
-- Status color maps across affected files
+**Modified:**
+- `supabase/config.toml` — add auto-sync function config
+- `src/pages/Inventory.tsx` — hide sync buttons
+- `src/pages/Suppliers.tsx` — hide sync buttons
+- `src/pages/Stores.tsx` — hide sync buttons
+- `src/pages/Purchasing.tsx` — hide sync buttons
+- `src/pages/StoreOrderDetail.tsx` — hide sync button
+- `src/components/inventory/AddInventoryDialog.tsx` — hide sync checkbox
+- `src/components/inventory/EditInventoryDialog.tsx` — hide sync checkbox
+- `src/components/inventory/StockAdjustmentDialog.tsx` — hide sync checkbox
 
