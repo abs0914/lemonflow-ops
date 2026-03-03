@@ -41,6 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Only fetch profile if the initial session was already handled
           // to avoid double-fetching
           if (initialSessionHandled) {
+            setLoading(true);
             fetchUserProfile(session.user.id);
           }
         } else {
