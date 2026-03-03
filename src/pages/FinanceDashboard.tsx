@@ -27,14 +27,21 @@ export default function FinanceDashboard() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("sales");
+  const [statusFilter, setStatusFilter] = useState("all");
   const { data: orders, isLoading: ordersLoading } = useFinanceOrders();
   const { data: procurementStats, isLoading: procurementLoading } = useFinanceProcurementStats();
 
-  const filteredOrders = orders?.filter(
-    (order) =>
+  const filteredOrders = orders?.filter((order) => {
+    const matchesSearch =
       order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.stores?.store_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+      order.stores?.store_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "pending_payment" && order.status === "pending_payment") ||
+      (statusFilter === "awaiting_proof" && order.status === "awaiting_proof" && !order.proof_of_payment_url) ||
+      (statusFilter === "proof_submitted" && order.status === "awaiting_proof" && !!order.proof_of_payment_url);
+    return matchesSearch && matchesStatus;
+  });
 
   const totalPendingValue = orders?.reduce(
     (sum, order) => sum + (order.total_amount || 0),
@@ -116,15 +123,47 @@ export default function FinanceDashboard() {
               </Card>
             </div>
 
-            {/* Search */}
-            <div className="relative max-w-sm">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search by order number or store..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
-              />
+            {/* Search & Filters */}
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+              <div className="relative max-w-sm flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search by order number or store..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant={statusFilter === "all" ? "default" : "outline"}
+                  onClick={() => setStatusFilter("all")}
+                >
+                  All ({orders?.length || 0})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={statusFilter === "pending_payment" ? "default" : "outline"}
+                  onClick={() => setStatusFilter("pending_payment")}
+                >
+                  Pending Payment ({orders?.filter(o => o.status === "pending_payment").length || 0})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={statusFilter === "awaiting_proof" ? "default" : "outline"}
+                  onClick={() => setStatusFilter("awaiting_proof")}
+                >
+                  Awaiting Proof ({orders?.filter(o => o.status === "awaiting_proof" && !o.proof_of_payment_url).length || 0})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={statusFilter === "proof_submitted" ? "default" : "outline"}
+                  onClick={() => setStatusFilter("proof_submitted")}
+                >
+                  Proof Submitted ({orders?.filter(o => o.status === "awaiting_proof" && !!o.proof_of_payment_url).length || 0})
+                </Button>
+              </div>
             </div>
 
             {/* Orders Table */}
