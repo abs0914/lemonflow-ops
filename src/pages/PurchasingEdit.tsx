@@ -293,36 +293,40 @@ export default function PurchasingEdit() {
                     </div>
                   </div>
 
-                  <Separator />
+                  {purchaseOrder.status !== "draft" && purchaseOrder.status !== "submitted" && (
+                    <>
+                      <Separator />
 
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="cash_returned">Cash Returned Amount</Label>
-                      <Input
-                        id="cash_returned"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        {...register("cash_returned", { valueAsNumber: true })}
-                        placeholder="0.00"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="cash_returned_to">Returned To</Label>
-                      <Select onValueChange={(value) => setValue("cash_returned_to", value)} defaultValue={purchaseOrder.cash_returned_to || ""}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select user" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {users?.map((user) => (
-                            <SelectItem key={user.id} value={user.id}>
-                              {user.full_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="cash_returned">Cash Returned Amount</Label>
+                          <Input
+                            id="cash_returned"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            {...register("cash_returned", { valueAsNumber: true })}
+                            placeholder="0.00"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="cash_returned_to">Returned To</Label>
+                          <Select onValueChange={(value) => setValue("cash_returned_to", value)} defaultValue={purchaseOrder.cash_returned_to || ""}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select user" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {users?.map((user) => (
+                                <SelectItem key={user.id} value={user.id}>
+                                  {user.full_name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
