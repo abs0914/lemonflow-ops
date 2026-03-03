@@ -108,7 +108,7 @@ export function useValidateProof() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ orderId }: { orderId: string }) => {
+    mutationFn: async ({ orderId, deliveryDate }: { orderId: string; deliveryDate: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
@@ -116,6 +116,7 @@ export function useValidateProof() {
         .from("sales_orders")
         .update({
           status: "pending_accounting",
+          delivery_date: deliveryDate,
         } as any)
         .eq("id", orderId);
 

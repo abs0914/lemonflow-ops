@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSalesOrder, useSalesOrderLines } from "@/hooks/useSalesOrders";
 import { useConfirmPayment, useRejectPayment, useValidateProof } from "@/hooks/useFinanceOrders";
 import { format } from "date-fns";
-import { ArrowLeft, Check, X, Package, Store, DollarSign, Truck, ShoppingBag, ImageIcon, ExternalLink } from "lucide-react";
+import { ArrowLeft, Check, X, Package, Store, DollarSign, Truck, ShoppingBag, ImageIcon, ExternalLink, CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
@@ -33,6 +33,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 function ProofImage({ url }: { url: string }) {
   const [imgUrl, setImgUrl] = useState<string | null>(null);
@@ -80,6 +83,8 @@ export default function FinanceOrderDetail() {
   const [orderType, setOrderType] = useState<"delivery" | "pickup">("delivery");
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [proofDeliveryDate, setProofDeliveryDate] = useState<Date>();
+  const [proofOrderType, setProofOrderType] = useState<"delivery" | "pickup">("delivery");
 
   const isLoading = orderLoading || linesLoading;
 
@@ -353,17 +358,78 @@ export default function FinanceOrderDetail() {
 
               {/* Proof Image */}
               {order.proof_of_payment_url ? (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <Label>Uploaded Proof of Payment</Label>
                   <div className="rounded-lg border overflow-hidden">
                     <ProofImage url={order.proof_of_payment_url} />
                   </div>
+
+                  {/* Order Type & Date Selection */}
+                  <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
+                    <Label>Fulfillment Type & Date <span className="text-destructive">*</span></Label>
+                    <RadioGroup
+                      value={proofOrderType}
+                      onValueChange={(val) => setProofOrderType(val as "delivery" | "pickup")}
+                      className="flex gap-4"
+                    >
+                      <div className="flex items-center gap-2 rounded-lg border px-4 py-3 cursor-pointer flex-1 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5">
+                        <RadioGroupItem value="delivery" id="proof-type-delivery" />
+                        <label htmlFor="proof-type-delivery" className="flex items-center gap-2 cursor-pointer font-medium">
+                          <Truck className="h-4 w-4 text-muted-foreground" />
+                          Delivery
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2 rounded-lg border px-4 py-3 cursor-pointer flex-1 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5">
+                        <RadioGroupItem value="pickup" id="proof-type-pickup" />
+                        <label htmlFor="proof-type-pickup" className="flex items-center gap-2 cursor-pointer font-medium">
+                          <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+                          Pickup
+                        </label>
+                      </div>
+                    </RadioGroup>
+
+                    <div className="space-y-2">
+                      <Label>{proofOrderType === "delivery" ? "Delivery Date" : "Pickup Date"} <span className="text-destructive">*</span></Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !proofDeliveryDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {proofDeliveryDate ? format(proofDeliveryDate, "PPP") : <span>Pick a date</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={proofDeliveryDate}
+                            onSelect={setProofDeliveryDate}
+                            disabled={(date) => date < new Date()}
+                            initialFocus
+                            className={cn("p-3 pointer-events-auto")}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+
                   <div className="flex gap-4 pt-2">
                     <Button
                       onClick={async () => {
                         if (!id) return;
+                        if (!proofDeliveryDate) {
+                          toast.error(`Please select a ${proofOrderType === "delivery" ? "delivery" : "pickup"} date`);
+                          return;
+                        }
                         try {
-                          await validateProof.mutateAsync({ orderId: id });
+                          await validateProof.mutateAsync({
+                            orderId: id,
+                            deliveryDate: format(proofDeliveryDate, "yyyy-MM-dd"),
+                          });
                           toast.success("Proof validated. Order sent to Accounting for final review.");
                           navigate("/finance");
                         } catch (error) {
