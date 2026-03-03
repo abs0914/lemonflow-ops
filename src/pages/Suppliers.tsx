@@ -155,14 +155,6 @@ export default function Suppliers() {
           </div>
           {!isMobile && (
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setSyncDialogOpen(true)}>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Sync from AutoCount
-              </Button>
-              <Button variant="outline" onClick={handleSyncToAutoCount}>
-                <Upload className="mr-2 h-4 w-4" />
-                Sync to AutoCount
-              </Button>
               <Button onClick={handleCreate}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add Supplier

@@ -201,7 +201,7 @@ export default function StoreOrderDetail() {
                 Delete
               </Button>
             )}
-            {canSync && (
+            {canSync && profile?.role === "Admin" && (
               <Button
                 onClick={handleSyncToAutoCount}
                 disabled={isSyncing || updateMutation.isPending}

@@ -305,7 +305,7 @@ export function StockAdjustmentDialog({
         />
       </div>
 
-      {itemType !== "raw_material" && (
+      {itemType !== "raw_material" && profile?.role === "Admin" && (
         <div className="flex items-center space-x-2 pt-2">
           <Checkbox
             id="sync_to_autocount"

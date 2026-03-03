@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,6 +49,7 @@ interface InventoryFormData {
 
 export function AddInventoryDialog({ open, onOpenChange, isRawMaterial = false }: AddInventoryDialogProps) {
   const { toast } = useToast();
+  const { profile } = useAuth();
   const queryClient = useQueryClient();
   const [isSyncing, setIsSyncing] = useState(false);
   const [isLoadingCode, setIsLoadingCode] = useState(false);
@@ -365,7 +367,7 @@ export function AddInventoryDialog({ open, onOpenChange, isRawMaterial = false }
               </Label>
             </div>
 
-            {!isRawMaterial && (
+            {!isRawMaterial && profile?.role === "Admin" && (
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="sync_to_autocount"
