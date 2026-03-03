@@ -36,6 +36,7 @@ export default function PurchaseOrderDetail() {
 
   const isAccountingUser = profile?.role === "Accounting";
   const canUploadProof = ["Admin", "Warehouse", "Production"].includes(profile?.role || "");
+  const canApprove = ["Admin", "CEO"].includes(profile?.role || "");
 
   const { data: purchaseOrder, isLoading: loadingPO } = usePurchaseOrder(id);
   const { data: lines, isLoading: loadingLines } = usePurchaseOrderLines(id);
