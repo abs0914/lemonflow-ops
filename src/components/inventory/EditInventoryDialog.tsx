@@ -50,6 +50,7 @@ interface InventoryFormData {
 
 export function EditInventoryDialog({ open, onOpenChange, component }: EditInventoryDialogProps) {
   const { toast } = useToast();
+  const { profile } = useAuth();
   const queryClient = useQueryClient();
   const [isSyncing, setIsSyncing] = useState(false);
   
@@ -362,18 +363,20 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
               </Label>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="sync_to_autocount"
-                checked={watch("sync_to_autocount")}
-                onCheckedChange={(checked) =>
-                  setValue("sync_to_autocount", checked as boolean)
-                }
-              />
-              <Label htmlFor="sync_to_autocount" className="font-normal cursor-pointer">
-                Sync changes to AutoCount
-              </Label>
-            </div>
+            {profile?.role === "Admin" && (
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="sync_to_autocount"
+                  checked={watch("sync_to_autocount")}
+                  onCheckedChange={(checked) =>
+                    setValue("sync_to_autocount", checked as boolean)
+                  }
+                />
+                <Label htmlFor="sync_to_autocount" className="font-normal cursor-pointer">
+                  Sync changes to AutoCount
+                </Label>
+              </div>
+            )}
           </div>
 
           <DialogFooter>
