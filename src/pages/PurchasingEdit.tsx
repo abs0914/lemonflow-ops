@@ -155,11 +155,13 @@ export default function PurchasingEdit() {
       // Insert new lines
       const poLines = data.lines.map((line, index) => ({
         purchase_order_id: id,
-        component_id: line.component_id,
+        component_id: line.component_id || null,
+        raw_material_id: line.raw_material_id || null,
+        item_type: line.item_type || "component",
         quantity: line.quantity,
         unit_price: line.unit_price,
         uom: line.uom,
-        line_remarks: line.line_remarks,
+        line_remarks: line.line_remarks || null,
         line_number: index + 1,
       }));
 
@@ -431,8 +433,9 @@ export default function PurchasingEdit() {
                               type="number"
                               min="0"
                               step="0.01"
-                              value={line.quantity}
-                              onChange={(e) => updateLine(index, "quantity", parseFloat(e.target.value) || 0)}
+                              value={line.quantity === 0 ? "" : line.quantity}
+                              onChange={(e) => updateLine(index, "quantity", e.target.value === "" ? 0 : parseFloat(e.target.value))}
+                              onBlur={(e) => { if (e.target.value === "") updateLine(index, "quantity", 0); }}
                               className="w-full"
                             />
                           </TableCell>
@@ -441,8 +444,9 @@ export default function PurchasingEdit() {
                               type="number"
                               min="0"
                               step="0.01"
-                              value={line.unit_price}
-                              onChange={(e) => updateLine(index, "unit_price", parseFloat(e.target.value) || 0)}
+                              value={line.unit_price === 0 ? "" : line.unit_price}
+                              onChange={(e) => updateLine(index, "unit_price", e.target.value === "" ? 0 : parseFloat(e.target.value))}
+                              onBlur={(e) => { if (e.target.value === "") updateLine(index, "unit_price", 0); }}
                               className="w-full"
                             />
                           </TableCell>
