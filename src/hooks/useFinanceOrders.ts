@@ -12,7 +12,7 @@ export function useFinanceOrders() {
           *,
           stores (*)
         `)
-        .eq("status", "pending_payment")
+        .in("status", ["pending_payment", "awaiting_proof"])
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -99,6 +99,31 @@ export function useRejectPayment() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["finance-orders"] });
       queryClient.invalidateQueries({ queryKey: ["fulfillment-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["sales-orders"] });
+    },
+  });
+}
+
+export function useValidateProof() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ orderId }: { orderId: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const { error } = await supabase
+        .from("sales_orders")
+        .update({
+          status: "pending_accounting",
+        } as any)
+        .eq("id", orderId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["finance-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["accounting-orders"] });
       queryClient.invalidateQueries({ queryKey: ["sales-orders"] });
     },
   });

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,9 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSalesOrder, useSalesOrderLines } from "@/hooks/useSalesOrders";
-import { useConfirmPayment, useRejectPayment } from "@/hooks/useFinanceOrders";
+import { useConfirmPayment, useRejectPayment, useValidateProof } from "@/hooks/useFinanceOrders";
 import { format } from "date-fns";
-import { ArrowLeft, Check, X, Package, Store, DollarSign, Truck, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Check, X, Package, Store, DollarSign, Truck, ShoppingBag, ImageIcon, ExternalLink } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import {
@@ -33,6 +34,36 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+function ProofImage({ url }: { url: string }) {
+  const [imgUrl, setImgUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.storage
+      .from("payment-proofs")
+      .createSignedUrl(url.replace(/^.*payment-proofs\//, ""), 3600)
+      .then(({ data }) => {
+        if (data?.signedUrl) setImgUrl(data.signedUrl);
+        else setImgUrl(url);
+      });
+  }, [url]);
+
+  if (!imgUrl) return <div className="p-8 text-center text-muted-foreground">Loading image...</div>;
+
+  return (
+    <a href={imgUrl} target="_blank" rel="noopener noreferrer" className="block">
+      <img
+        src={imgUrl}
+        alt="Proof of payment"
+        className="w-full max-h-[500px] object-contain bg-muted"
+      />
+      <div className="flex items-center justify-center gap-1 py-2 text-sm text-muted-foreground hover:text-foreground">
+        <ExternalLink className="h-3 w-3" />
+        Open full size
+      </div>
+    </a>
+  );
+}
+
 export default function FinanceOrderDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -40,6 +71,7 @@ export default function FinanceOrderDetail() {
   const { data: lines, isLoading: linesLoading } = useSalesOrderLines(id);
   const confirmPayment = useConfirmPayment();
   const rejectPayment = useRejectPayment();
+  const validateProof = useValidateProof();
 
   const [paymentAmount, setPaymentAmount] = useState<string>("");
   const [paymentReference, setPaymentReference] = useState("");
@@ -56,10 +88,6 @@ export default function FinanceOrderDetail() {
     setPaymentAmount((order.total_amount || 0).toString());
   }
 
-  // Initialize payment amount when order loads
-  if (order && !paymentAmount) {
-    setPaymentAmount((order.total_amount || 0).toString());
-  }
 
   const deliveryFeeAmount = parseFloat(deliveryFee) || 0;
   const shippingFeeAmount = parseFloat(shippingFee) || 0;
@@ -147,11 +175,19 @@ export default function FinanceOrderDetail() {
           </Button>
           <div className="flex-1">
             <h1 className="text-2xl font-bold">{order.order_number}</h1>
-            <p className="text-muted-foreground">Payment Confirmation</p>
+            <p className="text-muted-foreground">
+              {order.status === 'awaiting_proof' ? 'Proof of Payment Review' : 'Payment Confirmation'}
+            </p>
           </div>
-          <Badge className="bg-orange-100 text-orange-800">
-            Pending Payment
-          </Badge>
+          {order.status === 'awaiting_proof' ? (
+            <Badge className={order.proof_of_payment_url ? "bg-blue-100 text-blue-800" : "bg-yellow-100 text-yellow-800"}>
+              {order.proof_of_payment_url ? "Proof Submitted" : "Awaiting Proof"}
+            </Badge>
+          ) : (
+            <Badge className="bg-orange-100 text-orange-800">
+              Pending Payment
+            </Badge>
+          )}
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -279,7 +315,91 @@ export default function FinanceOrderDetail() {
           </CardContent>
         </Card>
 
-        {/* Payment Confirmation Form */}
+        {/* Proof of Payment Review (for awaiting_proof status) */}
+        {order.status === 'awaiting_proof' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ImageIcon className="h-5 w-5" />
+                Proof of Payment Review
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Fee Summary */}
+              <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Order Total</span>
+                  <span>₱{(order.total_amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Delivery Fee</span>
+                  <span>₱{(order.delivery_fee || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Shipping Fee</span>
+                  <span>₱{(order.shipping_fee || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between font-bold border-t pt-2">
+                  <span>Payment Amount</span>
+                  <span className="text-lg">₱{(order.payment_amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                </div>
+                {order.payment_reference && (
+                  <div className="flex justify-between text-sm pt-1">
+                    <span className="text-muted-foreground">Payment Reference</span>
+                    <span>{order.payment_reference}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Proof Image */}
+              {order.proof_of_payment_url ? (
+                <div className="space-y-3">
+                  <Label>Uploaded Proof of Payment</Label>
+                  <div className="rounded-lg border overflow-hidden">
+                    <ProofImage url={order.proof_of_payment_url} />
+                  </div>
+                  <div className="flex gap-4 pt-2">
+                    <Button
+                      onClick={async () => {
+                        if (!id) return;
+                        try {
+                          await validateProof.mutateAsync({ orderId: id });
+                          toast.success("Proof validated. Order sent to Accounting for final review.");
+                          navigate("/finance");
+                        } catch (error) {
+                          toast.error("Failed to validate proof");
+                        }
+                      }}
+                      disabled={validateProof.isPending}
+                      className="flex-1"
+                    >
+                      <Check className="h-4 w-4 mr-2" />
+                      {validateProof.isPending ? "Processing..." : "Validate & Send to Accounting"}
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => setShowRejectDialog(true)}
+                      disabled={rejectPayment.isPending}
+                      className="flex-1"
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Reject
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <ImageIcon className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p className="font-medium">Waiting for franchisee to upload proof of payment</p>
+                  <p className="text-sm mt-1">The franchisee has been notified to upload their payment screenshot.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Payment Confirmation Form (for pending_payment status) */}
+        {order.status === 'pending_payment' && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -416,6 +536,7 @@ export default function FinanceOrderDetail() {
             </div>
           </CardContent>
         </Card>
+        )}
       </div>
 
       {/* Reject Dialog */}
