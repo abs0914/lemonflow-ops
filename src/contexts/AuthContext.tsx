@@ -41,10 +41,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Only fetch profile if the initial session was already handled
           // to avoid double-fetching
           if (initialSessionHandled) {
-            setLoading(true);
+            // Don't set loading=true during token refresh to avoid UI flicker
+            if (event !== 'TOKEN_REFRESHED') {
+              setLoading(true);
+            }
             fetchUserProfile(session.user.id);
           }
-        } else {
+        } else if (event === 'SIGNED_OUT') {
+          // Only clear profile on explicit sign-out, not on transient auth state changes
           setProfile(null);
           setLoading(false);
         }
