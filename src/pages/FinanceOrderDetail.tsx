@@ -72,7 +72,6 @@ export default function FinanceOrderDetail() {
   const confirmPayment = useConfirmPayment();
   const rejectPayment = useRejectPayment();
   const validateProof = useValidateProof();
-  const [proofUrl, setProofUrl] = useState<string | null>(null);
 
   const [paymentAmount, setPaymentAmount] = useState<string>("");
   const [paymentReference, setPaymentReference] = useState("");
@@ -89,10 +88,6 @@ export default function FinanceOrderDetail() {
     setPaymentAmount((order.total_amount || 0).toString());
   }
 
-  // Initialize payment amount when order loads
-  if (order && !paymentAmount) {
-    setPaymentAmount((order.total_amount || 0).toString());
-  }
 
   const deliveryFeeAmount = parseFloat(deliveryFee) || 0;
   const shippingFeeAmount = parseFloat(shippingFee) || 0;
