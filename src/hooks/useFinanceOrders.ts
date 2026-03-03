@@ -29,14 +29,12 @@ export function useConfirmPayment() {
       orderId,
       paymentAmount,
       paymentReference,
-      deliveryDate,
       deliveryFee,
       shippingFee,
     }: {
       orderId: string;
       paymentAmount: number;
       paymentReference?: string;
-      deliveryDate: Date;
       deliveryFee?: number;
       shippingFee?: number;
     }) => {
@@ -48,7 +46,6 @@ export function useConfirmPayment() {
         .from("sales_orders")
         .update({
           status: "awaiting_proof",
-          delivery_date: deliveryDate.toISOString(),
           payment_amount: paymentAmount,
           payment_reference: paymentReference || null,
           payment_confirmed_by: user.id,

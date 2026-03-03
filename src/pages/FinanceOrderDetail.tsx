@@ -8,16 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { useSalesOrder, useSalesOrderLines } from "@/hooks/useSalesOrders";
 import { useConfirmPayment, useRejectPayment } from "@/hooks/useFinanceOrders";
 import { format } from "date-fns";
-import { ArrowLeft, Check, X, Package, Store, Calendar as CalendarIcon, DollarSign, Truck, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Check, X, Package, Store, DollarSign, Truck, ShoppingBag } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
