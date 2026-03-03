@@ -125,6 +125,8 @@ export default function StoreOrderQuickEntry() {
     });
   };
 
+  const hasInvalidItems = parsedItems.some(item => item.isValid === false);
+
   const handleSaveDraft = async () => {
     if (!storeId) {
       toast.error("Please select a store");
@@ -132,6 +134,10 @@ export default function StoreOrderQuickEntry() {
     }
     if (parsedItems.length === 0) {
       toast.error("Please add at least one item");
+      return;
+    }
+    if (hasInvalidItems) {
+      toast.error("All item codes must exist in inventory before saving. Please fix or remove invalid items.");
       return;
     }
 
@@ -159,14 +165,9 @@ export default function StoreOrderQuickEntry() {
       toast.error("Please add at least one item");
       return;
     }
-
-    // Warn about unrecognized items
-    const invalidItems = parsedItems.filter(item => item.isValid === false);
-    if (invalidItems.length > 0) {
-      const proceed = window.confirm(
-        `${invalidItems.length} item(s) have unrecognized item codes. They will have ₱0 unit price. Continue?`
-      );
-      if (!proceed) return;
+    if (hasInvalidItems) {
+      toast.error("All item codes must exist in inventory before submitting. Please fix or remove invalid items.");
+      return;
     }
 
     const lines = convertToOrderLines();
@@ -390,14 +391,14 @@ export default function StoreOrderQuickEntry() {
               <Button
                 variant="outline"
                 onClick={handleSaveDraft}
-                disabled={createMutation.isPending || parsedItems.length === 0}
+                disabled={createMutation.isPending || parsedItems.length === 0 || hasInvalidItems}
               >
                 <Save className="mr-2 h-4 w-4" />
                 Save Draft
               </Button>
               <Button
                 onClick={handleSubmitOrder}
-                disabled={createMutation.isPending || updateMutation.isPending || parsedItems.length === 0}
+                disabled={createMutation.isPending || updateMutation.isPending || parsedItems.length === 0 || hasInvalidItems}
               >
                 <Send className="mr-2 h-4 w-4" />
                 Submit Order
