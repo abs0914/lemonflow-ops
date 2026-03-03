@@ -33,7 +33,7 @@ export interface SalesOrder {
   debtor_code: string;
   doc_date: string;
   delivery_date?: string;
-  status: 'draft' | 'submitted' | 'pending_payment' | 'awaiting_proof' | 'processing' | 'completed' | 'cancelled';
+  status: 'draft' | 'submitted' | 'pending_payment' | 'awaiting_proof' | 'processing' | 'completed' | 'cancelled' | 'issues';
   description?: string;
   total_amount: number;
   created_by: string;

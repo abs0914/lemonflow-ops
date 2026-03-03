@@ -24,6 +24,7 @@ const statusColors: Record<string, string> = {
   processing: "bg-yellow-100 text-yellow-800",
   completed: "bg-green-100 text-green-800",
   cancelled: "bg-red-100 text-red-800",
+  issues: "bg-orange-100 text-orange-800",
 };
 
 export default function FulfillmentOrderDetail() {
@@ -137,6 +138,27 @@ export default function FulfillmentOrderDetail() {
     }
   };
 
+  const handleMarkWithIssues = async (notes: string) => {
+    if (!order || !user) return;
+
+    try {
+      await updateMutation.mutateAsync({
+        id: order.id,
+        updates: {
+          status: "issues",
+          delivery_notes: [deliveryNotes, notes].filter(Boolean).join("\n---\nIssues: "),
+          fulfilled_by: user.id,
+          fulfilled_at: new Date().toISOString(),
+        } as any,
+      });
+
+      toast.success("Order marked with issues");
+      refetch();
+    } catch (error: any) {
+      toast.error(`Failed to mark issues: ${error.message}`);
+    }
+  };
+
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -161,6 +183,7 @@ export default function FulfillmentOrderDetail() {
   const isSubmitted = order.status === "submitted";
   const isProcessing = order.status === "processing";
   const isPendingPayment = order.status === "pending_payment";
+  const hasIssues = order.status === "issues";
 
   return (
     <DashboardLayout>
@@ -240,6 +263,13 @@ export default function FulfillmentOrderDetail() {
                   </div>
                 )}
 
+                {hasIssues && order.delivery_notes && (
+                  <div>
+                    <div className="text-sm text-muted-foreground mb-1">Issue Notes</div>
+                    <div className="text-sm text-orange-700 whitespace-pre-wrap">{order.delivery_notes}</div>
+                  </div>
+                )}
+
                 {order.approved_at && (
                   <div>
                     <div className="text-sm text-muted-foreground mb-1">Approved At</div>
@@ -307,6 +337,7 @@ export default function FulfillmentOrderDetail() {
               onApprove={handleApproveOrder}
               onReject={handleRejectOrder}
               onComplete={handleCompleteOrder}
+              onMarkWithIssues={handleMarkWithIssues}
               isLoading={updateMutation.isPending || isSyncing}
             />
 

@@ -35,6 +35,7 @@ interface FulfillmentOrderActionsProps {
   onApprove: (deliveryDate: Date) => Promise<void>;
   onReject: (reason: string) => Promise<void>;
   onComplete: () => Promise<void>;
+  onMarkWithIssues: (notes: string) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -43,12 +44,15 @@ export function FulfillmentOrderActions({
   onApprove,
   onReject,
   onComplete,
+  onMarkWithIssues,
   isLoading,
 }: FulfillmentOrderActionsProps) {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [showIssuesDialog, setShowIssuesDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [issuesNotes, setIssuesNotes] = useState("");
   const [deliveryDate, setDeliveryDate] = useState<Date | undefined>(
     order.delivery_date ? new Date(order.delivery_date) : undefined
   );
@@ -69,13 +73,19 @@ export function FulfillmentOrderActions({
     setShowCompleteDialog(false);
   };
 
+  const handleIssuesConfirm = async () => {
+    await onMarkWithIssues(issuesNotes);
+    setShowIssuesDialog(false);
+    setIssuesNotes("");
+  };
+
   const handleApproveConfirm = async () => {
     if (!deliveryDate) return;
     await onApprove(deliveryDate);
     setShowApproveDialog(false);
   };
 
-  if (order.status === "completed" || order.status === "cancelled") {
+  if (order.status === "completed" || order.status === "cancelled" || order.status === "issues") {
     return (
       <Card>
         <CardHeader>
@@ -83,7 +93,7 @@ export function FulfillmentOrderActions({
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            This order has been {order.status}.
+            This order has been {order.status === "issues" ? "marked with issues" : order.status}.
           </p>
         </CardContent>
       </Card>
@@ -173,14 +183,25 @@ export function FulfillmentOrderActions({
           )}
 
           {isProcessing && (
-            <Button
-              className="w-full"
-              onClick={() => setShowCompleteDialog(true)}
-              disabled={isLoading}
-            >
-              <Truck className="mr-2 h-4 w-4" />
-              Mark as Completed
-            </Button>
+            <>
+              <Button
+                className="w-full"
+                onClick={() => setShowCompleteDialog(true)}
+                disabled={isLoading}
+              >
+                <Truck className="mr-2 h-4 w-4" />
+                Mark as Completed
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full text-orange-600 hover:text-orange-700 border-orange-300 hover:bg-orange-50"
+                onClick={() => setShowIssuesDialog(true)}
+                disabled={isLoading}
+              >
+                <XCircle className="mr-2 h-4 w-4" />
+                Mark with Issues
+              </Button>
+            </>
           )}
         </CardContent>
       </Card>
@@ -246,6 +267,34 @@ export function FulfillmentOrderActions({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleApproveConfirm}>
               Approve Order
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Issues Dialog */}
+      <AlertDialog open={showIssuesDialog} onOpenChange={setShowIssuesDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark Order with Issues</AlertDialogTitle>
+            <AlertDialogDescription>
+              Please describe the issues (e.g., lacking items, damaged goods).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Textarea
+            placeholder="Describe the issues..."
+            value={issuesNotes}
+            onChange={(e) => setIssuesNotes(e.target.value)}
+            rows={4}
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleIssuesConfirm}
+              disabled={!issuesNotes.trim()}
+              className="bg-orange-600 text-white hover:bg-orange-700"
+            >
+              Confirm Issues
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
