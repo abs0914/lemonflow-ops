@@ -14,7 +14,6 @@ import { format } from "date-fns";
 import { ArrowLeft, Check, X, Package, Store, DollarSign, Truck, ShoppingBag } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import {
   Table,
   TableBody,
