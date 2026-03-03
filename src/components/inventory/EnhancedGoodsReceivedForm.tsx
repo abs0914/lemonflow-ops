@@ -83,7 +83,7 @@ export function EnhancedGoodsReceivedForm() {
           is_cash_purchase,
           suppliers(company_name, supplier_code)
         `)
-        .eq("status", "approved")
+        .eq("status", "verified")
         .or("goods_received.is.null,goods_received.eq.false")
         .order("doc_date", { ascending: false });
 

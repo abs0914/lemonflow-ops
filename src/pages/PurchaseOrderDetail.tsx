@@ -338,6 +338,7 @@ export default function PurchaseOrderDetail() {
       draft: "outline",
       submitted: "secondary",
       approved: "default",
+      verified: "default",
       cancelled: "destructive",
     };
     return (

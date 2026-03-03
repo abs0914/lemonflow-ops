@@ -57,7 +57,7 @@ export function GoodsReceivedForm() {
           doc_date,
           suppliers(company_name)
         `)
-        .eq("status", "approved")
+        .eq("status", "verified")
         .order("doc_date", { ascending: false });
 
       if (error) throw error;
