@@ -108,7 +108,7 @@ export function AppSidebar() {
       title: "Stores",
       url: "/stores",
       icon: Store,
-      roles: ["Admin", "Warehouse"],
+      roles: ["Admin", "Warehouse", "Production"],
     },
     {
       title: "Purchasing",
