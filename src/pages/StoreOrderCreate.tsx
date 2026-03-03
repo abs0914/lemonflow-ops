@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Calendar } from "@/components/ui/calendar";
@@ -179,24 +180,22 @@ export default function StoreOrderCreate() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="store">Store *</Label>
-                  <Select value={storeId} onValueChange={setStoreId}>
-                    <SelectTrigger id="store">
-                      <SelectValue placeholder="Select store" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {isOperationalRole
-                        ? allStores?.map((store) => (
-                            <SelectItem key={store.id} value={store.id}>
-                              {store.store_name} ({store.store_code})
-                            </SelectItem>
-                          ))
-                        : userStores?.map((assignment) => (
-                            <SelectItem key={assignment.store_id} value={assignment.store_id}>
-                              {assignment.stores?.store_name} ({assignment.stores?.store_code})
-                            </SelectItem>
-                          ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={
+                      isOperationalRole
+                        ? (allStores?.map((store) => ({
+                            value: store.id,
+                            label: `${store.store_name} (${store.store_code})`,
+                          })) || [])
+                        : (userStores?.map((assignment) => ({
+                            value: assignment.store_id,
+                            label: `${assignment.stores?.store_name} (${assignment.stores?.store_code})`,
+                          })) || [])
+                    }
+                    value={storeId}
+                    onValueChange={setStoreId}
+                    placeholder="Search and select store..."
+                  />
                 </div>
 
                 <div className="space-y-2">
