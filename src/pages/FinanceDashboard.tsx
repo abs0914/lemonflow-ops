@@ -123,15 +123,47 @@ export default function FinanceDashboard() {
               </Card>
             </div>
 
-            {/* Search */}
-            <div className="relative max-w-sm">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search by order number or store..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
-              />
+            {/* Search & Filters */}
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+              <div className="relative max-w-sm flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search by order number or store..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant={statusFilter === "all" ? "default" : "outline"}
+                  onClick={() => setStatusFilter("all")}
+                >
+                  All ({orders?.length || 0})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={statusFilter === "pending_payment" ? "default" : "outline"}
+                  onClick={() => setStatusFilter("pending_payment")}
+                >
+                  Pending Payment ({orders?.filter(o => o.status === "pending_payment").length || 0})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={statusFilter === "awaiting_proof" ? "default" : "outline"}
+                  onClick={() => setStatusFilter("awaiting_proof")}
+                >
+                  Awaiting Proof ({orders?.filter(o => o.status === "awaiting_proof" && !o.proof_of_payment_url).length || 0})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={statusFilter === "proof_submitted" ? "default" : "outline"}
+                  onClick={() => setStatusFilter("proof_submitted")}
+                >
+                  Proof Submitted ({orders?.filter(o => o.status === "awaiting_proof" && !!o.proof_of_payment_url).length || 0})
+                </Button>
+              </div>
             </div>
 
             {/* Orders Table */}
