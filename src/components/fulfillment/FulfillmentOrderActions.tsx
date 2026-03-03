@@ -73,13 +73,19 @@ export function FulfillmentOrderActions({
     setShowCompleteDialog(false);
   };
 
+  const handleIssuesConfirm = async () => {
+    await onMarkWithIssues(issuesNotes);
+    setShowIssuesDialog(false);
+    setIssuesNotes("");
+  };
+
   const handleApproveConfirm = async () => {
     if (!deliveryDate) return;
     await onApprove(deliveryDate);
     setShowApproveDialog(false);
   };
 
-  if (order.status === "completed" || order.status === "cancelled") {
+  if (order.status === "completed" || order.status === "cancelled" || order.status === "issues") {
     return (
       <Card>
         <CardHeader>
@@ -87,7 +93,7 @@ export function FulfillmentOrderActions({
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            This order has been {order.status}.
+            This order has been {order.status === "issues" ? "marked with issues" : order.status}.
           </p>
         </CardContent>
       </Card>
@@ -177,14 +183,25 @@ export function FulfillmentOrderActions({
           )}
 
           {isProcessing && (
-            <Button
-              className="w-full"
-              onClick={() => setShowCompleteDialog(true)}
-              disabled={isLoading}
-            >
-              <Truck className="mr-2 h-4 w-4" />
-              Mark as Completed
-            </Button>
+            <>
+              <Button
+                className="w-full"
+                onClick={() => setShowCompleteDialog(true)}
+                disabled={isLoading}
+              >
+                <Truck className="mr-2 h-4 w-4" />
+                Mark as Completed
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full text-orange-600 hover:text-orange-700 border-orange-300 hover:bg-orange-50"
+                onClick={() => setShowIssuesDialog(true)}
+                disabled={isLoading}
+              >
+                <XCircle className="mr-2 h-4 w-4" />
+                Mark with Issues
+              </Button>
+            </>
           )}
         </CardContent>
       </Card>
