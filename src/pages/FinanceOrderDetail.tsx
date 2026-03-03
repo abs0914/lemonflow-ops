@@ -290,7 +290,91 @@ export default function FinanceOrderDetail() {
           </CardContent>
         </Card>
 
-        {/* Payment Confirmation Form */}
+        {/* Proof of Payment Review (for awaiting_proof status) */}
+        {order.status === 'awaiting_proof' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ImageIcon className="h-5 w-5" />
+                Proof of Payment Review
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Fee Summary */}
+              <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Order Total</span>
+                  <span>₱{(order.total_amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Delivery Fee</span>
+                  <span>₱{(order.delivery_fee || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Shipping Fee</span>
+                  <span>₱{(order.shipping_fee || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between font-bold border-t pt-2">
+                  <span>Payment Amount</span>
+                  <span className="text-lg">₱{(order.payment_amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                </div>
+                {order.payment_reference && (
+                  <div className="flex justify-between text-sm pt-1">
+                    <span className="text-muted-foreground">Payment Reference</span>
+                    <span>{order.payment_reference}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Proof Image */}
+              {order.proof_of_payment_url ? (
+                <div className="space-y-3">
+                  <Label>Uploaded Proof of Payment</Label>
+                  <div className="rounded-lg border overflow-hidden">
+                    <ProofImage url={order.proof_of_payment_url} />
+                  </div>
+                  <div className="flex gap-4 pt-2">
+                    <Button
+                      onClick={async () => {
+                        if (!id) return;
+                        try {
+                          await validateProof.mutateAsync({ orderId: id });
+                          toast.success("Proof validated. Order sent to Accounting for final review.");
+                          navigate("/finance");
+                        } catch (error) {
+                          toast.error("Failed to validate proof");
+                        }
+                      }}
+                      disabled={validateProof.isPending}
+                      className="flex-1"
+                    >
+                      <Check className="h-4 w-4 mr-2" />
+                      {validateProof.isPending ? "Processing..." : "Validate & Send to Accounting"}
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => setShowRejectDialog(true)}
+                      disabled={rejectPayment.isPending}
+                      className="flex-1"
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Reject
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <ImageIcon className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p className="font-medium">Waiting for franchisee to upload proof of payment</p>
+                  <p className="text-sm mt-1">The franchisee has been notified to upload their payment screenshot.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Payment Confirmation Form (for pending_payment status) */}
+        {order.status === 'pending_payment' && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -427,6 +511,7 @@ export default function FinanceOrderDetail() {
             </div>
           </CardContent>
         </Card>
+        )}
       </div>
 
       {/* Reject Dialog */}
