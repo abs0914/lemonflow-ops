@@ -602,6 +602,7 @@ export type Database = {
           id: string
           is_cash_purchase: boolean | null
           po_number: string
+          po_proof_of_payment_url: string | null
           received_at: string | null
           received_by: string | null
           remarks: string | null
@@ -610,6 +611,8 @@ export type Database = {
           sync_error_message: string | null
           total_amount: number
           updated_at: string
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
           approved_at?: string | null
@@ -628,6 +631,7 @@ export type Database = {
           id?: string
           is_cash_purchase?: boolean | null
           po_number: string
+          po_proof_of_payment_url?: string | null
           received_at?: string | null
           received_by?: string | null
           remarks?: string | null
@@ -636,6 +640,8 @@ export type Database = {
           sync_error_message?: string | null
           total_amount?: number
           updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
           approved_at?: string | null
@@ -654,6 +660,7 @@ export type Database = {
           id?: string
           is_cash_purchase?: boolean | null
           po_number?: string
+          po_proof_of_payment_url?: string | null
           received_at?: string | null
           received_by?: string | null
           remarks?: string | null
@@ -662,6 +669,8 @@ export type Database = {
           sync_error_message?: string | null
           total_amount?: number
           updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: [
           {
@@ -697,6 +706,13 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
             referencedColumns: ["id"]
           },
         ]
