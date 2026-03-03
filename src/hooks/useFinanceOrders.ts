@@ -103,3 +103,28 @@ export function useRejectPayment() {
     },
   });
 }
+
+export function useValidateProof() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ orderId }: { orderId: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const { error } = await supabase
+        .from("sales_orders")
+        .update({
+          status: "pending_accounting",
+        } as any)
+        .eq("id", orderId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["finance-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["accounting-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["sales-orders"] });
+    },
+  });
+}
