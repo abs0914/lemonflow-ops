@@ -341,6 +341,67 @@ export default function PurchaseOrderDetail() {
     },
   });
 
+  const handleUploadProof = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !id) return;
+
+    setIsUploadingProof(true);
+    try {
+      const filePath = `${id}/${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from("po-payment-proofs")
+        .upload(filePath, file, { upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { error: updateError } = await supabase
+        .from("purchase_orders")
+        .update({ po_proof_of_payment_url: filePath })
+        .eq("id", id);
+      if (updateError) throw updateError;
+
+      toast.success("Proof of payment uploaded");
+      queryClient.invalidateQueries({ queryKey: ["purchase-order", id] });
+    } catch (err: any) {
+      toast.error(`Upload failed: ${err.message}`);
+    } finally {
+      setIsUploadingProof(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const verifyMutation = useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+      const now = new Date().toISOString();
+
+      const { error } = await supabase
+        .from("purchase_orders")
+        .update({
+          status: "verified",
+          verified_by: user.id,
+          verified_at: now,
+        })
+        .eq("id", id);
+      if (error) throw error;
+
+      await supabase.from("audit_logs").insert({
+        entity_type: "purchase_order",
+        entity_id: id,
+        action: "verified",
+        user_id: user.id,
+        details: { status: "verified", timestamp: now },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Purchase order verified");
+      queryClient.invalidateQueries({ queryKey: ["purchase-order", id] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["po-approval-history", id] });
+    },
+    onError: () => toast.error("Failed to verify"),
+  });
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       draft: "outline",
