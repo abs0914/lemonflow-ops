@@ -267,14 +267,18 @@ export default function Inventory() {
                 <Upload className="mr-2 h-4 w-4" />
                 Import
               </Button>
-              <Button variant="outline" onClick={() => setSyncDialogOpen(true)}>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Pull from AutoCount
-              </Button>
-              <Button variant="outline" onClick={() => setPushDialogOpen(true)}>
-                <Database className="mr-2 h-4 w-4" />
-                Sync to AutoCount
-              </Button>
+              {profile?.role === "Admin" && (
+                <>
+                  <Button variant="outline" onClick={() => setSyncDialogOpen(true)}>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Pull from AutoCount
+                  </Button>
+                  <Button variant="outline" onClick={() => setPushDialogOpen(true)}>
+                    <Database className="mr-2 h-4 w-4" />
+                    Sync to AutoCount
+                  </Button>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -382,16 +386,18 @@ export default function Inventory() {
               label: "Add Item",
               onClick: () => setAddDialogOpen(true)
             },
-            {
-              icon: RefreshCw,
-              label: "Pull from AutoCount",
-              onClick: () => setSyncDialogOpen(true)
-            },
-            {
-              icon: Database,
-              label: "Sync to AutoCount",
-              onClick: () => setPushDialogOpen(true)
-            }
+            ...(profile?.role === "Admin" ? [
+              {
+                icon: RefreshCw,
+                label: "Pull from AutoCount",
+                onClick: () => setSyncDialogOpen(true)
+              },
+              {
+                icon: Database,
+                label: "Sync to AutoCount",
+                onClick: () => setPushDialogOpen(true)
+              }
+            ] : [])
           ]}
         />
       )}

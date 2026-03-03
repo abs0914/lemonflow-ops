@@ -168,35 +168,6 @@ export default function Stores() {
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <Button 
-              variant="outline" 
-              onClick={handlePullFromAutoCount}
-              disabled={isPulling}
-            >
-              {isPulling ? (
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="mr-2 h-4 w-4" />
-              )}
-              Sync from AutoCount
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => handleSyncToAutoCount()}
-              disabled={isSyncing || unsyncedCount === 0}
-            >
-              {isSyncing ? (
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Upload className="mr-2 h-4 w-4" />
-              )}
-              Sync to AutoCount
-              {unsyncedCount > 0 && (
-                <Badge variant="secondary" className="ml-2">
-                  {unsyncedCount}
-                </Badge>
-              )}
-            </Button>
             <Button onClick={() => setShowStoreDialog(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Add Store
@@ -283,19 +254,7 @@ export default function Stores() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleSyncToAutoCount(store.id)}
-                          disabled={syncingStoreId === store.id}
-                          title="Sync this store to AutoCount"
-                        >
-                          {syncingStoreId === store.id ? (
-                            <RefreshCw className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Upload className="h-4 w-4" />
-                          )}
-                        </Button>
+                        
                         <Button
                           variant="ghost"
                           size="sm"

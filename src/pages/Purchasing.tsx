@@ -284,20 +284,24 @@ export default function Purchasing() {
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Refresh
               </Button>
-              <Button
-                variant="outline"
-                onClick={handlePullFromAutoCount}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Pull from AutoCount
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleSyncAllToAutoCount}
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                Sync to AutoCount
-              </Button>
+              {profile?.role === "Admin" && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={handlePullFromAutoCount}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Pull from AutoCount
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleSyncAllToAutoCount}
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    Sync to AutoCount
+                  </Button>
+                </>
+              )}
               <Button onClick={() => navigate("/purchasing/create")}>
                 <Plus className="mr-2 h-4 w-4" />
                 New Purchase Order
@@ -458,7 +462,7 @@ export default function Purchasing() {
                           <Button variant="outline" size="sm" onClick={() => navigate(`/purchasing/${order.id}`)}>
                             View
                           </Button>
-                          {!isFinanceUser && !order.autocount_synced && (
+                          {!isFinanceUser && !order.autocount_synced && profile?.role === "Admin" && (
                             <Button
                               variant="outline"
                               size="sm"
