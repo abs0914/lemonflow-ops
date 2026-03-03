@@ -29,7 +29,7 @@ export default function IncomingInventory() {
   const [activeTab, setActiveTab] = useState("pending");
 
   useEffect(() => {
-    if (!loading && (!profile || !["Admin", "Warehouse", "Fulfillment", "Production"].includes(profile.role))) {
+    if (!loading && (!profile || !["Admin", "Warehouse", "Fulfillment", "Production", "Accounting"].includes(profile.role))) {
       navigate("/login");
     }
   }, [profile, loading, navigate]);
