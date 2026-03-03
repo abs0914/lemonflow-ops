@@ -210,13 +210,14 @@ Deno.serve(async (req) => {
       for (const store of unsyncedStores) {
         try {
           const storePayload = {
-            debtorCode: store.debtor_code,
-            companyName: store.store_name,
-            contactPerson: store.contact_person || '',
-            phone: store.phone || '',
-            email: store.email || '',
-            address: store.address || '',
-            currencyCode: 'PHP',
+            Code: store.debtor_code,
+            Name: store.store_name,
+            ContactPerson: store.contact_person || '',
+            Phone: store.phone || '',
+            Email: store.email || '',
+            Address1: store.address || '',
+            IsActive: store.is_active ?? true,
+            CurrencyCode: 'PHP',
           };
 
           // Try create first, then update on conflict
@@ -305,17 +306,17 @@ Deno.serve(async (req) => {
       for (const supplier of unsyncedSuppliers) {
         try {
           const supplierPayload = {
-            creditorCode: supplier.supplier_code,
-            companyName: supplier.company_name,
+            code: supplier.supplier_code,
+            companyName: supplier.company_name || '',
             contactPerson: supplier.contact_person || '',
             phone: supplier.phone || '',
             email: supplier.email || '',
             address: supplier.address || '',
             creditTerms: supplier.credit_terms || 0,
-            currencyCode: 'PHP',
+            isActive: supplier.is_active !== false,
           };
 
-          const response = await fetch(`${apiUrl}/autocount/creditors`, {
+          const response = await fetch(`${apiUrl}/autocount/suppliers`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
