@@ -24,6 +24,7 @@ const statusColors: Record<string, string> = {
   processing: "bg-accent text-accent-foreground",
   completed: "bg-primary/20 text-primary",
   cancelled: "bg-destructive/10 text-destructive",
+  issues: "bg-orange-100 text-orange-800",
 };
 
 export default function StoreOrderDetail() {

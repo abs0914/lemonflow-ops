@@ -35,6 +35,7 @@ interface FulfillmentOrderActionsProps {
   onApprove: (deliveryDate: Date) => Promise<void>;
   onReject: (reason: string) => Promise<void>;
   onComplete: () => Promise<void>;
+  onMarkWithIssues: (notes: string) => Promise<void>;
   isLoading: boolean;
 }
 
