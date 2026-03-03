@@ -1,13 +1,17 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { UserManagement } from "@/components/settings/UserManagement";
+import { SyncReportTable } from "@/components/settings/SyncReportTable";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Store, UserCheck, ArrowRight } from "lucide-react";
+import { Store, UserCheck, ArrowRight, RefreshCw } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Settings() {
   const navigate = useNavigate();
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === "Admin";
 
   return (
     <DashboardLayout>
@@ -23,6 +27,7 @@ export default function Settings() {
           <TabsList>
             <TabsTrigger value="users">User Management</TabsTrigger>
             <TabsTrigger value="stores">Store Management</TabsTrigger>
+            {isAdmin && <TabsTrigger value="sync-report">Sync Report</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="users">
@@ -76,6 +81,11 @@ export default function Settings() {
               </Card>
             </div>
           </TabsContent>
+          {isAdmin && (
+            <TabsContent value="sync-report">
+              <SyncReportTable />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </DashboardLayout>
