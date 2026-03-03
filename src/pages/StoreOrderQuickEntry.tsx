@@ -351,12 +351,27 @@ export default function StoreOrderQuickEntry() {
                   Review and edit the parsed items before creating the order
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 <ParsedOrderTable
                   items={parsedItems}
                   onItemsChange={handleItemsChange}
                   itemDetails={validationData?.itemDetails}
                 />
+                {parsedItems.length > 0 && (
+                  <div className="flex justify-end">
+                    <div className="bg-muted/50 rounded-lg p-4 min-w-[250px]">
+                      <div className="flex justify-between items-center">
+                        <span className="text-lg font-semibold">Total Amount:</span>
+                        <span className="text-2xl font-bold text-primary">
+                          ₱{parsedItems.reduce((sum, item) => {
+                            const price = validationData?.itemDetails?.get(item.itemCode)?.price || 0;
+                            return sum + (item.quantity * price);
+                          }, 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
