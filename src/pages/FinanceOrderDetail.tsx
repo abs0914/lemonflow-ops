@@ -9,9 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSalesOrder, useSalesOrderLines } from "@/hooks/useSalesOrders";
-import { useConfirmPayment, useRejectPayment } from "@/hooks/useFinanceOrders";
+import { useConfirmPayment, useRejectPayment, useValidateProof } from "@/hooks/useFinanceOrders";
 import { format } from "date-fns";
-import { ArrowLeft, Check, X, Package, Store, DollarSign, Truck, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Check, X, Package, Store, DollarSign, Truck, ShoppingBag, ImageIcon, ExternalLink } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import {
@@ -40,6 +41,8 @@ export default function FinanceOrderDetail() {
   const { data: lines, isLoading: linesLoading } = useSalesOrderLines(id);
   const confirmPayment = useConfirmPayment();
   const rejectPayment = useRejectPayment();
+  const validateProof = useValidateProof();
+  const [proofUrl, setProofUrl] = useState<string | null>(null);
 
   const [paymentAmount, setPaymentAmount] = useState<string>("");
   const [paymentReference, setPaymentReference] = useState("");
@@ -147,11 +150,19 @@ export default function FinanceOrderDetail() {
           </Button>
           <div className="flex-1">
             <h1 className="text-2xl font-bold">{order.order_number}</h1>
-            <p className="text-muted-foreground">Payment Confirmation</p>
+            <p className="text-muted-foreground">
+              {order.status === 'awaiting_proof' ? 'Proof of Payment Review' : 'Payment Confirmation'}
+            </p>
           </div>
-          <Badge className="bg-orange-100 text-orange-800">
-            Pending Payment
-          </Badge>
+          {order.status === 'awaiting_proof' ? (
+            <Badge className={order.proof_of_payment_url ? "bg-blue-100 text-blue-800" : "bg-yellow-100 text-yellow-800"}>
+              {order.proof_of_payment_url ? "Proof Submitted" : "Awaiting Proof"}
+            </Badge>
+          ) : (
+            <Badge className="bg-orange-100 text-orange-800">
+              Pending Payment
+            </Badge>
+          )}
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
