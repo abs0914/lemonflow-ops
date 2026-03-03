@@ -14,7 +14,7 @@ export function ProofImage({ filePath, bucket = "payment-proofs" }: ProofImagePr
   useEffect(() => {
     const fetchUrl = async () => {
       const { data } = await supabase.storage
-        .from("payment-proofs")
+        .from(bucket)
         .createSignedUrl(filePath, 3600);
       if (data?.signedUrl) setUrl(data.signedUrl);
       setLoading(false);
