@@ -10,6 +10,8 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export default function Settings() {
   const navigate = useNavigate();
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === "Admin";
 
   return (
     <DashboardLayout>
@@ -25,6 +27,7 @@ export default function Settings() {
           <TabsList>
             <TabsTrigger value="users">User Management</TabsTrigger>
             <TabsTrigger value="stores">Store Management</TabsTrigger>
+            {isAdmin && <TabsTrigger value="sync-report">Sync Report</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="users">
@@ -78,6 +81,11 @@ export default function Settings() {
               </Card>
             </div>
           </TabsContent>
+          {isAdmin && (
+            <TabsContent value="sync-report">
+              <SyncReportTable />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </DashboardLayout>
