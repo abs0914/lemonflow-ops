@@ -263,6 +263,13 @@ export default function FulfillmentOrderDetail() {
                   </div>
                 )}
 
+                {hasIssues && order.delivery_notes && (
+                  <div>
+                    <div className="text-sm text-muted-foreground mb-1">Issue Notes</div>
+                    <div className="text-sm text-orange-700 whitespace-pre-wrap">{order.delivery_notes}</div>
+                  </div>
+                )}
+
                 {order.approved_at && (
                   <div>
                     <div className="text-sm text-muted-foreground mb-1">Approved At</div>
