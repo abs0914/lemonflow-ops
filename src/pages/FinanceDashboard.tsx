@@ -27,14 +27,21 @@ export default function FinanceDashboard() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("sales");
+  const [statusFilter, setStatusFilter] = useState("all");
   const { data: orders, isLoading: ordersLoading } = useFinanceOrders();
   const { data: procurementStats, isLoading: procurementLoading } = useFinanceProcurementStats();
 
-  const filteredOrders = orders?.filter(
-    (order) =>
+  const filteredOrders = orders?.filter((order) => {
+    const matchesSearch =
       order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.stores?.store_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+      order.stores?.store_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "pending_payment" && order.status === "pending_payment") ||
+      (statusFilter === "awaiting_proof" && order.status === "awaiting_proof" && !order.proof_of_payment_url) ||
+      (statusFilter === "proof_submitted" && order.status === "awaiting_proof" && !!order.proof_of_payment_url);
+    return matchesSearch && matchesStatus;
+  });
 
   const totalPendingValue = orders?.reduce(
     (sum, order) => sum + (order.total_amount || 0),
