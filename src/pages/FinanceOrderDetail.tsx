@@ -34,6 +34,37 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+function ProofImage({ url }: { url: string }) {
+  const [imgUrl, setImgUrl] = useState<string | null>(null);
+
+  useState(() => {
+    // Generate signed URL for private bucket
+    supabase.storage
+      .from("payment-proofs")
+      .createSignedUrl(url.replace(/^.*payment-proofs\//, ""), 3600)
+      .then(({ data }) => {
+        if (data?.signedUrl) setImgUrl(data.signedUrl);
+        else setImgUrl(url); // fallback to raw url
+      });
+  });
+
+  if (!imgUrl) return <div className="p-8 text-center text-muted-foreground">Loading image...</div>;
+
+  return (
+    <a href={imgUrl} target="_blank" rel="noopener noreferrer" className="block">
+      <img
+        src={imgUrl}
+        alt="Proof of payment"
+        className="w-full max-h-[500px] object-contain bg-muted"
+      />
+      <div className="flex items-center justify-center gap-1 py-2 text-sm text-muted-foreground hover:text-foreground">
+        <ExternalLink className="h-3 w-3" />
+        Open full size
+      </div>
+    </a>
+  );
+}
+
 export default function FinanceOrderDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
