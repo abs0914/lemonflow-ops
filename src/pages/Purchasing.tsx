@@ -423,7 +423,6 @@ export default function Purchasing() {
                     ) : (
                       <SortableTableHead sortKey="status" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Status</SortableTableHead>
                     )}
-                    <SortableTableHead sortKey="autocount_synced" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>AutoCount Sync</SortableTableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -452,7 +451,6 @@ export default function Purchasing() {
                       ) : (
                         <TableCell>{getStatusBadge(order.status)}</TableCell>
                       )}
-                      <TableCell>{getSyncStatusBadge(order)}</TableCell>
                       <TableCell>
                         <div className="flex gap-2">
                           <Button variant="outline" size="sm" onClick={() => navigate(`/purchasing/${order.id}`)}>
