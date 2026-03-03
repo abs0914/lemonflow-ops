@@ -622,8 +622,31 @@ export default function PurchaseOrderDetail() {
                   </div>
                 </>
               )}
+              {(purchaseOrder as any).verified_at && (
+                <>
+                  <Separator />
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Accounting Verification</p>
+                    <p className="text-sm font-medium text-green-600">
+                      Verified on {dateFormatters.medium((purchaseOrder as any).verified_at)}
+                    </p>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
+
+          {/* Proof of Payment */}
+          {(purchaseOrder as any).po_proof_of_payment_url && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Proof of Payment</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ProofImage filePath={(purchaseOrder as any).po_proof_of_payment_url} />
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>
