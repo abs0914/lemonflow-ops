@@ -522,12 +522,52 @@ export default function PurchaseOrderDetail() {
                     {isSyncing ? "Syncing..." : "Sync to AutoCount"}
                   </Button>
                 )}
+                {canUploadProof && (
+                  <>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      accept="image/*,.pdf"
+                      className="hidden"
+                      onChange={handleUploadProof}
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploadingProof}
+                    >
+                      <ImagePlus className="h-4 w-4 mr-2" />
+                      {isUploadingProof ? "Uploading..." : "Upload Proof of Payment"}
+                    </Button>
+                  </>
+                )}
+                {isAccountingUser && (
+                  <Button
+                    onClick={() => verifyMutation.mutate()}
+                    disabled={verifyMutation.isPending}
+                  >
+                    <ShieldCheck className="h-4 w-4 mr-2" />
+                    {verifyMutation.isPending ? "Verifying..." : "Verify PO"}
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   onClick={() => setShowCancelDialog(true)}
                 >
                   <X className="h-4 w-4 mr-2" />
                   Cancel PO
+                </Button>
+              </>
+            )}
+            {purchaseOrder.status === "verified" && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowPrintView(true)}
+                  className="bg-primary/10"
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Print PO (2 Copies)
                 </Button>
               </>
             )}
