@@ -12,7 +12,7 @@ export function useFinanceOrders() {
           *,
           stores (*)
         `)
-        .eq("status", "pending_payment")
+        .in("status", ["pending_payment", "awaiting_proof"])
         .order("created_at", { ascending: false });
 
       if (error) throw error;

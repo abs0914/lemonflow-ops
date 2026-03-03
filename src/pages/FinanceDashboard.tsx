@@ -102,15 +102,15 @@ export default function FinanceDashboard() {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Action Required</CardTitle>
-                  <AlertCircle className="h-4 w-4 text-orange-500" />
+                  <CardTitle className="text-sm font-medium">Awaiting Proof</CardTitle>
+                  <AlertCircle className="h-4 w-4 text-blue-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-orange-600">
-                    {orders?.length || 0}
+                  <div className="text-2xl font-bold text-blue-600">
+                    {orders?.filter(o => o.status === 'awaiting_proof').length || 0}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Confirm or reject payments
+                    Proof of payment submitted
                   </p>
                 </CardContent>
               </Card>
@@ -130,7 +130,7 @@ export default function FinanceDashboard() {
             {/* Orders Table */}
             <Card>
               <CardHeader>
-                <CardTitle>Pending Payment Orders</CardTitle>
+                <CardTitle>Orders Requiring Finance Action</CardTitle>
               </CardHeader>
               <CardContent>
                 {ordersLoading ? (
@@ -175,9 +175,15 @@ export default function FinanceDashboard() {
                             {formatCurrency(order.total_amount || 0)}
                           </TableCell>
                           <TableCell>
-                            <Badge className="bg-orange-100 text-orange-800">
-                              Pending Payment
-                            </Badge>
+                            {order.status === 'awaiting_proof' ? (
+                              <Badge className={order.proof_of_payment_url ? "bg-blue-100 text-blue-800" : "bg-yellow-100 text-yellow-800"}>
+                                {order.proof_of_payment_url ? "Proof Submitted" : "Awaiting Proof"}
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-orange-100 text-orange-800">
+                                Pending Payment
+                              </Badge>
+                            )}
                           </TableCell>
                           <TableCell className="text-right">
                             <Button
