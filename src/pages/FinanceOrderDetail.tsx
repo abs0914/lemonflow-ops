@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,16 +37,15 @@ import {
 function ProofImage({ url }: { url: string }) {
   const [imgUrl, setImgUrl] = useState<string | null>(null);
 
-  useState(() => {
-    // Generate signed URL for private bucket
+  useEffect(() => {
     supabase.storage
       .from("payment-proofs")
       .createSignedUrl(url.replace(/^.*payment-proofs\//, ""), 3600)
       .then(({ data }) => {
         if (data?.signedUrl) setImgUrl(data.signedUrl);
-        else setImgUrl(url); // fallback to raw url
+        else setImgUrl(url);
       });
-  });
+  }, [url]);
 
   if (!imgUrl) return <div className="p-8 text-center text-muted-foreground">Loading image...</div>;
 
