@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Edit, Trash2, FileText, CheckCircle, X, Upload, PackageCheck, Printer } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, FileText, CheckCircle, X, Upload, PackageCheck, Printer, ShieldCheck, ImagePlus } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +18,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ReceiveFromCashPO } from "@/components/warehouse/ReceiveFromCashPO";
 import { POPrintView } from "@/components/purchasing/POPrintView";
 import { PurchaseOrderApprovalHistory } from "@/components/PurchaseOrderApprovalHistory";
+import { useAuth } from "@/contexts/AuthContext";
+import { ProofImage } from "@/components/store-orders/ProofImage";
 
 export default function PurchaseOrderDetail() {
   const { id } = useParams<{ id: string }>();
@@ -28,6 +30,12 @@ export default function PurchaseOrderDetail() {
   const [showReceiveDialog, setShowReceiveDialog] = useState(false);
   const [showPrintView, setShowPrintView] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isUploadingProof, setIsUploadingProof] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { profile } = useAuth();
+
+  const isAccountingUser = profile?.role === "Accounting";
+  const canUploadProof = ["Admin", "Warehouse", "Production"].includes(profile?.role || "");
 
   const { data: purchaseOrder, isLoading: loadingPO } = usePurchaseOrder(id);
   const { data: lines, isLoading: loadingLines } = usePurchaseOrderLines(id);
