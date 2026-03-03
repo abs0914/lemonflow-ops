@@ -1,81 +1,103 @@
 
 
-## Add "Verified" Status to Purchase Order Workflow
+## Add Proof of Payment Upload & Updated Franchisee Workflow
 
-### Current Flow
+### Updated Workflow
+
+The franchisee order flow changes from:
+
 ```text
-draft → submitted → approved (CEO) → Receiving Report
+Current:  submitted → pending_payment (Finance) → pending_accounting (Accounting) → processing (Fulfillment)
+
+New:      submitted → pending_payment (Finance sets fees/dates) → awaiting_proof (Franchisee uploads proof) → pending_accounting (Accounting reviews proof & approves) → processing (Fulfillment)
 ```
 
-### New Flow
-```text
-draft → submitted → approved (CEO) → verified (Accounting) → Receiving Report
-```
+Finance no longer confirms payment directly. Instead, Finance sets delivery/shipping fees and delivery date, then sends it back to the franchisee to upload proof of payment. Only after the franchisee uploads the screenshot does it go to Accounting for final approval.
 
-After CEO approval, the PO moves to Accounting for verification. Accounting reviews PO details and proof of payment (uploaded by the purchaser), then marks it as "Verified". Only verified POs appear in the Receiving Report.
+### Database Changes
 
----
-
-### Database Changes (Migration)
-
-1. Add columns to `purchase_orders`:
-   - `verified_by UUID` (nullable, references the Accounting user)
-   - `verified_at TIMESTAMPTZ` (nullable)
-   - `po_proof_of_payment_url TEXT` (nullable, for uploaded receipt/proof)
-
-2. Update RLS policies:
-   - Allow Accounting to UPDATE `purchase_orders` when status is `approved` (to set status to `verified`, record `verified_by`/`verified_at`)
-   - Warehouse/Production can UPDATE approved POs to upload proof of payment
-
-3. Create storage bucket `po-payment-proofs` (private) with RLS for upload by Warehouse/Production and viewing by Accounting/Admin/CEO/Finance
-
----
+1. **New status value**: Add `awaiting_proof` to the sales order status flow
+2. **New column on `sales_orders`**: `proof_of_payment_url TEXT` to store the uploaded file path
+3. **Storage bucket**: Create `payment-proofs` bucket (private) with RLS policies allowing:
+   - Store users to upload files for their own orders
+   - Finance, Accounting, Admin to view files
+4. **RLS policy updates**: 
+   - Store users can UPDATE orders in `awaiting_proof` status (to set `proof_of_payment_url`)
+   - Finance `WITH CHECK` expression updated to allow transitioning to `awaiting_proof`
 
 ### File Changes
 
-**`src/types/inventory.ts`**
-- Add `'verified'` to the PurchaseOrder status union type
-- Add `verified_by`, `verified_at`, `po_proof_of_payment_url` fields
+**`src/types/sales-order.ts`**
+- Add `awaiting_proof` to the status union type
+- Add `proof_of_payment_url?: string` field
 
-**`src/pages/PurchaseOrderDetail.tsx`**
-- When status is `approved`: show file upload for proof of payment (for Warehouse/Production users)
-- When status is `approved`: show "Verify" button for Accounting users (reviews details + proof image, moves to `verified`)
-- Add `verified` to status badge map (e.g., green "Verified" badge)
-- Display uploaded proof of payment image using the existing `ProofImage` pattern
+**`src/hooks/useFinanceOrders.ts`** (`useConfirmPayment`)
+- Change target status from `pending_accounting` to `awaiting_proof`
+- Remove AutoCount sync from this step (moved to later, or kept at accounting approval)
 
-**`src/pages/Purchasing.tsx`**
-- Add `verified` tab to the tab list
-- Add `verified` to status badge map
-- Update Accounting user view: show `approved` POs needing verification instead of only approved
-- Update Receiving Report filter references
+**`src/pages/FinanceOrderDetail.tsx`**
+- Update button label from "Confirm Payment" to "Send for Proof of Payment" or similar
+- Finance sets fees, dates, and sends order back to franchisee
 
-**`src/pages/IncomingInventory.tsx`** and related components
-- Change filter from `status = 'approved'` to `status = 'verified'` so only verified POs appear in Receiving Report
+**`src/pages/StoreOrderDetail.tsx`**
+- When order status is `awaiting_proof`, show:
+  - Order summary with fees set by Finance (grand total)
+  - File upload input for proof of payment screenshot
+  - "Submit Proof" button that uploads file to storage and updates `proof_of_payment_url`, moving status to `pending_accounting`
 
-**`src/components/warehouse/GoodsReceivedForm.tsx`**
-- Change PO query filter from `"approved"` to `"verified"`
+**`src/pages/StoreOrders.tsx`**
+- Add `awaiting_proof` tab/filter so franchisees can see orders needing their action
 
-**`src/components/inventory/EnhancedGoodsReceivedForm.tsx`**
-- Change PO query filter from `"approved"` to `"verified"`
+**`src/pages/AccountingOrderDetail.tsx`**
+- Display the uploaded proof of payment image
+- Keep existing approve flow (moves to `processing`)
 
-**`src/components/inventory/PendingReceiptsList.tsx`**
-- Change PO query filter from `"approved"` to `"verified"`
+**`src/hooks/useAccountingOrders.ts`** / **`src/hooks/useFinanceOrders.ts`**
+- Update mutation logic for new status transitions
 
-**`src/components/purchasing/MobilePOCard.tsx`**
-- Add `verified` to status variant map
+**Status color maps** (multiple files)
+- Add `awaiting_proof: "bg-amber-100 text-amber-800"` entry
 
-**`src/pages/CEODashboard.tsx`**
-- No changes needed (CEO still approves, flow continues to Accounting)
+**`src/components/store-orders/MobileOrderCard.tsx`**
+- Add `awaiting_proof` status color
 
-**`src/hooks/usePurchaseOrders.ts`**
-- No changes needed (already fetches all statuses)
-
----
+**RLS policies** (migration)
+- Store users: allow UPDATE on `awaiting_proof` orders (to upload proof)
+- Finance: update WITH CHECK to include `awaiting_proof` as target status
 
 ### Technical Details
 
-- Storage bucket: `po-payment-proofs` (private), files stored as `{po_id}/{filename}`
-- Proof of payment upload reuses the same pattern as `ProofImage` component from sales orders
-- Accounting verification records `verified_by` and `verified_at` for audit trail
-- The `verified` action will also be logged to `audit_logs`
+**Storage setup** (SQL migration):
+```sql
+INSERT INTO storage.buckets (id, name, public) VALUES ('payment-proofs', 'payment-proofs', false);
+
+-- Store users can upload to their order folders
+CREATE POLICY "Store users can upload payment proofs"
+ON storage.objects FOR INSERT
+WITH CHECK (bucket_id = 'payment-proofs' AND ...);
+
+-- Finance, Accounting, Admin can view
+CREATE POLICY "Authorized users can view payment proofs"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'payment-proofs' AND ...);
+```
+
+**Upload flow**: File is uploaded to `payment-proofs/{order_id}/{filename}`, then the signed/public URL is stored in `sales_orders.proof_of_payment_url`.
+
+**Sales order column** (SQL migration):
+```sql
+ALTER TABLE sales_orders ADD COLUMN proof_of_payment_url TEXT DEFAULT NULL;
+```
+
+### Files Modified
+- New database migration (column + storage bucket + RLS)
+- `src/types/sales-order.ts`
+- `src/hooks/useFinanceOrders.ts`
+- `src/hooks/useAccountingOrders.ts`
+- `src/pages/StoreOrderDetail.tsx`
+- `src/pages/StoreOrders.tsx`
+- `src/pages/FinanceOrderDetail.tsx`
+- `src/pages/AccountingOrderDetail.tsx`
+- `src/components/store-orders/MobileOrderCard.tsx`
+- Status color maps across affected files
 

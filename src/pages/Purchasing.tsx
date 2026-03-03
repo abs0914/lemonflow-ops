@@ -232,6 +232,7 @@ export default function Purchasing() {
       draft: "outline",
       submitted: "secondary",
       approved: "default",
+      verified: "default",
       cancelled: "destructive"
     };
     return <Badge variant={variants[status] || "outline"}>{status.charAt(0).toUpperCase() + status.slice(1)}</Badge>;
@@ -389,6 +390,7 @@ export default function Purchasing() {
                     <TabsTrigger value="draft">Draft</TabsTrigger>
                     <TabsTrigger value="submitted">Submitted</TabsTrigger>
                     <TabsTrigger value="approved">Approved</TabsTrigger>
+                    <TabsTrigger value="verified">Verified</TabsTrigger>
                   </TabsList>
                 </Tabs>
               )}

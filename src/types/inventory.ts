@@ -96,7 +96,7 @@ export interface PurchaseOrder {
   supplier_id: string;
   doc_date: string;
   delivery_date: string | null;
-  status: 'draft' | 'submitted' | 'approved' | 'cancelled';
+  status: 'draft' | 'submitted' | 'approved' | 'verified' | 'cancelled';
   total_amount: number;
   remarks: string | null;
   created_by: string;
@@ -113,6 +113,9 @@ export interface PurchaseOrder {
   received_at: string | null;
   approved_by: string | null;
   approved_at: string | null;
+  verified_by: string | null;
+  verified_at: string | null;
+  po_proof_of_payment_url: string | null;
   created_at: string;
   updated_at: string;
   suppliers?: Supplier;

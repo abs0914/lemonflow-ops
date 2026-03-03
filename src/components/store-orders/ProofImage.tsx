@@ -4,16 +4,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 interface ProofImageProps {
   filePath: string;
+  bucket?: string;
 }
 
-export function ProofImage({ filePath }: ProofImageProps) {
+export function ProofImage({ filePath, bucket = "payment-proofs" }: ProofImageProps) {
   const [url, setUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchUrl = async () => {
       const { data } = await supabase.storage
-        .from("payment-proofs")
+        .from(bucket)
         .createSignedUrl(filePath, 3600);
       if (data?.signedUrl) setUrl(data.signedUrl);
       setLoading(false);
