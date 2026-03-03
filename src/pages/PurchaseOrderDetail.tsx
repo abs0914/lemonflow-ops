@@ -485,7 +485,7 @@ export default function PurchaseOrderDetail() {
                 </Button>
               </>
             )}
-            {purchaseOrder.status === "submitted" && (
+            {purchaseOrder.status === "submitted" && canApprove && (
               <>
                 <Button
                   onClick={() => updateStatusMutation.mutate("approved")}
