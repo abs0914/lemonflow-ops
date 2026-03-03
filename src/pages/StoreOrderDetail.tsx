@@ -152,7 +152,6 @@ export default function StoreOrderDetail() {
         id: order.id,
         updates: {
           proof_of_payment_url: filePath,
-          status: "pending_accounting",
         } as any,
       });
 
