@@ -4,9 +4,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 interface ProofImageProps {
   filePath: string;
+  bucket?: string;
 }
 
-export function ProofImage({ filePath }: ProofImageProps) {
+export function ProofImage({ filePath, bucket = "payment-proofs" }: ProofImageProps) {
   const [url, setUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
