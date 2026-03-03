@@ -643,7 +643,7 @@ export default function PurchaseOrderDetail() {
                 <CardTitle>Proof of Payment</CardTitle>
               </CardHeader>
               <CardContent>
-                <ProofImage filePath={(purchaseOrder as any).po_proof_of_payment_url} />
+                <ProofImage filePath={(purchaseOrder as any).po_proof_of_payment_url} bucket="po-payment-proofs" />
               </CardContent>
             </Card>
           )}
