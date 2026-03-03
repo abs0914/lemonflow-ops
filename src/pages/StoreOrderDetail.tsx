@@ -13,6 +13,7 @@ import { ProofImage } from "@/components/store-orders/ProofImage";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -28,6 +29,7 @@ const statusColors: Record<string, string> = {
 export default function StoreOrderDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isUploadingProof, setIsUploadingProof] = useState(false);
@@ -128,6 +130,8 @@ export default function StoreOrderDetail() {
   const isSubmitted = order.status === "submitted";
   const isAwaitingProof = order.status === "awaiting_proof";
   const canSync = isSubmitted && !order.autocount_synced;
+  const canDeleteRoles = ["Admin", "Warehouse", "Fulfillment"];
+  const canDelete = isDraft || (isSubmitted && profile?.role && canDeleteRoles.includes(profile.role));
 
   const handleUploadProof = async (file: File) => {
     if (!order) return;
@@ -176,25 +180,25 @@ export default function StoreOrderDetail() {
 
           <div className="flex gap-2">
             {isDraft && (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={handleSubmitOrder}
-                  disabled={updateMutation.isPending}
-                >
-                  <Send className="mr-2 h-4 w-4" />
-                  Submit Order
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowDeleteDialog(true)}
-                  disabled={deleteMutation.isPending}
-                  className="text-destructive hover:text-destructive"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </Button>
-              </>
+              <Button
+                variant="outline"
+                onClick={handleSubmitOrder}
+                disabled={updateMutation.isPending}
+              >
+                <Send className="mr-2 h-4 w-4" />
+                Submit Order
+              </Button>
+            )}
+            {canDelete && (
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteDialog(true)}
+                disabled={deleteMutation.isPending}
+                className="text-destructive hover:text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </Button>
             )}
             {canSync && (
               <Button
