@@ -271,6 +271,34 @@ export function FulfillmentOrderActions({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Issues Dialog */}
+      <AlertDialog open={showIssuesDialog} onOpenChange={setShowIssuesDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark Order with Issues</AlertDialogTitle>
+            <AlertDialogDescription>
+              Please describe the issues (e.g., lacking items, damaged goods).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Textarea
+            placeholder="Describe the issues..."
+            value={issuesNotes}
+            onChange={(e) => setIssuesNotes(e.target.value)}
+            rows={4}
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleIssuesConfirm}
+              disabled={!issuesNotes.trim()}
+              className="bg-orange-600 text-white hover:bg-orange-700"
+            >
+              Confirm Issues
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

@@ -138,6 +138,27 @@ export default function FulfillmentOrderDetail() {
     }
   };
 
+  const handleMarkWithIssues = async (notes: string) => {
+    if (!order || !user) return;
+
+    try {
+      await updateMutation.mutateAsync({
+        id: order.id,
+        updates: {
+          status: "issues",
+          delivery_notes: [deliveryNotes, notes].filter(Boolean).join("\n---\nIssues: "),
+          fulfilled_by: user.id,
+          fulfilled_at: new Date().toISOString(),
+        } as any,
+      });
+
+      toast.success("Order marked with issues");
+      refetch();
+    } catch (error: any) {
+      toast.error(`Failed to mark issues: ${error.message}`);
+    }
+  };
+
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -309,6 +330,7 @@ export default function FulfillmentOrderDetail() {
               onApprove={handleApproveOrder}
               onReject={handleRejectOrder}
               onComplete={handleCompleteOrder}
+              onMarkWithIssues={handleMarkWithIssues}
               isLoading={updateMutation.isPending || isSyncing}
             />
 
