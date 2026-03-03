@@ -8,19 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { useSalesOrder, useSalesOrderLines } from "@/hooks/useSalesOrders";
 import { useConfirmPayment, useRejectPayment } from "@/hooks/useFinanceOrders";
 import { format } from "date-fns";
-import { ArrowLeft, Check, X, Package, Store, Calendar as CalendarIcon, DollarSign, Truck, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Check, X, Package, Store, DollarSign, Truck, ShoppingBag } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -52,7 +45,6 @@ export default function FinanceOrderDetail() {
   const [paymentReference, setPaymentReference] = useState("");
   const [deliveryFee, setDeliveryFee] = useState<string>("0");
   const [shippingFee, setShippingFee] = useState<string>("0");
-  const [deliveryDate, setDeliveryDate] = useState<Date | undefined>(undefined);
   const [orderType, setOrderType] = useState<"delivery" | "pickup">("delivery");
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
@@ -87,18 +79,11 @@ export default function FinanceOrderDetail() {
       return;
     }
 
-    if (!deliveryDate) {
-      const label = orderType === "pickup" ? "pickup date" : "delivery date";
-      toast.error(`Please set a ${label} before confirming payment`);
-      return;
-    }
-
     try {
       await confirmPayment.mutateAsync({
         orderId: id,
         paymentAmount: amount,
         paymentReference: paymentReference || undefined,
-        deliveryDate: deliveryDate,
         deliveryFee: deliveryFeeAmount,
         shippingFee: shippingFeeAmount,
       });
@@ -390,10 +375,7 @@ export default function FinanceOrderDetail() {
               <Label>Order Fulfillment Type <span className="text-destructive">*</span></Label>
               <RadioGroup
                 value={orderType}
-                onValueChange={(val) => {
-                  setOrderType(val as "delivery" | "pickup");
-                  setDeliveryDate(undefined);
-                }}
+                onValueChange={(val) => setOrderType(val as "delivery" | "pickup")}
                 className="flex gap-4"
               >
                 <div className="flex items-center gap-2 rounded-lg border px-4 py-3 cursor-pointer flex-1 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5">
@@ -413,49 +395,10 @@ export default function FinanceOrderDetail() {
               </RadioGroup>
             </div>
 
-            {/* Date Picker — label changes based on type */}
-            <div className="space-y-2">
-              <Label>
-                {orderType === "pickup" ? "Pickup Date" : "Delivery Date"}{" "}
-                <span className="text-destructive">*</span>
-              </Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full md:w-[280px] justify-start text-left font-normal",
-                      !deliveryDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {deliveryDate
-                      ? format(deliveryDate, "PPP")
-                      : `Select ${orderType === "pickup" ? "pickup" : "delivery"} date`}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={deliveryDate}
-                    onSelect={setDeliveryDate}
-                    disabled={(date) => date < new Date()}
-                    initialFocus
-                    className="p-3 pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-              {!deliveryDate && (
-                <p className="text-xs text-muted-foreground">
-                  Set {orderType === "pickup" ? "pickup" : "delivery"} date before confirming payment
-                </p>
-              )}
-            </div>
-
             <div className="flex gap-4 pt-4">
               <Button
                 onClick={handleConfirmPayment}
-                disabled={confirmPayment.isPending || !deliveryDate}
+                disabled={confirmPayment.isPending}
                 className="flex-1"
               >
                 <Check className="h-4 w-4 mr-2" />
