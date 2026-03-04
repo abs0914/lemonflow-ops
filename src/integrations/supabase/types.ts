@@ -856,12 +856,15 @@ export type Database = {
           delivery_fee: number | null
           delivery_notes: string | null
           description: string | null
+          discount_amount: number | null
           doc_date: string
+          ewt_amount: number | null
           expedite_fee: number | null
           fulfilled_at: string | null
           fulfilled_by: string | null
           id: string
           order_number: string
+          overpayment: number | null
           payment_amount: number | null
           payment_confirmed_at: string | null
           payment_confirmed_by: string | null
@@ -876,7 +879,9 @@ export type Database = {
           sync_error_message: string | null
           synced_at: string | null
           total_amount: number | null
+          underpayment: number | null
           updated_at: string | null
+          vat_amount: number | null
         }
         Insert: {
           approved_at?: string | null
@@ -891,12 +896,15 @@ export type Database = {
           delivery_fee?: number | null
           delivery_notes?: string | null
           description?: string | null
+          discount_amount?: number | null
           doc_date?: string
+          ewt_amount?: number | null
           expedite_fee?: number | null
           fulfilled_at?: string | null
           fulfilled_by?: string | null
           id?: string
           order_number: string
+          overpayment?: number | null
           payment_amount?: number | null
           payment_confirmed_at?: string | null
           payment_confirmed_by?: string | null
@@ -911,7 +919,9 @@ export type Database = {
           sync_error_message?: string | null
           synced_at?: string | null
           total_amount?: number | null
+          underpayment?: number | null
           updated_at?: string | null
+          vat_amount?: number | null
         }
         Update: {
           approved_at?: string | null
@@ -926,12 +936,15 @@ export type Database = {
           delivery_fee?: number | null
           delivery_notes?: string | null
           description?: string | null
+          discount_amount?: number | null
           doc_date?: string
+          ewt_amount?: number | null
           expedite_fee?: number | null
           fulfilled_at?: string | null
           fulfilled_by?: string | null
           id?: string
           order_number?: string
+          overpayment?: number | null
           payment_amount?: number | null
           payment_confirmed_at?: string | null
           payment_confirmed_by?: string | null
@@ -946,7 +959,9 @@ export type Database = {
           sync_error_message?: string | null
           synced_at?: string | null
           total_amount?: number | null
+          underpayment?: number | null
           updated_at?: string | null
+          vat_amount?: number | null
         }
         Relationships: [
           {
