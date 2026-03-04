@@ -46,7 +46,7 @@ export default function RawMaterials() {
     navigate("/login");
     return null;
   }
-  if (profile?.role !== "Admin" && profile?.role !== "Warehouse") {
+  if (profile?.role !== "Admin" && profile?.role !== "Warehouse" && profile?.role !== "Fulfillment") {
     navigate("/login");
     return null;
   }
