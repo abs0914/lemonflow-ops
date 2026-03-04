@@ -145,6 +145,7 @@ export default function FinanceOrderDetail() {
         deliveryFee: deliveryFeeAmount,
         shippingFee: shippingFeeAmount,
         expediteFee: expediteFeeAmount,
+        fulfillmentType: orderType,
       });
       
       toast.success("Fees set. Order sent to franchisee for proof of payment upload.");
@@ -494,6 +495,7 @@ export default function FinanceOrderDetail() {
                           await validateProof.mutateAsync({
                             orderId: id,
                             deliveryDate: format(proofDeliveryDate, "yyyy-MM-dd"),
+                            fulfillmentType: proofOrderType,
                           });
                           toast.success("Proof validated. Order sent to Accounting for final review.");
                           navigate("/finance");
