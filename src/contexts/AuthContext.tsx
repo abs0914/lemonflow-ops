@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useRef, useCallback } from "react";
+import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -27,11 +27,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const profileFetchIdRef = useRef(0);
+  const lastFetchedUserId = useRef<string | null>(null);
 
-  const fetchUserProfile = useCallback(async (userId: string) => {
-    const currentFetchId = ++profileFetchIdRef.current;
-
+  const fetchUserProfile = async (userId: string) => {
     try {
       console.log("Fetching profile for user:", userId);
       const { data, error } = await supabase
@@ -44,55 +42,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error("Error fetching profile:", error);
         throw error;
       }
-
-      if (currentFetchId === profileFetchIdRef.current) {
-        console.log("Profile fetched:", data);
-        setProfile(data as UserProfile);
-      }
+      console.log("Profile fetched:", data);
+      setProfile(data as UserProfile);
     } catch (error) {
       console.error("Error fetching profile:", error);
-      if (currentFetchId === profileFetchIdRef.current) {
-        setProfile(null);
-      }
+      setProfile(null);
     } finally {
-      if (currentFetchId === profileFetchIdRef.current) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+    let initialSessionHandled = false;
 
-        if (session?.user) {
-          if (event !== "TOKEN_REFRESHED") {
-            setLoading(true);
-          }
-          void fetchUserProfile(session.user.id);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, currentSession) => {
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+
+        if (currentSession?.user) {
+          // Skip if initial session hasn't been handled yet (getSession will handle it)
+          if (!initialSessionHandled) return;
+          // Skip duplicate fetches for same user (e.g. TOKEN_REFRESHED)
+          if (event === "TOKEN_REFRESHED") return;
+          
+          lastFetchedUserId.current = currentSession.user.id;
+          setLoading(true);
+          fetchUserProfile(currentSession.user.id);
         } else if (event === "SIGNED_OUT") {
+          lastFetchedUserId.current = null;
           setProfile(null);
           setLoading(false);
         }
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      initialSessionHandled = true;
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
 
-      if (session?.user) {
-        setLoading(true);
-        void fetchUserProfile(session.user.id);
+      if (currentSession?.user) {
+        lastFetchedUserId.current = currentSession.user.id;
+        fetchUserProfile(currentSession.user.id);
       } else {
         setLoading(false);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [fetchUserProfile]);
+  }, []);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
@@ -109,6 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    lastFetchedUserId.current = null;
     setUser(null);
     setSession(null);
     setProfile(null);
