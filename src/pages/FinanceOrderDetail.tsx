@@ -241,17 +241,42 @@ export default function FinanceOrderDetail() {
                 </div>
               </div>
 
+              {/* Fulfillment Type selected by franchisee */}
+              {order.delivery_notes && (
+                <div className="pt-2 border-t">
+                  <Label className="text-muted-foreground">Fulfillment Type (Selected by Store)</Label>
+                  <div className="mt-1 flex items-center gap-2">
+                    {order.delivery_notes.toLowerCase().includes("pickup") ? (
+                      <Badge variant="outline" className="gap-1 px-3 py-1.5 text-sm">
+                        <ShoppingBag className="h-3.5 w-3.5" />
+                        Pickup
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="gap-1 px-3 py-1.5 text-sm">
+                        <Truck className="h-3.5 w-3.5" />
+                        Delivery
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {!order.delivery_notes && (
+                <div className="pt-2 border-t">
+                  <Label className="text-muted-foreground">Fulfillment Type (Selected by Store)</Label>
+                  <div className="mt-1 flex items-center gap-2">
+                    <Badge variant="outline" className="gap-1 px-3 py-1.5 text-sm">
+                      <Truck className="h-3.5 w-3.5" />
+                      Delivery
+                    </Badge>
+                  </div>
+                </div>
+              )}
+
               {order.description && (
                 <div className="pt-2 border-t">
                   <Label className="text-muted-foreground">Franchisee Note</Label>
                   <p className="font-medium text-sm mt-1 whitespace-pre-wrap">{order.description}</p>
-                </div>
-              )}
-
-              {order.delivery_notes && (
-                <div className="pt-2 border-t">
-                  <Label className="text-muted-foreground">Delivery Notes</Label>
-                  <p className="font-medium text-sm mt-1 whitespace-pre-wrap">{order.delivery_notes}</p>
                 </div>
               )}
             </CardContent>
