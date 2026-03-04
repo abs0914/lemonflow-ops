@@ -242,8 +242,8 @@ export default function FulfillmentOrderDetail() {
 
                 {order.description && (
                   <div>
-                    <div className="text-sm text-muted-foreground mb-1">Description</div>
-                    <div className="text-sm">{order.description}</div>
+                    <div className="text-sm text-muted-foreground mb-1">Franchisee Note</div>
+                    <div className="text-sm bg-muted/50 rounded-md p-2 whitespace-pre-wrap">{order.description}</div>
                   </div>
                 )}
 

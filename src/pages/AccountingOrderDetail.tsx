@@ -152,7 +152,7 @@ export default function AccountingOrderDetail() {
               )}
               {order.description && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Description</span>
+                  <span className="text-muted-foreground">Franchisee Note</span>
                   <span className="text-right max-w-[200px]">{order.description}</span>
                 </div>
               )}
