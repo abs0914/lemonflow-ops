@@ -857,6 +857,7 @@ export type Database = {
           delivery_notes: string | null
           description: string | null
           doc_date: string
+          expedite_fee: number | null
           fulfilled_at: string | null
           fulfilled_by: string | null
           id: string
@@ -891,6 +892,7 @@ export type Database = {
           delivery_notes?: string | null
           description?: string | null
           doc_date?: string
+          expedite_fee?: number | null
           fulfilled_at?: string | null
           fulfilled_by?: string | null
           id?: string
@@ -925,6 +927,7 @@ export type Database = {
           delivery_notes?: string | null
           description?: string | null
           doc_date?: string
+          expedite_fee?: number | null
           fulfilled_at?: string | null
           fulfilled_by?: string | null
           id?: string

@@ -56,6 +56,7 @@ export interface SalesOrder {
   stock_reserved?: boolean;
   delivery_fee?: number;
   shipping_fee?: number;
+  expedite_fee?: number;
   proof_of_payment_url?: string;
   created_at: string;
   updated_at: string;

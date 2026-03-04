@@ -80,6 +80,7 @@ export default function FinanceOrderDetail() {
   const [paymentReference, setPaymentReference] = useState("");
   const [deliveryFee, setDeliveryFee] = useState<string>("0");
   const [shippingFee, setShippingFee] = useState<string>("0");
+  const [expediteFee, setExpediteFee] = useState<string>("0");
   const [orderType, setOrderType] = useState<"delivery" | "pickup">("delivery");
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
@@ -96,7 +97,8 @@ export default function FinanceOrderDetail() {
 
   const deliveryFeeAmount = parseFloat(deliveryFee) || 0;
   const shippingFeeAmount = parseFloat(shippingFee) || 0;
-  const grandTotal = (order?.total_amount || 0) + deliveryFeeAmount + shippingFeeAmount;
+  const expediteFeeAmount = parseFloat(expediteFee) || 0;
+  const grandTotal = (order?.total_amount || 0) + deliveryFeeAmount + shippingFeeAmount + expediteFeeAmount;
 
   const handleConfirmPayment = async () => {
     if (!id) return;
@@ -119,6 +121,7 @@ export default function FinanceOrderDetail() {
         paymentReference: paymentReference || undefined,
         deliveryFee: deliveryFeeAmount,
         shippingFee: shippingFeeAmount,
+        expediteFee: expediteFeeAmount,
       });
       
       toast.success("Fees set. Order sent to franchisee for proof of payment upload.");
@@ -474,7 +477,7 @@ export default function FinanceOrderDetail() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="deliveryFee">Delivery Fee (₱)</Label>
                 <Input
@@ -487,7 +490,8 @@ export default function FinanceOrderDetail() {
                     setDeliveryFee(e.target.value);
                     const fee = parseFloat(e.target.value) || 0;
                     const shipping = parseFloat(shippingFee) || 0;
-                    setPaymentAmount(((order.total_amount || 0) + fee + shipping).toString());
+                    const expedite = parseFloat(expediteFee) || 0;
+                    setPaymentAmount(((order.total_amount || 0) + fee + shipping + expedite).toString());
                   }}
                   placeholder="0.00"
                 />
@@ -504,7 +508,26 @@ export default function FinanceOrderDetail() {
                     setShippingFee(e.target.value);
                     const shipping = parseFloat(e.target.value) || 0;
                     const delivery = parseFloat(deliveryFee) || 0;
-                    setPaymentAmount(((order.total_amount || 0) + delivery + shipping).toString());
+                    const expedite = parseFloat(expediteFee) || 0;
+                    setPaymentAmount(((order.total_amount || 0) + delivery + shipping + expedite).toString());
+                  }}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="expediteFee">Expedite Fee (₱)</Label>
+                <Input
+                  id="expediteFee"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={expediteFee}
+                  onChange={(e) => {
+                    setExpediteFee(e.target.value);
+                    const expedite = parseFloat(e.target.value) || 0;
+                    const delivery = parseFloat(deliveryFee) || 0;
+                    const shipping = parseFloat(shippingFee) || 0;
+                    setPaymentAmount(((order.total_amount || 0) + delivery + shipping + expedite).toString());
                   }}
                   placeholder="0.00"
                 />
@@ -523,6 +546,10 @@ export default function FinanceOrderDetail() {
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Shipping Fee</span>
                 <span>₱{shippingFeeAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Expedite Fee</span>
+                <span>₱{expediteFeeAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between font-bold border-t pt-2">
                 <span>Grand Total</span>
