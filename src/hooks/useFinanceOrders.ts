@@ -33,6 +33,11 @@ export function useConfirmPayment() {
       shippingFee,
       expediteFee,
       fulfillmentType,
+      vatAmount,
+      ewtAmount,
+      underpayment,
+      overpayment,
+      discountAmount,
     }: {
       orderId: string;
       paymentAmount: number;
@@ -41,6 +46,11 @@ export function useConfirmPayment() {
       shippingFee?: number;
       expediteFee?: number;
       fulfillmentType?: string;
+      vatAmount?: number;
+      ewtAmount?: number;
+      underpayment?: number;
+      overpayment?: number;
+      discountAmount?: number;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
@@ -58,6 +68,11 @@ export function useConfirmPayment() {
           shipping_fee: shippingFee ?? 0,
           expedite_fee: expediteFee ?? 0,
           delivery_notes: fulfillmentType || null,
+          vat_amount: vatAmount ?? 0,
+          ewt_amount: ewtAmount ?? 0,
+          underpayment: underpayment ?? 0,
+          overpayment: overpayment ?? 0,
+          discount_amount: discountAmount ?? 0,
         } as any)
         .eq("id", orderId);
 
