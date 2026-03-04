@@ -81,6 +81,11 @@ export default function FinanceOrderDetail() {
   const [deliveryFee, setDeliveryFee] = useState<string>("0");
   const [shippingFee, setShippingFee] = useState<string>("0");
   const [expediteFee, setExpediteFee] = useState<string>("0");
+  const [vatAmount, setVatAmount] = useState<string>("0");
+  const [ewtAmount, setEwtAmount] = useState<string>("0");
+  const [underpayment, setUnderpayment] = useState<string>("0");
+  const [overpayment, setOverpayment] = useState<string>("0");
+  const [discountAmount, setDiscountAmount] = useState<string>("0");
   const [orderType, setOrderType] = useState<"delivery" | "pickup">("delivery");
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
@@ -107,21 +112,47 @@ export default function FinanceOrderDetail() {
     if (order.delivery_fee) setDeliveryFee(order.delivery_fee.toString());
     if (order.shipping_fee) setShippingFee(order.shipping_fee.toString());
     if (order.expedite_fee) setExpediteFee(order.expedite_fee.toString());
+    if ((order as any).vat_amount) setVatAmount((order as any).vat_amount.toString());
+    if ((order as any).ewt_amount) setEwtAmount((order as any).ewt_amount.toString());
+    if ((order as any).underpayment) setUnderpayment((order as any).underpayment.toString());
+    if ((order as any).overpayment) setOverpayment((order as any).overpayment.toString());
+    if ((order as any).discount_amount) setDiscountAmount((order as any).discount_amount.toString());
 
     // Delivery date
     if (order.delivery_date) {
       setProofDeliveryDate(new Date(order.delivery_date));
     }
 
-    // Recalculate payment amount with fees
-    const total = (order.total_amount || 0) + (order.delivery_fee || 0) + (order.shipping_fee || 0) + (order.expedite_fee || 0);
+    // Recalculate payment amount with all fees/adjustments
+    const total = (order.total_amount || 0) + (order.delivery_fee || 0) + (order.shipping_fee || 0) + (order.expedite_fee || 0)
+      + ((order as any).vat_amount || 0) - ((order as any).ewt_amount || 0) - ((order as any).discount_amount || 0)
+      + ((order as any).underpayment || 0) - ((order as any).overpayment || 0);
     if (total > 0) setPaymentAmount(total.toString());
   }, [order, initialized]);
 
   const deliveryFeeAmount = parseFloat(deliveryFee) || 0;
   const shippingFeeAmount = parseFloat(shippingFee) || 0;
   const expediteFeeAmount = parseFloat(expediteFee) || 0;
-  const grandTotal = (order?.total_amount || 0) + deliveryFeeAmount + shippingFeeAmount + expediteFeeAmount;
+  const vatAmountVal = parseFloat(vatAmount) || 0;
+  const ewtAmountVal = parseFloat(ewtAmount) || 0;
+  const underpaymentVal = parseFloat(underpayment) || 0;
+  const overpaymentVal = parseFloat(overpayment) || 0;
+  const discountAmountVal = parseFloat(discountAmount) || 0;
+  const grandTotal = (order?.total_amount || 0) + deliveryFeeAmount + shippingFeeAmount + expediteFeeAmount
+    + vatAmountVal - ewtAmountVal - discountAmountVal + underpaymentVal - overpaymentVal;
+
+  const recalcTotal = (overrides: Record<string, string> = {}) => {
+    const d = parseFloat(overrides.delivery ?? deliveryFee) || 0;
+    const s = parseFloat(overrides.shipping ?? shippingFee) || 0;
+    const ex = parseFloat(overrides.expedite ?? expediteFee) || 0;
+    const v = parseFloat(overrides.vat ?? vatAmount) || 0;
+    const ew = parseFloat(overrides.ewt ?? ewtAmount) || 0;
+    const disc = parseFloat(overrides.discount ?? discountAmount) || 0;
+    const under = parseFloat(overrides.under ?? underpayment) || 0;
+    const over = parseFloat(overrides.over ?? overpayment) || 0;
+    const total = (order?.total_amount || 0) + d + s + ex + v - ew - disc + under - over;
+    setPaymentAmount(total.toString());
+  };
 
   const handleConfirmPayment = async () => {
     if (!id) return;
@@ -146,6 +177,11 @@ export default function FinanceOrderDetail() {
         shippingFee: shippingFeeAmount,
         expediteFee: expediteFeeAmount,
         fulfillmentType: orderType,
+        vatAmount: vatAmountVal,
+        ewtAmount: ewtAmountVal,
+        underpayment: underpaymentVal,
+        overpayment: overpaymentVal,
+        discountAmount: discountAmountVal,
       });
       
       toast.success("Fees set. Order sent to franchisee for proof of payment upload.");
@@ -402,16 +438,40 @@ export default function FinanceOrderDetail() {
                   <span className="text-muted-foreground">Order Total</span>
                   <span>₱{(order.total_amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
                 </div>
-                <div className="flex justify-between text-sm">
+                {(order.delivery_fee || 0) > 0 && <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Delivery Fee</span>
-                  <span>₱{(order.delivery_fee || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex justify-between text-sm">
+                  <span>+ ₱{(order.delivery_fee || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                </div>}
+                {(order.shipping_fee || 0) > 0 && <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Shipping Fee</span>
-                  <span>₱{(order.shipping_fee || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
-                </div>
+                  <span>+ ₱{(order.shipping_fee || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                </div>}
+                {(order.expedite_fee || 0) > 0 && <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Expedite Fee</span>
+                  <span>+ ₱{(order.expedite_fee || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                </div>}
+                {((order as any).vat_amount || 0) > 0 && <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">12% VAT</span>
+                  <span>+ ₱{((order as any).vat_amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                </div>}
+                {((order as any).ewt_amount || 0) > 0 && <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">EWT</span>
+                  <span className="text-destructive">- ₱{((order as any).ewt_amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                </div>}
+                {((order as any).discount_amount || 0) > 0 && <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Discount</span>
+                  <span className="text-destructive">- ₱{((order as any).discount_amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                </div>}
+                {((order as any).underpayment || 0) > 0 && <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Underpayment</span>
+                  <span>+ ₱{((order as any).underpayment || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                </div>}
+                {((order as any).overpayment || 0) > 0 && <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Overpayment</span>
+                  <span className="text-destructive">- ₱{((order as any).overpayment || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                </div>}
                 <div className="flex justify-between font-bold border-t pt-2">
-                  <span>Payment Amount</span>
+                  <span>Amount Due</span>
                   <span className="text-lg">₱{(order.payment_amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
                 </div>
                 {order.payment_reference && (
@@ -544,79 +604,96 @@ export default function FinanceOrderDetail() {
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="deliveryFee">Delivery Fee (₱)</Label>
-                <Input
-                  id="deliveryFee"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={deliveryFee}
-                  onChange={(e) => {
-                    setDeliveryFee(e.target.value);
-                    const fee = parseFloat(e.target.value) || 0;
-                    const shipping = parseFloat(shippingFee) || 0;
-                    const expedite = parseFloat(expediteFee) || 0;
-                    setPaymentAmount(((order.total_amount || 0) + fee + shipping + expedite).toString());
-                  }}
-                  placeholder="0.00"
-                />
+                <Input id="deliveryFee" type="number" step="0.01" min="0" value={deliveryFee}
+                  onChange={(e) => { setDeliveryFee(e.target.value); recalcTotal({ delivery: e.target.value }); }} placeholder="0.00" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="shippingFee">Shipping Fee (₱)</Label>
-                <Input
-                  id="shippingFee"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={shippingFee}
-                  onChange={(e) => {
-                    setShippingFee(e.target.value);
-                    const shipping = parseFloat(e.target.value) || 0;
-                    const delivery = parseFloat(deliveryFee) || 0;
-                    const expedite = parseFloat(expediteFee) || 0;
-                    setPaymentAmount(((order.total_amount || 0) + delivery + shipping + expedite).toString());
-                  }}
-                  placeholder="0.00"
-                />
+                <Input id="shippingFee" type="number" step="0.01" min="0" value={shippingFee}
+                  onChange={(e) => { setShippingFee(e.target.value); recalcTotal({ shipping: e.target.value }); }} placeholder="0.00" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="expediteFee">Expedite Fee (₱)</Label>
-                <Input
-                  id="expediteFee"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={expediteFee}
-                  onChange={(e) => {
-                    setExpediteFee(e.target.value);
-                    const expedite = parseFloat(e.target.value) || 0;
-                    const delivery = parseFloat(deliveryFee) || 0;
-                    const shipping = parseFloat(shippingFee) || 0;
-                    setPaymentAmount(((order.total_amount || 0) + delivery + shipping + expedite).toString());
-                  }}
-                  placeholder="0.00"
-                />
+                <Input id="expediteFee" type="number" step="0.01" min="0" value={expediteFee}
+                  onChange={(e) => { setExpediteFee(e.target.value); recalcTotal({ expedite: e.target.value }); }} placeholder="0.00" />
               </div>
             </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="vatAmount">12% VAT (₱)</Label>
+                <Input id="vatAmount" type="number" step="0.01" min="0" value={vatAmount}
+                  onChange={(e) => { setVatAmount(e.target.value); recalcTotal({ vat: e.target.value }); }} placeholder="0.00" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ewtAmount">EWT (₱)</Label>
+                <Input id="ewtAmount" type="number" step="0.01" min="0" value={ewtAmount}
+                  onChange={(e) => { setEwtAmount(e.target.value); recalcTotal({ ewt: e.target.value }); }} placeholder="0.00" />
+                <p className="text-xs text-muted-foreground">Deducted from total</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="discountAmount">Discount (₱)</Label>
+                <Input id="discountAmount" type="number" step="0.01" min="0" value={discountAmount}
+                  onChange={(e) => { setDiscountAmount(e.target.value); recalcTotal({ discount: e.target.value }); }} placeholder="0.00" />
+                <p className="text-xs text-muted-foreground">Deducted from total</p>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="underpayment">Underpayment (₱)</Label>
+                <Input id="underpayment" type="number" step="0.01" min="0" value={underpayment}
+                  onChange={(e) => { setUnderpayment(e.target.value); recalcTotal({ under: e.target.value }); }} placeholder="0.00" />
+                <p className="text-xs text-muted-foreground">Added to total</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="overpayment">Overpayment (₱)</Label>
+                <Input id="overpayment" type="number" step="0.01" min="0" value={overpayment}
+                  onChange={(e) => { setOverpayment(e.target.value); recalcTotal({ over: e.target.value }); }} placeholder="0.00" />
+                <p className="text-xs text-muted-foreground">Deducted from total</p>
+              </div>
+            </div>
+
             {/* Grand Total Summary */}
             <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Order Total</span>
                 <span>₱{(order.total_amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
               </div>
-              <div className="flex justify-between text-sm">
+              {deliveryFeeAmount > 0 && <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Delivery Fee</span>
-                <span>₱{deliveryFeeAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
-              </div>
-              <div className="flex justify-between text-sm">
+                <span>+ ₱{deliveryFeeAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+              </div>}
+              {shippingFeeAmount > 0 && <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Shipping Fee</span>
-                <span>₱{shippingFeeAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
-              </div>
-              <div className="flex justify-between text-sm">
+                <span>+ ₱{shippingFeeAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+              </div>}
+              {expediteFeeAmount > 0 && <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Expedite Fee</span>
-                <span>₱{expediteFeeAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
-              </div>
+                <span>+ ₱{expediteFeeAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+              </div>}
+              {vatAmountVal > 0 && <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">12% VAT</span>
+                <span>+ ₱{vatAmountVal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+              </div>}
+              {ewtAmountVal > 0 && <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">EWT</span>
+                <span className="text-destructive">- ₱{ewtAmountVal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+              </div>}
+              {discountAmountVal > 0 && <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Discount</span>
+                <span className="text-destructive">- ₱{discountAmountVal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+              </div>}
+              {underpaymentVal > 0 && <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Underpayment</span>
+                <span>+ ₱{underpaymentVal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+              </div>}
+              {overpaymentVal > 0 && <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Overpayment</span>
+                <span className="text-destructive">- ₱{overpaymentVal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+              </div>}
               <div className="flex justify-between font-bold border-t pt-2">
-                <span>Grand Total</span>
+                <span>Amount Due</span>
                 <span className="text-lg">₱{grandTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
               </div>
             </div>

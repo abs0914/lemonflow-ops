@@ -57,6 +57,11 @@ export interface SalesOrder {
   delivery_fee?: number;
   shipping_fee?: number;
   expedite_fee?: number;
+  vat_amount?: number;
+  ewt_amount?: number;
+  underpayment?: number;
+  overpayment?: number;
+  discount_amount?: number;
   proof_of_payment_url?: string;
   created_at: string;
   updated_at: string;

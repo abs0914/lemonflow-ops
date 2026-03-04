@@ -99,7 +99,9 @@ export default function AccountingOrderDetail() {
     );
   }
 
-  const grandTotal = (order.total_amount || 0) + (order.delivery_fee || 0) + (order.shipping_fee || 0);
+  const grandTotal = (order.total_amount || 0) + (order.delivery_fee || 0) + (order.shipping_fee || 0) + (order.expedite_fee || 0)
+    + ((order as any).vat_amount || 0) - ((order as any).ewt_amount || 0) - ((order as any).discount_amount || 0)
+    + ((order as any).underpayment || 0) - ((order as any).overpayment || 0);
 
   return (
     <DashboardLayout>
@@ -175,17 +177,53 @@ export default function AccountingOrderDetail() {
               {(order.delivery_fee || 0) > 0 && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Delivery Fee</span>
-                  <span>{formatCurrency(order.delivery_fee || 0)}</span>
+                  <span>+ {formatCurrency(order.delivery_fee || 0)}</span>
                 </div>
               )}
               {(order.shipping_fee || 0) > 0 && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Shipping Fee</span>
-                  <span>{formatCurrency(order.shipping_fee || 0)}</span>
+                  <span>+ {formatCurrency(order.shipping_fee || 0)}</span>
+                </div>
+              )}
+              {(order.expedite_fee || 0) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Expedite Fee</span>
+                  <span>+ {formatCurrency(order.expedite_fee || 0)}</span>
+                </div>
+              )}
+              {((order as any).vat_amount || 0) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">12% VAT</span>
+                  <span>+ {formatCurrency((order as any).vat_amount || 0)}</span>
+                </div>
+              )}
+              {((order as any).ewt_amount || 0) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">EWT</span>
+                  <span className="text-destructive">- {formatCurrency((order as any).ewt_amount || 0)}</span>
+                </div>
+              )}
+              {((order as any).discount_amount || 0) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Discount</span>
+                  <span className="text-destructive">- {formatCurrency((order as any).discount_amount || 0)}</span>
+                </div>
+              )}
+              {((order as any).underpayment || 0) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Underpayment</span>
+                  <span>+ {formatCurrency((order as any).underpayment || 0)}</span>
+                </div>
+              )}
+              {((order as any).overpayment || 0) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Overpayment</span>
+                  <span className="text-destructive">- {formatCurrency((order as any).overpayment || 0)}</span>
                 </div>
               )}
               <div className="flex justify-between border-t pt-2">
-                <span className="font-semibold">Grand Total</span>
+                <span className="font-semibold">Amount Due</span>
                 <span className="font-bold text-lg">{formatCurrency(grandTotal)}</span>
               </div>
               <div className="flex justify-between">
