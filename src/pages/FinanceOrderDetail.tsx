@@ -240,6 +240,20 @@ export default function FinanceOrderDetail() {
                   </p>
                 </div>
               </div>
+
+              {order.description && (
+                <div className="pt-2 border-t">
+                  <Label className="text-muted-foreground">Franchisee Note</Label>
+                  <p className="font-medium text-sm mt-1 whitespace-pre-wrap">{order.description}</p>
+                </div>
+              )}
+
+              {order.delivery_notes && (
+                <div className="pt-2 border-t">
+                  <Label className="text-muted-foreground">Delivery Notes</Label>
+                  <p className="font-medium text-sm mt-1 whitespace-pre-wrap">{order.delivery_notes}</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
