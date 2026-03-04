@@ -164,6 +164,11 @@ export default function FinanceOrderDetail() {
         shippingFee: shippingFeeAmount,
         expediteFee: expediteFeeAmount,
         fulfillmentType: orderType,
+        vatAmount: vatAmountVal,
+        ewtAmount: ewtAmountVal,
+        underpayment: underpaymentVal,
+        overpayment: overpaymentVal,
+        discountAmount: discountAmountVal,
       });
       
       toast.success("Fees set. Order sent to franchisee for proof of payment upload.");
