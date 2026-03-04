@@ -81,6 +81,11 @@ export default function FinanceOrderDetail() {
   const [deliveryFee, setDeliveryFee] = useState<string>("0");
   const [shippingFee, setShippingFee] = useState<string>("0");
   const [expediteFee, setExpediteFee] = useState<string>("0");
+  const [vatAmount, setVatAmount] = useState<string>("0");
+  const [ewtAmount, setEwtAmount] = useState<string>("0");
+  const [underpayment, setUnderpayment] = useState<string>("0");
+  const [overpayment, setOverpayment] = useState<string>("0");
+  const [discountAmount, setDiscountAmount] = useState<string>("0");
   const [orderType, setOrderType] = useState<"delivery" | "pickup">("delivery");
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
@@ -107,21 +112,34 @@ export default function FinanceOrderDetail() {
     if (order.delivery_fee) setDeliveryFee(order.delivery_fee.toString());
     if (order.shipping_fee) setShippingFee(order.shipping_fee.toString());
     if (order.expedite_fee) setExpediteFee(order.expedite_fee.toString());
+    if ((order as any).vat_amount) setVatAmount((order as any).vat_amount.toString());
+    if ((order as any).ewt_amount) setEwtAmount((order as any).ewt_amount.toString());
+    if ((order as any).underpayment) setUnderpayment((order as any).underpayment.toString());
+    if ((order as any).overpayment) setOverpayment((order as any).overpayment.toString());
+    if ((order as any).discount_amount) setDiscountAmount((order as any).discount_amount.toString());
 
     // Delivery date
     if (order.delivery_date) {
       setProofDeliveryDate(new Date(order.delivery_date));
     }
 
-    // Recalculate payment amount with fees
-    const total = (order.total_amount || 0) + (order.delivery_fee || 0) + (order.shipping_fee || 0) + (order.expedite_fee || 0);
+    // Recalculate payment amount with all fees/adjustments
+    const total = (order.total_amount || 0) + (order.delivery_fee || 0) + (order.shipping_fee || 0) + (order.expedite_fee || 0)
+      + ((order as any).vat_amount || 0) - ((order as any).ewt_amount || 0) - ((order as any).discount_amount || 0)
+      + ((order as any).underpayment || 0) - ((order as any).overpayment || 0);
     if (total > 0) setPaymentAmount(total.toString());
   }, [order, initialized]);
 
   const deliveryFeeAmount = parseFloat(deliveryFee) || 0;
   const shippingFeeAmount = parseFloat(shippingFee) || 0;
   const expediteFeeAmount = parseFloat(expediteFee) || 0;
-  const grandTotal = (order?.total_amount || 0) + deliveryFeeAmount + shippingFeeAmount + expediteFeeAmount;
+  const vatAmountVal = parseFloat(vatAmount) || 0;
+  const ewtAmountVal = parseFloat(ewtAmount) || 0;
+  const underpaymentVal = parseFloat(underpayment) || 0;
+  const overpaymentVal = parseFloat(overpayment) || 0;
+  const discountAmountVal = parseFloat(discountAmount) || 0;
+  const grandTotal = (order?.total_amount || 0) + deliveryFeeAmount + shippingFeeAmount + expediteFeeAmount
+    + vatAmountVal - ewtAmountVal - discountAmountVal + underpaymentVal - overpaymentVal;
 
   const handleConfirmPayment = async () => {
     if (!id) return;
