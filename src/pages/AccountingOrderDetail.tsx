@@ -99,7 +99,9 @@ export default function AccountingOrderDetail() {
     );
   }
 
-  const grandTotal = (order.total_amount || 0) + (order.delivery_fee || 0) + (order.shipping_fee || 0);
+  const grandTotal = (order.total_amount || 0) + (order.delivery_fee || 0) + (order.shipping_fee || 0) + (order.expedite_fee || 0)
+    + ((order as any).vat_amount || 0) - ((order as any).ewt_amount || 0) - ((order as any).discount_amount || 0)
+    + ((order as any).underpayment || 0) - ((order as any).overpayment || 0);
 
   return (
     <DashboardLayout>
