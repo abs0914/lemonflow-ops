@@ -141,6 +141,19 @@ export default function FinanceOrderDetail() {
   const grandTotal = (order?.total_amount || 0) + deliveryFeeAmount + shippingFeeAmount + expediteFeeAmount
     + vatAmountVal - ewtAmountVal - discountAmountVal + underpaymentVal - overpaymentVal;
 
+  const recalcTotal = (overrides: Record<string, string> = {}) => {
+    const d = parseFloat(overrides.delivery ?? deliveryFee) || 0;
+    const s = parseFloat(overrides.shipping ?? shippingFee) || 0;
+    const ex = parseFloat(overrides.expedite ?? expediteFee) || 0;
+    const v = parseFloat(overrides.vat ?? vatAmount) || 0;
+    const ew = parseFloat(overrides.ewt ?? ewtAmount) || 0;
+    const disc = parseFloat(overrides.discount ?? discountAmount) || 0;
+    const under = parseFloat(overrides.under ?? underpayment) || 0;
+    const over = parseFloat(overrides.over ?? overpayment) || 0;
+    const total = (order?.total_amount || 0) + d + s + ex + v - ew - disc + under - over;
+    setPaymentAmount(total.toString());
+  };
+
   const handleConfirmPayment = async () => {
     if (!id) return;
 
