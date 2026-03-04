@@ -438,16 +438,40 @@ export default function FinanceOrderDetail() {
                   <span className="text-muted-foreground">Order Total</span>
                   <span>₱{(order.total_amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
                 </div>
-                <div className="flex justify-between text-sm">
+                {(order.delivery_fee || 0) > 0 && <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Delivery Fee</span>
-                  <span>₱{(order.delivery_fee || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex justify-between text-sm">
+                  <span>+ ₱{(order.delivery_fee || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                </div>}
+                {(order.shipping_fee || 0) > 0 && <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Shipping Fee</span>
-                  <span>₱{(order.shipping_fee || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
-                </div>
+                  <span>+ ₱{(order.shipping_fee || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                </div>}
+                {(order.expedite_fee || 0) > 0 && <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Expedite Fee</span>
+                  <span>+ ₱{(order.expedite_fee || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                </div>}
+                {((order as any).vat_amount || 0) > 0 && <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">12% VAT</span>
+                  <span>+ ₱{((order as any).vat_amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                </div>}
+                {((order as any).ewt_amount || 0) > 0 && <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">EWT</span>
+                  <span className="text-destructive">- ₱{((order as any).ewt_amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                </div>}
+                {((order as any).discount_amount || 0) > 0 && <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Discount</span>
+                  <span className="text-destructive">- ₱{((order as any).discount_amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                </div>}
+                {((order as any).underpayment || 0) > 0 && <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Underpayment</span>
+                  <span>+ ₱{((order as any).underpayment || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                </div>}
+                {((order as any).overpayment || 0) > 0 && <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Overpayment</span>
+                  <span className="text-destructive">- ₱{((order as any).overpayment || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                </div>}
                 <div className="flex justify-between font-bold border-t pt-2">
-                  <span>Payment Amount</span>
+                  <span>Amount Due</span>
                   <span className="text-lg">₱{(order.payment_amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
                 </div>
                 {order.payment_reference && (
