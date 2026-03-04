@@ -86,14 +86,37 @@ export default function FinanceOrderDetail() {
   const [rejectReason, setRejectReason] = useState("");
   const [proofDeliveryDate, setProofDeliveryDate] = useState<Date>();
   const [proofOrderType, setProofOrderType] = useState<"delivery" | "pickup">("delivery");
+  const [initialized, setInitialized] = useState(false);
 
   const isLoading = orderLoading || linesLoading;
 
-  // Initialize payment amount when order loads
-  if (order && !paymentAmount) {
-    setPaymentAmount((order.total_amount || 0).toString());
-  }
+  // Initialize form state from saved order data
+  useEffect(() => {
+    if (!order || initialized) return;
+    setInitialized(true);
 
+    // Payment amount
+    setPaymentAmount((order.total_amount || 0).toString());
+
+    // Fulfillment type from delivery_notes
+    const savedType = order.delivery_notes?.toLowerCase().includes("pickup") ? "pickup" : "delivery";
+    setOrderType(savedType);
+    setProofOrderType(savedType);
+
+    // Fees (for awaiting_proof, pre-populate from saved values)
+    if (order.delivery_fee) setDeliveryFee(order.delivery_fee.toString());
+    if (order.shipping_fee) setShippingFee(order.shipping_fee.toString());
+    if (order.expedite_fee) setExpediteFee(order.expedite_fee.toString());
+
+    // Delivery date
+    if (order.delivery_date) {
+      setProofDeliveryDate(new Date(order.delivery_date));
+    }
+
+    // Recalculate payment amount with fees
+    const total = (order.total_amount || 0) + (order.delivery_fee || 0) + (order.shipping_fee || 0) + (order.expedite_fee || 0);
+    if (total > 0) setPaymentAmount(total.toString());
+  }, [order, initialized]);
 
   const deliveryFeeAmount = parseFloat(deliveryFee) || 0;
   const shippingFeeAmount = parseFloat(shippingFee) || 0;
