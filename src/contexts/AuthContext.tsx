@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useRef, useCallback } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -27,51 +27,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const profileFetchIdRef = useRef(0);
 
-  useEffect(() => {
-    let initialSessionHandled = false;
+  const fetchUserProfile = useCallback(async (userId: string) => {
+    const currentFetchId = ++profileFetchIdRef.current;
 
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          // Only fetch profile if the initial session was already handled
-          // to avoid double-fetching
-          if (initialSessionHandled) {
-            // Don't set loading=true during token refresh to avoid UI flicker
-            if (event !== 'TOKEN_REFRESHED') {
-              setLoading(true);
-            }
-            fetchUserProfile(session.user.id);
-          }
-        } else if (event === 'SIGNED_OUT') {
-          // Only clear profile on explicit sign-out, not on transient auth state changes
-          setProfile(null);
-          setLoading(false);
-        }
-      }
-    );
-
-    // Then check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      initialSessionHandled = true;
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        fetchUserProfile(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const fetchUserProfile = async (userId: string) => {
     try {
       console.log("Fetching profile for user:", userId);
       const { data, error } = await supabase
@@ -84,25 +44,66 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error("Error fetching profile:", error);
         throw error;
       }
-      console.log("Profile fetched:", data);
-      setProfile(data as UserProfile);
+
+      if (currentFetchId === profileFetchIdRef.current) {
+        console.log("Profile fetched:", data);
+        setProfile(data as UserProfile);
+      }
     } catch (error) {
       console.error("Error fetching profile:", error);
+      if (currentFetchId === profileFetchIdRef.current) {
+        setProfile(null);
+      }
     } finally {
-      setLoading(false);
+      if (currentFetchId === profileFetchIdRef.current) {
+        setLoading(false);
+      }
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        if (session?.user) {
+          if (event !== "TOKEN_REFRESHED") {
+            setLoading(true);
+          }
+          void fetchUserProfile(session.user.id);
+        } else if (event === "SIGNED_OUT") {
+          setProfile(null);
+          setLoading(false);
+        }
+      }
+    );
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+
+      if (session?.user) {
+        setLoading(true);
+        void fetchUserProfile(session.user.id);
+      } else {
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [fetchUserProfile]);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-    
+
     if (!error) {
       navigate("/dashboard");
     }
-    
+
     return { error };
   };
 
@@ -116,6 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshProfile = async () => {
     if (user?.id) {
+      setLoading(true);
       await fetchUserProfile(user.id);
     }
   };
@@ -144,3 +146,4 @@ export function useAuth() {
   }
   return context;
 }
+
