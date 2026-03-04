@@ -32,6 +32,7 @@ export function useConfirmPayment() {
       deliveryFee,
       shippingFee,
       expediteFee,
+      fulfillmentType,
     }: {
       orderId: string;
       paymentAmount: number;
@@ -39,6 +40,7 @@ export function useConfirmPayment() {
       deliveryFee?: number;
       shippingFee?: number;
       expediteFee?: number;
+      fulfillmentType?: string;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
@@ -55,6 +57,7 @@ export function useConfirmPayment() {
           delivery_fee: deliveryFee ?? 0,
           shipping_fee: shippingFee ?? 0,
           expedite_fee: expediteFee ?? 0,
+          delivery_notes: fulfillmentType || null,
         } as any)
         .eq("id", orderId);
 
@@ -111,7 +114,7 @@ export function useValidateProof() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ orderId, deliveryDate }: { orderId: string; deliveryDate: string }) => {
+    mutationFn: async ({ orderId, deliveryDate, fulfillmentType }: { orderId: string; deliveryDate: string; fulfillmentType?: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
@@ -120,6 +123,7 @@ export function useValidateProof() {
         .update({
           status: "pending_accounting",
           delivery_date: deliveryDate,
+          ...(fulfillmentType ? { delivery_notes: fulfillmentType } : {}),
         } as any)
         .eq("id", orderId);
 
