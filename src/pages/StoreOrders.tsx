@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Plus, Search, RefreshCw, ClipboardPaste } from "lucide-react";
 import { useSalesOrders } from "@/hooks/useSalesOrders";
-import { useUserStores } from "@/hooks/useUserStore";
+import { useAllUserStores } from "@/hooks/useUserStore";
 import { MobileOrderCard } from "@/components/store-orders/MobileOrderCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
@@ -41,7 +41,7 @@ export default function StoreOrders() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
 
-  const { data: userStores } = useUserStores();
+  const { data: userStores } = useAllUserStores();
   const storeIds = userStores?.map(s => s.store_id);
   const { data: orders, isLoading, refetch } = useSalesOrders(storeIds);
 
