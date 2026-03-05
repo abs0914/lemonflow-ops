@@ -31,6 +31,7 @@ interface InventoryTableProps {
 }
 
 export function InventoryTable({ components, isLoading, onRefetch, onAdjustStock, tableName = "components" }: InventoryTableProps) {
+  const isRawMaterials = tableName === "raw_materials";
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
