@@ -122,7 +122,7 @@ export function StockAdjustmentDialog({
       } as const;
 
       const targetTable = tableByType[itemType];
-      const newStockQty = data.movement_type === "adjustment"
+      const newStockQty = currentMovementType === "adjustment"
         ? parseFloat(data.quantity)
         : currentStock + quantity;
 
@@ -138,9 +138,9 @@ export function StockAdjustmentDialog({
         setIsSyncing(true);
         
         let adjustmentType: "IN" | "OUT" | "SET" = "IN";
-        if (data.movement_type === "issue") {
+        if (currentMovementType === "issue") {
           adjustmentType = "OUT";
-        } else if (data.movement_type === "adjustment") {
+        } else if (currentMovementType === "adjustment") {
           adjustmentType = "SET";
         }
 
@@ -151,7 +151,7 @@ export function StockAdjustmentDialog({
               itemCode: itemSku,
               location: data.location,
               adjustmentType: adjustmentType,
-              quantity: data.movement_type === "adjustment" ? parseFloat(data.quantity) : Math.abs(quantity),
+              quantity: currentMovementType === "adjustment" ? parseFloat(data.quantity) : Math.abs(quantity),
               uom: itemUnit,
               description: itemName,
               batchNumber: data.batch_number || undefined,
