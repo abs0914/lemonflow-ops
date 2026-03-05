@@ -265,7 +265,7 @@ export function InventoryTable({ components, isLoading, onRefetch, onAdjustStock
               <TableHead className="text-right">Price</TableHead>
               <TableHead className="text-right">Cost</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Last Synced</TableHead>
+              {!isRawMaterials && <TableHead>Last Synced</TableHead>}
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -324,6 +324,7 @@ export function InventoryTable({ components, isLoading, onRefetch, onAdjustStock
                     )}
                   </div>
                 </TableCell>
+                {!isRawMaterials && (
                 <TableCell>
                   <div className="space-y-1">
                     {getSyncStatusBadge(component.last_synced_at)}
@@ -334,6 +335,7 @@ export function InventoryTable({ components, isLoading, onRefetch, onAdjustStock
                     )}
                   </div>
                 </TableCell>
+                )}
                 <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                   <div className="flex gap-1 justify-end">
                     <Button
@@ -387,7 +389,7 @@ export function InventoryTable({ components, isLoading, onRefetch, onAdjustStock
     <StockAdjustmentDialog
       open={adjustStockDialogOpen}
       onOpenChange={setAdjustStockDialogOpen}
-      itemType="component"
+      itemType={itemType}
       itemId={itemToAdjust?.id || ""}
       itemName={itemToAdjust?.name || ""}
       itemSku={itemToAdjust?.autocount_item_code || itemToAdjust?.sku || ""}
