@@ -16,7 +16,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Loader2 } from "lucide-react";
 
 interface StockAdjustmentFormData {
-  movement_type: string;
   quantity: string;
   notes: string;
   reason: string;
