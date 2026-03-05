@@ -101,10 +101,69 @@ serve(async (req) => {
       case "delete": {
         const { userId } = data;
         
+        console.log("Deleting user and related records:", userId);
+
+        // Delete related records first to avoid foreign key constraint errors
+        // Order matters: delete child records before parent
+        const cleanupTables = [
+          { table: "user_store_assignments", column: "user_id" },
+          { table: "notifications", column: "user_id" },
+        ];
+
+        for (const { table, column } of cleanupTables) {
+          const { error: cleanupError } = await supabaseAdmin
+            .from(table)
+            .delete()
+            .eq(column, userId);
+          if (cleanupError) {
+            console.error(`Failed to clean up ${table}:`, cleanupError);
+          }
+        }
+
+        // Nullify references in sales_orders (don't delete orders, just unlink user)
+        const nullifyColumns = [
+          { table: "sales_orders", column: "created_by" },
+          { table: "sales_orders", column: "submitted_by" },
+          { table: "sales_orders", column: "approved_by" },
+          { table: "sales_orders", column: "fulfilled_by" },
+          { table: "sales_orders", column: "payment_confirmed_by" },
+          { table: "purchase_orders", column: "created_by" },
+          { table: "purchase_orders", column: "approved_by" },
+          { table: "purchase_orders", column: "received_by" },
+          { table: "purchase_orders", column: "verified_by" },
+          { table: "purchase_orders", column: "cash_given_by" },
+          { table: "purchase_orders", column: "cash_returned_to" },
+          { table: "stock_movements", column: "performed_by" },
+          { table: "stock_movements", column: "marked_expired_by" },
+          { table: "assembly_orders", column: "created_by" },
+          { table: "audit_logs", column: "user_id" },
+        ];
+
+        for (const { table, column } of nullifyColumns) {
+          const { error: nullifyError } = await supabaseAdmin
+            .from(table)
+            .update({ [column]: null })
+            .eq(column, userId);
+          if (nullifyError) {
+            console.log(`Note: could not nullify ${table}.${column}:`, nullifyError.message);
+          }
+        }
+
+        // Delete user profile
+        const { error: profileError } = await supabaseAdmin
+          .from("user_profiles")
+          .delete()
+          .eq("id", userId);
+        if (profileError) {
+          console.error("Failed to delete user profile:", profileError);
+        }
+
+        // Finally delete the auth user
         const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
 
         if (error) throw error;
 
+        console.log("User deleted successfully:", userId);
         return new Response(JSON.stringify({ success: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
