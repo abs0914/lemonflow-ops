@@ -1,0 +1,2 @@
+ALTER TABLE public.stock_movements DROP CONSTRAINT valid_item_type;
+ALTER TABLE public.stock_movements ADD CONSTRAINT valid_item_type CHECK (item_type IN ('product', 'component', 'raw_material', 'finished_good'));
