@@ -219,7 +219,7 @@ export function StockAdjustmentDialog({
         <Label htmlFor="movement_type">Movement Type</Label>
         <Select
           value={movementType}
-          onValueChange={(value) => setValue("movement_type", value)}
+          onValueChange={(value) => setMovementType(value)}
         >
           <SelectTrigger>
             <SelectValue />
