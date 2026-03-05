@@ -3,9 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { SalesOrder, SalesOrderLine } from "@/types/sales-order";
 import { toast } from "sonner";
 
-export function useSalesOrders(storeId?: string) {
+export function useSalesOrders(storeIds?: string[]) {
   return useQuery({
-    queryKey: ["sales-orders", storeId],
+    queryKey: ["sales-orders", storeIds],
     queryFn: async () => {
       let query = supabase
         .from("sales_orders")
@@ -15,8 +15,8 @@ export function useSalesOrders(storeId?: string) {
         `)
         .order("created_at", { ascending: false });
       
-      if (storeId) {
-        query = query.eq("store_id", storeId);
+      if (storeIds && storeIds.length > 0) {
+        query = query.in("store_id", storeIds);
       }
       
       const { data, error } = await query;
