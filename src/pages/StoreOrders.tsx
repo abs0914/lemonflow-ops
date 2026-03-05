@@ -43,7 +43,7 @@ export default function StoreOrders() {
 
   const { data: userStores } = useUserStores();
   const storeIds = userStores?.map(s => s.store_id);
-  const { data: orders, isLoading, refetch } = useSalesOrders(storeIds?.[0]);
+  const { data: orders, isLoading, refetch } = useSalesOrders(storeIds);
 
   const filteredOrders = useMemo(() => {
     return orders?.filter((order) => {
