@@ -52,10 +52,10 @@ export function StockAdjustmentDialog({
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [isSyncing, setIsSyncing] = useState(false);
+  const [movementType, setMovementType] = useState<string>("receipt");
   
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<StockAdjustmentFormData>({
     defaultValues: {
-      movement_type: "receipt",
       quantity: "",
       notes: "",
       reason: "Stock Count",
@@ -65,13 +65,12 @@ export function StockAdjustmentDialog({
     },
   });
 
-  const movementType = watch("movement_type");
   const syncToAutocount = watch("sync_to_autocount");
 
   useEffect(() => {
     if (open) {
+      setMovementType("receipt");
       reset({
-        movement_type: "receipt",
         quantity: "",
         notes: "",
         reason: "Stock Count",
@@ -86,12 +85,13 @@ export function StockAdjustmentDialog({
     mutationFn: async (data: StockAdjustmentFormData) => {
       if (!profile) throw new Error("Not authenticated");
 
+      const currentMovementType = movementType;
       let quantity = parseFloat(data.quantity);
       
       // For issue and adjustment (decrease), make quantity negative
-      if (data.movement_type === "issue") {
+      if (currentMovementType === "issue") {
         quantity = -Math.abs(quantity);
-      } else if (data.movement_type === "adjustment") {
+      } else if (currentMovementType === "adjustment") {
         // For adjustment, if the new value is less than current, it's negative
         const newStock = parseFloat(data.quantity);
         quantity = newStock - currentStock;
@@ -99,7 +99,7 @@ export function StockAdjustmentDialog({
 
       // Insert stock movement
       const { error: movementError } = await supabase.from("stock_movements").insert([{
-        movement_type: data.movement_type,
+        movement_type: currentMovementType,
         item_type: itemType,
         item_id: itemId,
         quantity: quantity,
