@@ -16,7 +16,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Loader2 } from "lucide-react";
 
 interface StockAdjustmentFormData {
-  movement_type: string;
   quantity: string;
   notes: string;
   reason: string;
@@ -53,10 +52,10 @@ export function StockAdjustmentDialog({
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [isSyncing, setIsSyncing] = useState(false);
+  const [movementType, setMovementType] = useState<string>("receipt");
   
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<StockAdjustmentFormData>({
     defaultValues: {
-      movement_type: "receipt",
       quantity: "",
       notes: "",
       reason: "Stock Count",
@@ -66,13 +65,12 @@ export function StockAdjustmentDialog({
     },
   });
 
-  const movementType = watch("movement_type");
   const syncToAutocount = watch("sync_to_autocount");
 
   useEffect(() => {
     if (open) {
+      setMovementType("receipt");
       reset({
-        movement_type: "receipt",
         quantity: "",
         notes: "",
         reason: "Stock Count",
@@ -87,12 +85,13 @@ export function StockAdjustmentDialog({
     mutationFn: async (data: StockAdjustmentFormData) => {
       if (!profile) throw new Error("Not authenticated");
 
+      const currentMovementType = movementType;
       let quantity = parseFloat(data.quantity);
       
       // For issue and adjustment (decrease), make quantity negative
-      if (data.movement_type === "issue") {
+      if (currentMovementType === "issue") {
         quantity = -Math.abs(quantity);
-      } else if (data.movement_type === "adjustment") {
+      } else if (currentMovementType === "adjustment") {
         // For adjustment, if the new value is less than current, it's negative
         const newStock = parseFloat(data.quantity);
         quantity = newStock - currentStock;
@@ -100,7 +99,7 @@ export function StockAdjustmentDialog({
 
       // Insert stock movement
       const { error: movementError } = await supabase.from("stock_movements").insert([{
-        movement_type: data.movement_type,
+        movement_type: currentMovementType,
         item_type: itemType,
         item_id: itemId,
         quantity: quantity,
@@ -123,7 +122,7 @@ export function StockAdjustmentDialog({
       } as const;
 
       const targetTable = tableByType[itemType];
-      const newStockQty = data.movement_type === "adjustment"
+      const newStockQty = currentMovementType === "adjustment"
         ? parseFloat(data.quantity)
         : currentStock + quantity;
 
@@ -139,9 +138,9 @@ export function StockAdjustmentDialog({
         setIsSyncing(true);
         
         let adjustmentType: "IN" | "OUT" | "SET" = "IN";
-        if (data.movement_type === "issue") {
+        if (currentMovementType === "issue") {
           adjustmentType = "OUT";
-        } else if (data.movement_type === "adjustment") {
+        } else if (currentMovementType === "adjustment") {
           adjustmentType = "SET";
         }
 
@@ -152,7 +151,7 @@ export function StockAdjustmentDialog({
               itemCode: itemSku,
               location: data.location,
               adjustmentType: adjustmentType,
-              quantity: data.movement_type === "adjustment" ? parseFloat(data.quantity) : Math.abs(quantity),
+              quantity: currentMovementType === "adjustment" ? parseFloat(data.quantity) : Math.abs(quantity),
               uom: itemUnit,
               description: itemName,
               batchNumber: data.batch_number || undefined,
@@ -220,7 +219,7 @@ export function StockAdjustmentDialog({
         <Label htmlFor="movement_type">Movement Type</Label>
         <Select
           value={movementType}
-          onValueChange={(value) => setValue("movement_type", value)}
+          onValueChange={(value) => setMovementType(value)}
         >
           <SelectTrigger>
             <SelectValue />
