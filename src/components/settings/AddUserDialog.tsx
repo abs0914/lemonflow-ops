@@ -49,7 +49,11 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
         },
       });
 
-      if (response.error) throw response.error;
+      if (response.error) {
+        // Extract the actual error message from the response data
+        const errorMessage = response.data?.error || response.error.message || "Failed to create user";
+        throw new Error(errorMessage);
+      }
       return response.data;
     },
     onSuccess: () => {
