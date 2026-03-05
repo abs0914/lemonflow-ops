@@ -41,7 +41,7 @@ export default function StoreOrders() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
 
-  const { data: userStores } = useUserStores();
+  const { data: userStores } = useAllUserStores();
   const storeIds = userStores?.map(s => s.store_id);
   const { data: orders, isLoading, refetch } = useSalesOrders(storeIds);
 
