@@ -11,7 +11,7 @@ import { useSalesOrder, useSalesOrderLines } from "@/hooks/useSalesOrders";
 import { useAccountingApprove, useAccountingNotePayment, useAccountingReject } from "@/hooks/useAccountingOrders";
 import { formatCurrency } from "@/lib/currency";
 import { format } from "date-fns";
-import { ArrowLeft, Check, FileText, Package, Store, DollarSign, Image } from "lucide-react";
+import { ArrowLeft, Check, FileText, Package, Store, DollarSign, Image, X } from "lucide-react";
 import { ProofImage } from "@/components/store-orders/ProofImage";
 import { toast } from "sonner";
 import {
@@ -40,9 +40,12 @@ export default function AccountingOrderDetail() {
   const { data: lines, isLoading: linesLoading } = useSalesOrderLines(id);
   const accountingApprove = useAccountingApprove();
   const accountingNote = useAccountingNotePayment();
+  const accountingReject = useAccountingReject();
 
   const [notes, setNotes] = useState("");
   const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
 
   const isLoading = orderLoading || linesLoading;
 
@@ -75,6 +78,24 @@ export default function AccountingOrderDetail() {
       toast.success("Note saved successfully");
     } catch (error) {
       toast.error("Failed to save note");
+    }
+  };
+
+  const handleReject = async () => {
+    if (!id || !rejectReason.trim()) {
+      toast.error("Please provide a reason for rejection");
+      return;
+    }
+
+    try {
+      await accountingReject.mutateAsync({
+        orderId: id,
+        reason: rejectReason,
+      });
+      toast.success("Order rejected and stock released");
+      navigate("/accounting");
+    } catch (error) {
+      toast.error("Failed to reject order");
     }
   };
 
