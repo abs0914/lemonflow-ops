@@ -28,6 +28,7 @@ interface DebtorPayload {
   Address1?: string;
   IsActive: boolean;
   CurrencyCode: string;
+  ParentAccNo?: string;
 }
 
 interface RequestBody {
@@ -118,6 +119,7 @@ async function createDebtor(apiUrl: string, token: string, store: Store, retryWi
     Address1: store.address || '',
     IsActive: store.is_active ?? true,
     CurrencyCode: 'PHP',
+    ParentAccNo: 'Trade Debtor',
   };
 
   console.log(`Create debtor payload: ${JSON.stringify(payload)}`);
@@ -185,6 +187,7 @@ async function updateDebtor(apiUrl: string, token: string, store: Store): Promis
     Address1: store.address || '',
     IsActive: store.is_active ?? true,
     CurrencyCode: 'PHP',
+    ParentAccNo: 'Trade Debtor',
   };
 
   console.log(`Update debtor payload: ${JSON.stringify(payload)}`);
