@@ -359,6 +359,14 @@ export default function AccountingOrderDetail() {
                   <Check className="mr-2 h-4 w-4" />
                   Approve & Send to Fulfillment
                 </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowRejectDialog(true)}
+                  disabled={accountingReject.isPending}
+                >
+                  <X className="mr-2 h-4 w-4" />
+                  Reject Payment
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -378,6 +386,39 @@ export default function AccountingOrderDetail() {
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={handleApprove}>
                 Approve
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Reject Confirmation Dialog */}
+        <AlertDialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Reject Payment</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will cancel order {order.order_number} and release all reserved stock. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="py-4">
+              <Label htmlFor="rejectReason">Reason for rejection</Label>
+              <Textarea
+                id="rejectReason"
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Explain why this payment is being rejected..."
+                rows={3}
+                className="mt-2"
+              />
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleReject}
+                disabled={!rejectReason.trim()}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Reject
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
