@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSalesOrder, useSalesOrderLines } from "@/hooks/useSalesOrders";
-import { useAccountingApprove, useAccountingNotePayment } from "@/hooks/useAccountingOrders";
+import { useAccountingApprove, useAccountingNotePayment, useAccountingReject } from "@/hooks/useAccountingOrders";
 import { formatCurrency } from "@/lib/currency";
 import { format } from "date-fns";
 import { ArrowLeft, Check, FileText, Package, Store, DollarSign, Image } from "lucide-react";

@@ -83,3 +83,42 @@ export function useAccountingNotePayment() {
     },
   });
 }
+
+export function useAccountingReject() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      orderId,
+      reason,
+    }: {
+      orderId: string;
+      reason: string;
+    }) => {
+      // First release the reserved stock
+      const { error: releaseError } = await supabase.rpc(
+        "release_sales_order_stock",
+        { p_sales_order_id: orderId }
+      );
+
+      if (releaseError) throw releaseError;
+
+      // Then update the order status to cancelled
+      const { error } = await supabase
+        .from("sales_orders")
+        .update({
+          status: "cancelled",
+          cancellation_reason: reason,
+        })
+        .eq("id", orderId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["accounting-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["finance-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["fulfillment-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["sales-orders"] });
+    },
+  });
+}
