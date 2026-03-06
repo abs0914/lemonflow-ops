@@ -265,6 +265,13 @@ export default function StoreOrderDetail() {
                   <div className="text-sm text-destructive">{order.sync_error_message}</div>
                 </div>
               )}
+
+              {order.status === "cancelled" && order.cancellation_reason && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+                  <div className="text-sm font-medium text-destructive mb-1">Rejection Reason</div>
+                  <div className="text-sm text-destructive/90">{order.cancellation_reason}</div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
