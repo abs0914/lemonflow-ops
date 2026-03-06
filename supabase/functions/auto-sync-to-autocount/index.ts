@@ -328,6 +328,13 @@ Deno.serve(async (req) => {
 
       for (const supplier of unsyncedSuppliers) {
         try {
+          // Check if this supplier has exceeded max retry attempts
+          const retryCount = await getFailedRetryCount(supabaseClient, supplier.id, 'supplier');
+          if (retryCount >= MAX_AUTO_RETRY) {
+            console.log(`[auto-sync] Skipping supplier ${supplier.supplier_code} - exceeded ${MAX_AUTO_RETRY} retries`);
+            continue;
+          }
+
           const supplierPayload = {
             code: supplier.supplier_code,
             companyName: supplier.company_name || '',
