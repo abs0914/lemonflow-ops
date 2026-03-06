@@ -27,6 +27,29 @@ interface SyncResult {
   docNo?: string;
 }
 
+
+const MAX_AUTO_RETRY = 10; // Stop auto-retrying after 10 consecutive failures
+
+async function getFailedRetryCount(supabaseClient: any, referenceId: string, referenceType: string): Promise<number> {
+  const { data } = await supabaseClient
+    .from('autocount_sync_log')
+    .select('sync_status')
+    .eq('reference_id', referenceId)
+    .eq('reference_type', referenceType)
+    .eq('sync_type', 'auto_create')
+    .order('created_at', { ascending: false })
+    .limit(MAX_AUTO_RETRY);
+  
+  if (!data || data.length === 0) return 0;
+  // Count consecutive failures from most recent
+  let count = 0;
+  for (const log of data) {
+    if (log.sync_status === 'failed') count++;
+    else break;
+  }
+  return count;
+}
+
 async function authenticateAutoCount(apiUrl: string, username: string, password: string): Promise<string> {
   const loginResponse = await fetch(`${apiUrl}/auth/login`, {
     method: 'POST',
@@ -209,6 +232,13 @@ Deno.serve(async (req) => {
 
       for (const store of unsyncedStores) {
         try {
+          // Check if this store has exceeded max retry attempts
+          const retryCount = await getFailedRetryCount(supabaseClient, store.id, 'store');
+          if (retryCount >= MAX_AUTO_RETRY) {
+            console.log(`[auto-sync] Skipping store ${store.store_code} - exceeded ${MAX_AUTO_RETRY} retries`);
+            continue;
+          }
+
           const storePayload = {
             Code: store.debtor_code,
             Name: store.store_name,
@@ -218,6 +248,7 @@ Deno.serve(async (req) => {
             Address1: store.address || '',
             IsActive: store.is_active ?? true,
             CurrencyCode: 'PHP',
+            ParentAccNo: 'Trade Debtor',
           };
 
           // Try create first, then update on conflict
@@ -305,6 +336,13 @@ Deno.serve(async (req) => {
 
       for (const supplier of unsyncedSuppliers) {
         try {
+          // Check if this supplier has exceeded max retry attempts
+          const retryCount = await getFailedRetryCount(supabaseClient, supplier.id, 'supplier');
+          if (retryCount >= MAX_AUTO_RETRY) {
+            console.log(`[auto-sync] Skipping supplier ${supplier.supplier_code} - exceeded ${MAX_AUTO_RETRY} retries`);
+            continue;
+          }
+
           const supplierPayload = {
             code: supplier.supplier_code,
             companyName: supplier.company_name || '',
