@@ -50,7 +50,7 @@ async function getFailedRetryCount(supabaseClient: any, referenceId: string, ref
   return count;
 }
 
-
+async function authenticateAutoCount(apiUrl: string, username: string, password: string): Promise<string> {
   const loginResponse = await fetch(`${apiUrl}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
