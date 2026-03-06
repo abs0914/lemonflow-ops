@@ -8,10 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSalesOrder, useSalesOrderLines } from "@/hooks/useSalesOrders";
-import { useAccountingApprove, useAccountingNotePayment } from "@/hooks/useAccountingOrders";
+import { useAccountingApprove, useAccountingNotePayment, useAccountingReject } from "@/hooks/useAccountingOrders";
 import { formatCurrency } from "@/lib/currency";
 import { format } from "date-fns";
-import { ArrowLeft, Check, FileText, Package, Store, DollarSign, Image } from "lucide-react";
+import { ArrowLeft, Check, FileText, Package, Store, DollarSign, Image, X } from "lucide-react";
 import { ProofImage } from "@/components/store-orders/ProofImage";
 import { toast } from "sonner";
 import {
@@ -40,9 +40,12 @@ export default function AccountingOrderDetail() {
   const { data: lines, isLoading: linesLoading } = useSalesOrderLines(id);
   const accountingApprove = useAccountingApprove();
   const accountingNote = useAccountingNotePayment();
+  const accountingReject = useAccountingReject();
 
   const [notes, setNotes] = useState("");
   const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
 
   const isLoading = orderLoading || linesLoading;
 
@@ -75,6 +78,24 @@ export default function AccountingOrderDetail() {
       toast.success("Note saved successfully");
     } catch (error) {
       toast.error("Failed to save note");
+    }
+  };
+
+  const handleReject = async () => {
+    if (!id || !rejectReason.trim()) {
+      toast.error("Please provide a reason for rejection");
+      return;
+    }
+
+    try {
+      await accountingReject.mutateAsync({
+        orderId: id,
+        reason: rejectReason,
+      });
+      toast.success("Order rejected and stock released");
+      navigate("/accounting");
+    } catch (error) {
+      toast.error("Failed to reject order");
     }
   };
 
@@ -338,6 +359,14 @@ export default function AccountingOrderDetail() {
                   <Check className="mr-2 h-4 w-4" />
                   Approve & Send to Fulfillment
                 </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowRejectDialog(true)}
+                  disabled={accountingReject.isPending}
+                >
+                  <X className="mr-2 h-4 w-4" />
+                  Reject Payment
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -357,6 +386,39 @@ export default function AccountingOrderDetail() {
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={handleApprove}>
                 Approve
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Reject Confirmation Dialog */}
+        <AlertDialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Reject Payment</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will cancel order {order.order_number} and release all reserved stock. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="py-4">
+              <Label htmlFor="rejectReason">Reason for rejection</Label>
+              <Textarea
+                id="rejectReason"
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Explain why this payment is being rejected..."
+                rows={3}
+                className="mt-2"
+              />
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleReject}
+                disabled={!rejectReason.trim()}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Reject
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
