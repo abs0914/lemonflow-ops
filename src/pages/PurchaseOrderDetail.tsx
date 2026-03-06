@@ -376,15 +376,20 @@ export default function PurchaseOrderDetail() {
       if (!user) throw new Error("Not authenticated");
       const now = new Date().toISOString();
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("purchase_orders")
         .update({
           status: "verified",
           verified_by: user.id,
           verified_at: now,
         })
-        .eq("id", id);
+        .eq("id", id)
+        .select();
       if (error) throw error;
+      if (!data || data.length === 0) {
+        console.error("PO verify: RLS blocked update. User role:", profile?.role, "PO id:", id);
+        throw new Error("Unable to verify PO. You may not have permission.");
+      }
 
       await supabase.from("audit_logs").insert({
         entity_type: "purchase_order",
