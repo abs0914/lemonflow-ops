@@ -232,6 +232,13 @@ Deno.serve(async (req) => {
 
       for (const store of unsyncedStores) {
         try {
+          // Check if this store has exceeded max retry attempts
+          const retryCount = await getFailedRetryCount(supabaseClient, store.id, 'store');
+          if (retryCount >= MAX_AUTO_RETRY) {
+            console.log(`[auto-sync] Skipping store ${store.store_code} - exceeded ${MAX_AUTO_RETRY} retries`);
+            continue;
+          }
+
           const storePayload = {
             Code: store.debtor_code,
             Name: store.store_name,
@@ -241,6 +248,7 @@ Deno.serve(async (req) => {
             Address1: store.address || '',
             IsActive: store.is_active ?? true,
             CurrencyCode: 'PHP',
+            ParentAccNo: 'Trade Debtor',
           };
 
           // Try create first, then update on conflict
