@@ -27,7 +27,30 @@ interface SyncResult {
   docNo?: string;
 }
 
-async function authenticateAutoCount(apiUrl: string, username: string, password: string): Promise<string> {
+
+const MAX_AUTO_RETRY = 10; // Stop auto-retrying after 10 consecutive failures
+
+async function getFailedRetryCount(supabaseClient: any, referenceId: string, referenceType: string): Promise<number> {
+  const { data } = await supabaseClient
+    .from('autocount_sync_log')
+    .select('sync_status')
+    .eq('reference_id', referenceId)
+    .eq('reference_type', referenceType)
+    .eq('sync_type', 'auto_create')
+    .order('created_at', { ascending: false })
+    .limit(MAX_AUTO_RETRY);
+  
+  if (!data || data.length === 0) return 0;
+  // Count consecutive failures from most recent
+  let count = 0;
+  for (const log of data) {
+    if (log.sync_status === 'failed') count++;
+    else break;
+  }
+  return count;
+}
+
+
   const loginResponse = await fetch(`${apiUrl}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
