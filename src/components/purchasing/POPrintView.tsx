@@ -24,7 +24,7 @@ export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps)
   const totalAmount = lines.reduce((sum, line) => sum + (line.quantity * line.unit_price), 0);
 
   return (
-    <div className="print:block hidden">
+    <div className="print-wrapper print:block hidden">
       <style>{`
         @media print {
           body > *:not(.print-wrapper) {
