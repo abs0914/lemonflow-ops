@@ -27,23 +27,23 @@ export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps)
     <div className="print:block hidden">
       <style>{`
         @media print {
-          body * {
-            visibility: hidden;
+          body > *:not(.print-wrapper) {
+            display: none !important;
           }
-          .print-container, .print-container * {
-            visibility: visible;
+          .print-wrapper {
+            display: block !important;
+            position: static !important;
           }
           .print-container {
-            position: absolute;
-            left: 0;
-            top: 0;
+            position: relative;
             width: 100%;
           }
           .page-break {
             page-break-after: always;
+            break-after: page;
           }
           @page {
-            margin: 20mm;
+            margin: 15mm;
             size: A4;
           }
         }
