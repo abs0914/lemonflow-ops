@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { formatCurrency } from "@/lib/currency";
 import { dateFormatters } from "@/lib/datetime";
+import { SignatureDisplay } from "@/components/signature/SignatureDisplay";
 import tlcLogo from "@/assets/tlc-logo.png";
 
 interface POPrintViewProps {
@@ -193,10 +194,18 @@ export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps)
               <div>
                 <div className="border-t border-gray-400 pt-2">
                   <p className="text-sm text-center">Approved By (CEO)</p>
-                  {purchaseOrder.approved_at && (
-                    <p className="text-xs text-center text-gray-600 mt-1">
-                      {dateFormatters.medium(purchaseOrder.approved_at)}
-                    </p>
+                  {purchaseOrder.approved_at ? (
+                    <div className="flex flex-col items-center mt-1">
+                      <SignatureDisplay
+                        signatureUrl={purchaseOrder.approved_by_profile?.signature_url}
+                        className="h-12 w-auto max-w-24 object-contain"
+                      />
+                      <p className="text-xs text-center text-gray-600 mt-1">
+                        {dateFormatters.medium(purchaseOrder.approved_at)}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="border-b border-gray-400 w-full h-12 mt-2" />
                   )}
                 </div>
               </div>
