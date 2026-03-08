@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { ProfileSettings } from "@/components/account/ProfileSettings";
 import { PasswordSettings } from "@/components/account/PasswordSettings";
-import { User, Lock } from "lucide-react";
+import { SignatureManager } from "@/components/signature/SignatureManager";
+import { User, Lock, PenTool } from "lucide-react";
 
 export default function MyAccount() {
   const { profile } = useAuth();
@@ -34,6 +34,10 @@ export default function MyAccount() {
                 <User className="h-4 w-4" />
                 Profile
               </TabsTrigger>
+              <TabsTrigger value="signature" className="flex items-center gap-2">
+                <PenTool className="h-4 w-4" />
+                Signature
+              </TabsTrigger>
               <TabsTrigger value="password" className="flex items-center gap-2">
                 <Lock className="h-4 w-4" />
                 Password
@@ -50,6 +54,20 @@ export default function MyAccount() {
                 </CardHeader>
                 <CardContent>
                   <ProfileSettings />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="signature">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Digital Signature</CardTitle>
+                  <CardDescription>
+                    Create or update your digital signature for printed documents
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <SignatureManager />
                 </CardContent>
               </Card>
             </TabsContent>
