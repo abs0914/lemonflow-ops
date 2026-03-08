@@ -28,7 +28,7 @@ export function SignatureDisplay({ signatureUrl, className = "h-16 w-auto", fall
 
   if (!url) {
     return fallbackText ? (
-      <div className="border-b border-gray-400 w-full h-12" />
+      <div className="border-b border-border w-full h-12" />
     ) : null;
   }
 

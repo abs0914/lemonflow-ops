@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { formatCurrency } from "@/lib/currency";
 import { dateFormatters } from "@/lib/datetime";
+import { SignatureDisplay } from "@/components/signature/SignatureDisplay";
 import tlcLogo from "@/assets/tlc-logo.png";
 
 interface POPrintViewProps {
