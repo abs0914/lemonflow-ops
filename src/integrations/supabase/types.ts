@@ -1210,6 +1210,9 @@ export type Database = {
           full_name: string
           id: string
           role: string
+          signature_type: string | null
+          signature_updated_at: string | null
+          signature_url: string | null
           updated_at: string
         }
         Insert: {
@@ -1217,6 +1220,9 @@ export type Database = {
           full_name: string
           id: string
           role: string
+          signature_type?: string | null
+          signature_updated_at?: string | null
+          signature_url?: string | null
           updated_at?: string
         }
         Update: {
@@ -1224,6 +1230,9 @@ export type Database = {
           full_name?: string
           id?: string
           role?: string
+          signature_type?: string | null
+          signature_updated_at?: string | null
+          signature_url?: string | null
           updated_at?: string
         }
         Relationships: []
