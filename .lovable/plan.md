@@ -1,103 +1,147 @@
 
+# Digital Signature Implementation Plan
 
-## Add Proof of Payment Upload & Updated Franchisee Workflow
+Based on your requirements, I'll implement a comprehensive digital signature system that allows users to both draw and upload signatures, stores them in user profiles, and displays them on printed Purchase Orders and Sales Orders.
 
-### Updated Workflow
+## Current State Analysis
 
-The franchisee order flow changes from:
+The system currently has:
+- Purchase Order print view (`POPrintView.tsx`) with text-based signature placeholders
+- Delivery Order document with basic signature lines
+- No digital signature capture or storage capability
+- Basic user profiles without signature fields
 
-```text
-Current:  submitted → pending_payment (Finance) → pending_accounting (Accounting) → processing (Fulfillment)
+## Implementation Plan
 
-New:      submitted → pending_payment (Finance sets fees/dates) → awaiting_proof (Franchisee uploads proof) → pending_accounting (Accounting reviews proof & approves) → processing (Fulfillment)
+### 1. Database Schema Updates
+
+**Add signature fields to user_profiles table:**
+- `signature_url`: Text field to store signature image URL
+- `signature_type`: Enum ('drawn', 'uploaded') to track signature method
+- `signature_updated_at`: Timestamp for signature management
+
+**Create storage bucket for signatures:**
+- Private bucket `user-signatures` for secure signature storage
+- Proper RLS policies to ensure users can only access their own signatures
+
+### 2. Signature Capture Components
+
+**SignatureCanvas Component:**
+- HTML5 Canvas-based signature pad using mouse/touch input
+- Clear/reset functionality
+- Export to PNG format
+- Responsive design for mobile and desktop
+
+**SignatureUpload Component:**
+- File upload for PNG/JPG signature images
+- Image preview and validation
+- File size limits (max 2MB)
+- Image format restrictions
+
+**SignatureManager Component:**
+- Combined component offering both draw and upload options
+- Toggle between canvas and upload modes
+- Save/update signature functionality
+- Delete existing signature option
+
+### 3. User Profile Integration
+
+**Update My Account Page:**
+- Add "Digital Signature" section
+- Display current signature if exists
+- Allow users to create/update/delete their signature
+- Preview signature as it would appear on documents
+
+### 4. Print Document Updates
+
+**Enhanced Purchase Order Print View:**
+- Display actual signature image for CEO approval section
+- Fallback to text when no signature available
+- Proper signature positioning and scaling
+- Maintain print quality for signatures
+
+**Sales Order Print Document:**
+- Create comprehensive SO print view (currently missing)
+- Include signature sections for Finance/Accounting approvals
+- Match styling with PO print format
+- Support for multiple approval signatures
+
+**Signature Display Logic:**
+- Load signature images from storage
+- Handle missing signatures gracefully
+- Optimize signature size for print quality
+- Ensure signatures are visible in both copies
+
+### 5. Approval Workflow Integration
+
+**CEO Purchase Order Approval:**
+- Verify CEO has signature before allowing approval
+- Display signature requirement message if missing
+- Link to My Account for signature setup
+
+**Finance/Accounting Sales Order Approval:**
+- Similar signature verification for Finance users
+- Accounting approval signature capture
+- Payment confirmation signature integration
+
+### 6. Security & Access Control
+
+**RLS Policies:**
+- Users can only manage their own signatures
+- Signature viewing restricted to authorized roles
+- Secure signature storage with proper access controls
+
+**Validation:**
+- Signature image format validation
+- File size restrictions
+- Signature quality checks (not blank/too small)
+
+## Technical Implementation Details
+
+### Component Architecture
+```
+src/components/
+├── signature/
+│   ├── SignatureCanvas.tsx      # Canvas drawing component
+│   ├── SignatureUpload.tsx      # File upload component  
+│   ├── SignatureManager.tsx     # Combined manager
+│   └── SignatureDisplay.tsx     # Display component for prints
+├── purchasing/
+│   └── POPrintView.tsx          # Enhanced with signature display
+└── sales-orders/
+    └── SOPrintView.tsx          # New sales order print view
 ```
 
-Finance no longer confirms payment directly. Instead, Finance sets delivery/shipping fees and delivery date, then sends it back to the franchisee to upload proof of payment. Only after the franchisee uploads the screenshot does it go to Accounting for final approval.
+### Database Migrations
+- Add signature columns to user_profiles
+- Create user-signatures storage bucket
+- Set up proper RLS policies for signature access
 
-### Database Changes
+### Storage Integration
+- Supabase Storage for signature images
+- Automatic image optimization for print quality
+- Secure URL generation for signature access
 
-1. **New status value**: Add `awaiting_proof` to the sales order status flow
-2. **New column on `sales_orders`**: `proof_of_payment_url TEXT` to store the uploaded file path
-3. **Storage bucket**: Create `payment-proofs` bucket (private) with RLS policies allowing:
-   - Store users to upload files for their own orders
-   - Finance, Accounting, Admin to view files
-4. **RLS policy updates**: 
-   - Store users can UPDATE orders in `awaiting_proof` status (to set `proof_of_payment_url`)
-   - Finance `WITH CHECK` expression updated to allow transitioning to `awaiting_proof`
+## Implementation Benefits
 
-### File Changes
+1. **Professional Documentation**: Proper signatures on printed orders enhance business credibility
+2. **Audit Trail**: Digital signatures provide clear approval tracking
+3. **User Convenience**: Both drawing and upload options accommodate different user preferences
+4. **Security**: Proper access controls ensure signature integrity
+5. **Print Quality**: Optimized signature display for professional printing
 
-**`src/types/sales-order.ts`**
-- Add `awaiting_proof` to the status union type
-- Add `proof_of_payment_url?: string` field
+## User Experience Flow
 
-**`src/hooks/useFinanceOrders.ts`** (`useConfirmPayment`)
-- Change target status from `pending_accounting` to `awaiting_proof`
-- Remove AutoCount sync from this step (moved to later, or kept at accounting approval)
+1. **First Time Setup**: Users visit My Account → Digital Signature → Create signature
+2. **Approval Process**: When approving documents, system checks for existing signature
+3. **Print Documents**: Approved documents automatically include relevant signatures
+4. **Signature Management**: Users can update signatures anytime in My Account
 
-**`src/pages/FinanceOrderDetail.tsx`**
-- Update button label from "Confirm Payment" to "Send for Proof of Payment" or similar
-- Finance sets fees, dates, and sends order back to franchisee
+## Rollout Considerations
 
-**`src/pages/StoreOrderDetail.tsx`**
-- When order status is `awaiting_proof`, show:
-  - Order summary with fees set by Finance (grand total)
-  - File upload input for proof of payment screenshot
-  - "Submit Proof" button that uploads file to storage and updates `proof_of_payment_url`, moving status to `pending_accounting`
+- Existing users will need to set up signatures for future approvals
+- Backward compatibility for documents approved before signature implementation
+- Training materials for signature creation process
+- Clear error messages when signatures are missing during approval
 
-**`src/pages/StoreOrders.tsx`**
-- Add `awaiting_proof` tab/filter so franchisees can see orders needing their action
-
-**`src/pages/AccountingOrderDetail.tsx`**
-- Display the uploaded proof of payment image
-- Keep existing approve flow (moves to `processing`)
-
-**`src/hooks/useAccountingOrders.ts`** / **`src/hooks/useFinanceOrders.ts`**
-- Update mutation logic for new status transitions
-
-**Status color maps** (multiple files)
-- Add `awaiting_proof: "bg-amber-100 text-amber-800"` entry
-
-**`src/components/store-orders/MobileOrderCard.tsx`**
-- Add `awaiting_proof` status color
-
-**RLS policies** (migration)
-- Store users: allow UPDATE on `awaiting_proof` orders (to upload proof)
-- Finance: update WITH CHECK to include `awaiting_proof` as target status
-
-### Technical Details
-
-**Storage setup** (SQL migration):
-```sql
-INSERT INTO storage.buckets (id, name, public) VALUES ('payment-proofs', 'payment-proofs', false);
-
--- Store users can upload to their order folders
-CREATE POLICY "Store users can upload payment proofs"
-ON storage.objects FOR INSERT
-WITH CHECK (bucket_id = 'payment-proofs' AND ...);
-
--- Finance, Accounting, Admin can view
-CREATE POLICY "Authorized users can view payment proofs"
-ON storage.objects FOR SELECT
-USING (bucket_id = 'payment-proofs' AND ...);
-```
-
-**Upload flow**: File is uploaded to `payment-proofs/{order_id}/{filename}`, then the signed/public URL is stored in `sales_orders.proof_of_payment_url`.
-
-**Sales order column** (SQL migration):
-```sql
-ALTER TABLE sales_orders ADD COLUMN proof_of_payment_url TEXT DEFAULT NULL;
-```
-
-### Files Modified
-- New database migration (column + storage bucket + RLS)
-- `src/types/sales-order.ts`
-- `src/hooks/useFinanceOrders.ts`
-- `src/hooks/useAccountingOrders.ts`
-- `src/pages/StoreOrderDetail.tsx`
-- `src/pages/StoreOrders.tsx`
-- `src/pages/FinanceOrderDetail.tsx`
-- `src/pages/AccountingOrderDetail.tsx`
-- `src/components/store-orders/MobileOrderCard.tsx`
-- Status color maps across affected files
-
+This comprehensive approach ensures professional document printing while maintaining security and user convenience across both Purchase Orders and Sales Orders.
