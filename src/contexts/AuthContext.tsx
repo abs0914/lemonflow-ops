@@ -7,6 +7,9 @@ interface UserProfile {
   id: string;
   full_name: string;
   role: "Admin" | "Production" | "Warehouse" | "Store" | "CEO" | "Finance" | "Fulfillment" | "Accounting";
+  signature_url: string | null;
+  signature_type: string | null;
+  signature_updated_at: string | null;
 }
 
 interface AuthContextType {
