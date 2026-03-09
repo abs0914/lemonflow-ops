@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { formatCurrency } from "@/lib/currency";
 import { dateFormatters } from "@/lib/datetime";
 import { SignatureDisplay } from "@/components/signature/SignatureDisplay";
@@ -12,34 +13,40 @@ interface POPrintViewProps {
 
 export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps) {
   useEffect(() => {
-    // Auto-print when component mounts
-    window.print();
-    // Close after printing
+    // Small delay to ensure portal content is fully rendered in the DOM
+    const timer = setTimeout(() => {
+      window.print();
+    }, 300);
+
     const handleAfterPrint = () => {
       onClose();
     };
     window.addEventListener('afterprint', handleAfterPrint);
-    return () => window.removeEventListener('afterprint', handleAfterPrint);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('afterprint', handleAfterPrint);
+    };
   }, [onClose]);
 
   const totalAmount = lines.reduce((sum, line) => sum + (line.quantity * line.unit_price), 0);
 
-  return (
-    <div className="print-wrapper print:block hidden">
+  const content = (
+    <>
       <style>{`
         @media print {
-          body > *:not(.print-wrapper) {
+          body > *:not(#po-print-portal) {
             display: none !important;
           }
-          .print-wrapper {
+          #po-print-portal {
             display: block !important;
             position: static !important;
           }
-          .print-container {
+          .po-print-container {
             position: relative;
             width: 100%;
           }
-          .page-break {
+          .po-page-break {
             page-break-after: always;
             break-after: page;
           }
@@ -48,68 +55,63 @@ export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps)
             size: A4;
           }
         }
+        @media screen {
+          #po-print-portal {
+            display: none;
+          }
+        }
       `}</style>
 
       {/* Print 2 copies */}
       {[1, 2].map((copyNumber) => (
-        <div key={copyNumber} className={`print-container ${copyNumber === 1 ? 'page-break' : ''}`}>
-          <div className="p-8">
+        <div key={copyNumber} className={`po-print-container ${copyNumber === 1 ? 'po-page-break' : ''}`}>
+          <div style={{ padding: '2rem' }}>
             {/* Header */}
-            <div className="flex justify-between items-start mb-8 border-b-2 border-gray-800 pb-4">
-              <div className="flex items-center gap-4">
-                <img src={tlcLogo} alt="The Lemon Co" className="h-16 w-auto" />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', borderBottom: '2px solid #1f2937', paddingBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <img src={tlcLogo} alt="The Lemon Co" style={{ height: '4rem', width: 'auto' }} />
                 <div>
-                  <h1 className="text-3xl font-bold">PURCHASE ORDER</h1>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Copy {copyNumber} of 2 - {copyNumber === 1 ? 'CEO Copy' : 'Accounting Copy'}
+                  <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', margin: 0 }}>PURCHASE ORDER</h1>
+                  <p style={{ fontSize: '0.875rem', color: '#4b5563', marginTop: '0.25rem' }}>
+                    Copy {copyNumber} of 2 — {copyNumber === 1 ? 'CEO Copy' : 'Accounting Copy'}
                   </p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="text-lg font-semibold">PO #: {purchaseOrder.po_number}</p>
-                <p className="text-sm text-gray-600">Date: {dateFormatters.medium(purchaseOrder.doc_date)}</p>
+              <div style={{ textAlign: 'right' }}>
+                <p style={{ fontSize: '1.125rem', fontWeight: '600' }}>PO #: {purchaseOrder.po_number}</p>
+                <p style={{ fontSize: '0.875rem', color: '#4b5563' }}>Date: {dateFormatters.medium(purchaseOrder.doc_date)}</p>
                 {purchaseOrder.is_cash_purchase && (
-                  <p className="text-sm font-semibold text-orange-600 mt-1">CASH PURCHASE</p>
+                  <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#ea580c', marginTop: '0.25rem' }}>CASH PURCHASE</p>
                 )}
               </div>
             </div>
 
             {/* Supplier Info */}
-            <div className="mb-6 p-4 bg-gray-50 rounded">
-              <h3 className="font-semibold mb-2">Supplier Information:</h3>
-              <p className="text-sm">
-                <strong>Company:</strong> {purchaseOrder.suppliers?.company_name}
-              </p>
-              <p className="text-sm">
-                <strong>Code:</strong> {purchaseOrder.suppliers?.supplier_code}
-              </p>
+            <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#f9fafb', borderRadius: '0.375rem' }}>
+              <h3 style={{ fontWeight: '600', marginBottom: '0.5rem' }}>Supplier Information:</h3>
+              <p style={{ fontSize: '0.875rem' }}><strong>Company:</strong> {purchaseOrder.suppliers?.company_name}</p>
+              <p style={{ fontSize: '0.875rem' }}><strong>Code:</strong> {purchaseOrder.suppliers?.supplier_code}</p>
               {purchaseOrder.suppliers?.address && (
-                <p className="text-sm">
-                  <strong>Address:</strong> {purchaseOrder.suppliers?.address}
-                </p>
+                <p style={{ fontSize: '0.875rem' }}><strong>Address:</strong> {purchaseOrder.suppliers?.address}</p>
               )}
             </div>
 
             {/* PO Details */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
               <div>
-                <p className="text-sm">
-                  <strong>Delivery Date:</strong>{" "}
-                  {purchaseOrder.delivery_date ? dateFormatters.medium(purchaseOrder.delivery_date) : "Not specified"}
+                <p style={{ fontSize: '0.875rem' }}>
+                  <strong>Delivery Date:</strong>{' '}
+                  {purchaseOrder.delivery_date ? dateFormatters.medium(purchaseOrder.delivery_date) : 'Not specified'}
                 </p>
-                <p className="text-sm">
-                  <strong>Status:</strong> <span className="uppercase">{purchaseOrder.status}</span>
+                <p style={{ fontSize: '0.875rem' }}>
+                  <strong>Status:</strong> <span style={{ textTransform: 'uppercase' }}>{purchaseOrder.status}</span>
                 </p>
               </div>
               <div>
                 {purchaseOrder.approved_by && (
                   <>
-                    <p className="text-sm">
-                      <strong>Approved By:</strong> CEO
-                    </p>
-                    <p className="text-sm">
-                      <strong>Approved On:</strong> {dateFormatters.medium(purchaseOrder.approved_at)}
-                    </p>
+                    <p style={{ fontSize: '0.875rem' }}><strong>Approved By:</strong> CEO</p>
+                    <p style={{ fontSize: '0.875rem' }}><strong>Approved On:</strong> {dateFormatters.medium(purchaseOrder.approved_at)}</p>
                   </>
                 )}
               </div>
@@ -117,9 +119,9 @@ export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps)
 
             {/* Cash Purchase Details */}
             {purchaseOrder.is_cash_purchase && (
-              <div className="mb-6 p-4 border-2 border-orange-500 rounded">
-                <h3 className="font-semibold mb-2 text-orange-600">Cash Purchase Details:</h3>
-                <div className="grid grid-cols-2 gap-2 text-sm">
+              <div style={{ marginBottom: '1.5rem', padding: '1rem', border: '2px solid #f97316', borderRadius: '0.375rem' }}>
+                <h3 style={{ fontWeight: '600', marginBottom: '0.5rem', color: '#ea580c' }}>Cash Purchase Details:</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.875rem' }}>
                   <p><strong>Cash Advance:</strong> {formatCurrency(purchaseOrder.cash_advance || 0)}</p>
                   {purchaseOrder.cash_returned > 0 && (
                     <p><strong>Cash Returned:</strong> {formatCurrency(purchaseOrder.cash_returned)}</p>
@@ -129,31 +131,31 @@ export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps)
             )}
 
             {/* Line Items Table */}
-            <div className="mb-6">
-              <table className="w-full border-collapse">
+            <div style={{ marginBottom: '1.5rem' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr className="border-b-2 border-gray-800">
-                    <th className="text-left py-2 text-sm">#</th>
-                    <th className="text-left py-2 text-sm">Item Description</th>
-                    <th className="text-left py-2 text-sm">SKU</th>
-                    <th className="text-right py-2 text-sm">Qty</th>
-                    <th className="text-right py-2 text-sm">Unit Price</th>
-                    <th className="text-center py-2 text-sm">UOM</th>
-                    <th className="text-right py-2 text-sm">Subtotal</th>
+                  <tr style={{ borderBottom: '2px solid #1f2937' }}>
+                    <th style={{ textAlign: 'left', padding: '0.5rem', fontSize: '0.875rem' }}>#</th>
+                    <th style={{ textAlign: 'left', padding: '0.5rem', fontSize: '0.875rem' }}>Item Description</th>
+                    <th style={{ textAlign: 'left', padding: '0.5rem', fontSize: '0.875rem' }}>SKU</th>
+                    <th style={{ textAlign: 'right', padding: '0.5rem', fontSize: '0.875rem' }}>Qty</th>
+                    <th style={{ textAlign: 'right', padding: '0.5rem', fontSize: '0.875rem' }}>Unit Price</th>
+                    <th style={{ textAlign: 'center', padding: '0.5rem', fontSize: '0.875rem' }}>UOM</th>
+                    <th style={{ textAlign: 'right', padding: '0.5rem', fontSize: '0.875rem' }}>Subtotal</th>
                   </tr>
                 </thead>
                 <tbody>
                   {lines.map((line, index) => {
                     const item = line.item_type === 'raw_material' ? line.raw_materials : line.components;
                     return (
-                      <tr key={line.id} className="border-b border-gray-300">
-                        <td className="py-2 text-sm">{index + 1}</td>
-                        <td className="py-2 text-sm">{item?.name}</td>
-                        <td className="py-2 text-sm font-mono">{item?.sku}</td>
-                        <td className="py-2 text-sm text-right">{line.quantity}</td>
-                        <td className="py-2 text-sm text-right">{formatCurrency(line.unit_price)}</td>
-                        <td className="py-2 text-sm text-center">{line.uom}</td>
-                        <td className="py-2 text-sm text-right font-semibold">
+                      <tr key={line.id} style={{ borderBottom: '1px solid #d1d5db' }}>
+                        <td style={{ padding: '0.5rem', fontSize: '0.875rem' }}>{index + 1}</td>
+                        <td style={{ padding: '0.5rem', fontSize: '0.875rem' }}>{item?.name}</td>
+                        <td style={{ padding: '0.5rem', fontSize: '0.875rem', fontFamily: 'monospace' }}>{item?.sku}</td>
+                        <td style={{ padding: '0.5rem', fontSize: '0.875rem', textAlign: 'right' }}>{line.quantity}</td>
+                        <td style={{ padding: '0.5rem', fontSize: '0.875rem', textAlign: 'right' }}>{formatCurrency(line.unit_price)}</td>
+                        <td style={{ padding: '0.5rem', fontSize: '0.875rem', textAlign: 'center' }}>{line.uom}</td>
+                        <td style={{ padding: '0.5rem', fontSize: '0.875rem', textAlign: 'right', fontWeight: '600' }}>
                           {formatCurrency(line.quantity * line.unit_price)}
                         </td>
                       </tr>
@@ -161,11 +163,11 @@ export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps)
                   })}
                 </tbody>
                 <tfoot>
-                  <tr className="border-t-2 border-gray-800">
-                    <td colSpan={6} className="py-3 text-right font-bold text-lg">
+                  <tr style={{ borderTop: '2px solid #1f2937' }}>
+                    <td colSpan={6} style={{ padding: '0.75rem', textAlign: 'right', fontWeight: 'bold', fontSize: '1.125rem' }}>
                       TOTAL AMOUNT:
                     </td>
-                    <td className="py-3 text-right font-bold text-lg">
+                    <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: 'bold', fontSize: '1.125rem' }}>
                       {formatCurrency(totalAmount)}
                     </td>
                   </tr>
@@ -175,56 +177,69 @@ export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps)
 
             {/* Remarks */}
             {purchaseOrder.remarks && (
-              <div className="mb-6">
-                <h3 className="font-semibold mb-2">Remarks:</h3>
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{purchaseOrder.remarks}</p>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h3 style={{ fontWeight: '600', marginBottom: '0.5rem' }}>Remarks:</h3>
+                <p style={{ fontSize: '0.875rem', color: '#374151', whiteSpace: 'pre-wrap' }}>{purchaseOrder.remarks}</p>
               </div>
             )}
 
             {/* Signatures */}
-            <div className="grid grid-cols-3 gap-8 mt-12 pt-8 border-t">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '2rem', marginTop: '3rem', paddingTop: '2rem', borderTop: '1px solid #9ca3af' }}>
               <div>
-                <div className="border-t border-gray-400 pt-2">
-                  <p className="text-sm text-center">Prepared By</p>
-                  <p className="text-xs text-center text-gray-600 mt-1">
+                <div style={{ borderTop: '1px solid #9ca3af', paddingTop: '0.5rem' }}>
+                  <p style={{ fontSize: '0.875rem', textAlign: 'center' }}>Prepared By</p>
+                  <p style={{ fontSize: '0.75rem', textAlign: 'center', color: '#4b5563', marginTop: '0.25rem' }}>
                     {purchaseOrder.user_profiles?.full_name}
                   </p>
                 </div>
               </div>
               <div>
-                <div className="border-t border-gray-400 pt-2">
-                  <p className="text-sm text-center">Approved By (CEO)</p>
+                <div style={{ borderTop: '1px solid #9ca3af', paddingTop: '0.5rem' }}>
+                  <p style={{ fontSize: '0.875rem', textAlign: 'center' }}>Approved By (CEO)</p>
                   {purchaseOrder.approved_at ? (
-                    <div className="flex flex-col items-center mt-1">
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '0.25rem' }}>
                       <SignatureDisplay
                         signatureUrl={purchaseOrder.approved_by_profile?.signature_url}
                         className="h-12 w-auto max-w-24 object-contain"
                       />
-                      <p className="text-xs text-center text-gray-600 mt-1">
+                      <p style={{ fontSize: '0.75rem', textAlign: 'center', color: '#4b5563', marginTop: '0.25rem' }}>
                         {dateFormatters.medium(purchaseOrder.approved_at)}
                       </p>
                     </div>
                   ) : (
-                    <div className="border-b border-gray-400 w-full h-12 mt-2" />
+                    <div style={{ borderBottom: '1px solid #9ca3af', width: '100%', height: '3rem', marginTop: '0.5rem' }} />
                   )}
                 </div>
               </div>
               <div>
-                <div className="border-t border-gray-400 pt-2">
-                  <p className="text-sm text-center">Received By</p>
-                  <p className="text-xs text-center text-gray-600 mt-1">Date: __________</p>
+                <div style={{ borderTop: '1px solid #9ca3af', paddingTop: '0.5rem' }}>
+                  <p style={{ fontSize: '0.875rem', textAlign: 'center' }}>Received By</p>
+                  <p style={{ fontSize: '0.75rem', textAlign: 'center', color: '#4b5563', marginTop: '0.25rem' }}>Date: __________</p>
                 </div>
               </div>
             </div>
 
             {/* Footer */}
-            <div className="mt-8 text-center text-xs text-gray-500">
+            <div style={{ marginTop: '2rem', textAlign: 'center', fontSize: '0.75rem', color: '#6b7280' }}>
               <p>This is a computer-generated document. No signature is required.</p>
-              <p className="mt-1">Generated on: {dateFormatters.medium(new Date().toISOString())}</p>
+              <p style={{ marginTop: '0.25rem' }}>Generated on: {dateFormatters.medium(new Date().toISOString())}</p>
             </div>
           </div>
         </div>
       ))}
-    </div>
+    </>
   );
+
+  // Render into a direct child of body via portal to avoid being hidden by parent CSS
+  const portalTarget = (() => {
+    let el = document.getElementById('po-print-portal');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'po-print-portal';
+      document.body.appendChild(el);
+    }
+    return el;
+  })();
+
+  return createPortal(content, portalTarget);
 }
