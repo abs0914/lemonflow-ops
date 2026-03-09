@@ -203,6 +203,9 @@ export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps)
                         className="h-12 w-auto max-w-24 object-contain"
                       />
                       <p style={{ fontSize: '0.75rem', textAlign: 'center', color: '#4b5563', marginTop: '0.25rem' }}>
+                        {purchaseOrder.approved_by_profile?.full_name}
+                      </p>
+                      <p style={{ fontSize: '0.75rem', textAlign: 'center', color: '#4b5563', marginTop: '0.25rem' }}>
                         {dateFormatters.medium(purchaseOrder.approved_at)}
                       </p>
                     </div>

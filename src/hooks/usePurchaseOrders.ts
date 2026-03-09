@@ -56,16 +56,19 @@ export function usePurchaseOrder(id?: string) {
 
       if (error) throw error;
 
-      // Fetch user profile
-      const { data: profile } = await supabase
+      // Fetch user profiles (creator and approver)
+      const profileIds = [data.created_by, data.approved_by].filter(Boolean) as string[];
+      const { data: profiles } = await supabase
         .from("user_profiles")
-        .select("id, full_name")
-        .eq("id", data.created_by)
-        .single();
+        .select("id, full_name, signature_url")
+        .in("id", profileIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
       return {
         ...data,
-        user_profiles: profile,
+        user_profiles: profileMap.get(data.created_by),
+        approved_by_profile: data.approved_by ? profileMap.get(data.approved_by) : null,
       } as any;
     },
     enabled: !!id,
