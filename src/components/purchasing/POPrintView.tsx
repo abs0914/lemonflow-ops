@@ -216,8 +216,23 @@ export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps)
               </div>
               <div>
                 <div style={{ borderTop: '1px solid #9ca3af', paddingTop: '0.5rem' }}>
-                  <p style={{ fontSize: '0.875rem', textAlign: 'center' }}>Received By</p>
-                  <p style={{ fontSize: '0.75rem', textAlign: 'center', color: '#4b5563', marginTop: '0.25rem' }}>Date: __________</p>
+                  <p style={{ fontSize: '0.875rem', textAlign: 'center' }}>Verified By (Accounting)</p>
+                  {purchaseOrder.verified_at ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '0.25rem' }}>
+                      <SignatureDisplay
+                        signatureUrl={purchaseOrder.verified_by_profile?.signature_url}
+                        className="h-12 w-auto max-w-24 object-contain"
+                      />
+                      <p style={{ fontSize: '0.75rem', textAlign: 'center', color: '#4b5563', marginTop: '0.25rem' }}>
+                        {purchaseOrder.verified_by_profile?.full_name}
+                      </p>
+                      <p style={{ fontSize: '0.75rem', textAlign: 'center', color: '#4b5563', marginTop: '0.25rem' }}>
+                        {dateFormatters.medium(purchaseOrder.verified_at)}
+                      </p>
+                    </div>
+                  ) : (
+                    <div style={{ borderBottom: '1px solid #9ca3af', width: '100%', height: '3rem', marginTop: '0.5rem' }} />
+                  )}
                 </div>
               </div>
             </div>
