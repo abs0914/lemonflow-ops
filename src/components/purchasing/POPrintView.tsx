@@ -11,23 +11,61 @@ interface POPrintViewProps {
   onClose: () => void;
 }
 
+function resolveSignatureUrl(signatureUrl: string | null | undefined): string | null {
+  if (!signatureUrl) return null;
+  if (signatureUrl.startsWith("http")) return signatureUrl;
+  const { data } = supabase.storage.from("user-signatures").getPublicUrl(signatureUrl);
+  return data?.publicUrl || null;
+}
+
 export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps) {
+  const [ready, setReady] = useState(false);
+
+  const approvedSigUrl = resolveSignatureUrl(purchaseOrder.approved_by_profile?.signature_url);
+  const verifiedSigUrl = resolveSignatureUrl(purchaseOrder.verified_by_profile?.signature_url);
+
+  // Wait for signature images to load, then print
   useEffect(() => {
-    // Small delay to ensure portal content is fully rendered in the DOM
+    const imageUrls = [approvedSigUrl, verifiedSigUrl].filter(Boolean) as string[];
+    
+    if (imageUrls.length === 0) {
+      setReady(true);
+      return;
+    }
+
+    let loaded = 0;
+    const onLoad = () => {
+      loaded++;
+      if (loaded >= imageUrls.length) setReady(true);
+    };
+
+    imageUrls.forEach(url => {
+      const img = new Image();
+      img.onload = onLoad;
+      img.onerror = onLoad; // Don't block print on error
+      img.src = url;
+    });
+
+    // Fallback timeout in case images never load
+    const timeout = setTimeout(() => setReady(true), 3000);
+    return () => clearTimeout(timeout);
+  }, [approvedSigUrl, verifiedSigUrl]);
+
+  useEffect(() => {
+    if (!ready) return;
+
     const timer = setTimeout(() => {
       window.print();
-    }, 300);
+    }, 200);
 
-    const handleAfterPrint = () => {
-      onClose();
-    };
+    const handleAfterPrint = () => onClose();
     window.addEventListener('afterprint', handleAfterPrint);
 
     return () => {
       clearTimeout(timer);
       window.removeEventListener('afterprint', handleAfterPrint);
     };
-  }, [onClose]);
+  }, [ready, onClose]);
 
   const totalAmount = lines.reduce((sum, line) => sum + (line.quantity * line.unit_price), 0);
 
