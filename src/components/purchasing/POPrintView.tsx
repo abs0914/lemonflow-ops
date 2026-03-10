@@ -1,8 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { formatCurrency } from "@/lib/currency";
 import { dateFormatters } from "@/lib/datetime";
-import { SignatureDisplay } from "@/components/signature/SignatureDisplay";
+import { supabase } from "@/integrations/supabase/client";
 import tlcLogo from "@/assets/tlc-logo.png";
 
 interface POPrintViewProps {
@@ -11,23 +11,61 @@ interface POPrintViewProps {
   onClose: () => void;
 }
 
+function resolveSignatureUrl(signatureUrl: string | null | undefined): string | null {
+  if (!signatureUrl) return null;
+  if (signatureUrl.startsWith("http")) return signatureUrl;
+  const { data } = supabase.storage.from("user-signatures").getPublicUrl(signatureUrl);
+  return data?.publicUrl || null;
+}
+
 export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps) {
+  const [ready, setReady] = useState(false);
+
+  const approvedSigUrl = resolveSignatureUrl(purchaseOrder.approved_by_profile?.signature_url);
+  const verifiedSigUrl = resolveSignatureUrl(purchaseOrder.verified_by_profile?.signature_url);
+
+  // Wait for signature images to load, then print
   useEffect(() => {
-    // Small delay to ensure portal content is fully rendered in the DOM
+    const imageUrls = [approvedSigUrl, verifiedSigUrl].filter(Boolean) as string[];
+    
+    if (imageUrls.length === 0) {
+      setReady(true);
+      return;
+    }
+
+    let loaded = 0;
+    const onLoad = () => {
+      loaded++;
+      if (loaded >= imageUrls.length) setReady(true);
+    };
+
+    imageUrls.forEach(url => {
+      const img = new Image();
+      img.onload = onLoad;
+      img.onerror = onLoad; // Don't block print on error
+      img.src = url;
+    });
+
+    // Fallback timeout in case images never load
+    const timeout = setTimeout(() => setReady(true), 3000);
+    return () => clearTimeout(timeout);
+  }, [approvedSigUrl, verifiedSigUrl]);
+
+  useEffect(() => {
+    if (!ready) return;
+
     const timer = setTimeout(() => {
       window.print();
-    }, 300);
+    }, 200);
 
-    const handleAfterPrint = () => {
-      onClose();
-    };
+    const handleAfterPrint = () => onClose();
     window.addEventListener('afterprint', handleAfterPrint);
 
     return () => {
       clearTimeout(timer);
       window.removeEventListener('afterprint', handleAfterPrint);
     };
-  }, [onClose]);
+  }, [ready, onClose]);
 
   const totalAmount = lines.reduce((sum, line) => sum + (line.quantity * line.unit_price), 0);
 
@@ -198,10 +236,9 @@ export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps)
                   <p style={{ fontSize: '0.875rem', textAlign: 'center' }}>Approved By (CEO)</p>
                   {purchaseOrder.approved_at ? (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '0.25rem' }}>
-                      <SignatureDisplay
-                        signatureUrl={purchaseOrder.approved_by_profile?.signature_url}
-                        className="h-12 w-auto max-w-24 object-contain"
-                      />
+                      {approvedSigUrl && (
+                        <img src={approvedSigUrl} alt="Approver signature" style={{ height: '3rem', width: 'auto', maxWidth: '6rem', objectFit: 'contain' }} />
+                      )}
                       <p style={{ fontSize: '0.75rem', textAlign: 'center', color: '#4b5563', marginTop: '0.25rem' }}>
                         {purchaseOrder.approved_by_profile?.full_name}
                       </p>
@@ -219,10 +256,9 @@ export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps)
                   <p style={{ fontSize: '0.875rem', textAlign: 'center' }}>Verified By (Accounting)</p>
                   {purchaseOrder.verified_at ? (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '0.25rem' }}>
-                      <SignatureDisplay
-                        signatureUrl={purchaseOrder.verified_by_profile?.signature_url}
-                        className="h-12 w-auto max-w-24 object-contain"
-                      />
+                      {verifiedSigUrl && (
+                        <img src={verifiedSigUrl} alt="Verifier signature" style={{ height: '3rem', width: 'auto', maxWidth: '6rem', objectFit: 'contain' }} />
+                      )}
                       <p style={{ fontSize: '0.75rem', textAlign: 'center', color: '#4b5563', marginTop: '0.25rem' }}>
                         {purchaseOrder.verified_by_profile?.full_name}
                       </p>
