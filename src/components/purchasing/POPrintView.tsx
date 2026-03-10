@@ -236,10 +236,9 @@ export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps)
                   <p style={{ fontSize: '0.875rem', textAlign: 'center' }}>Approved By (CEO)</p>
                   {purchaseOrder.approved_at ? (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '0.25rem' }}>
-                      <SignatureDisplay
-                        signatureUrl={purchaseOrder.approved_by_profile?.signature_url}
-                        className="h-12 w-auto max-w-24 object-contain"
-                      />
+                      {approvedSigUrl && (
+                        <img src={approvedSigUrl} alt="Approver signature" style={{ height: '3rem', width: 'auto', maxWidth: '6rem', objectFit: 'contain' }} />
+                      )}
                       <p style={{ fontSize: '0.75rem', textAlign: 'center', color: '#4b5563', marginTop: '0.25rem' }}>
                         {purchaseOrder.approved_by_profile?.full_name}
                       </p>
