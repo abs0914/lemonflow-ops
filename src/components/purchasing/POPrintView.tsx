@@ -256,10 +256,9 @@ export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps)
                   <p style={{ fontSize: '0.875rem', textAlign: 'center' }}>Verified By (Accounting)</p>
                   {purchaseOrder.verified_at ? (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '0.25rem' }}>
-                      <SignatureDisplay
-                        signatureUrl={purchaseOrder.verified_by_profile?.signature_url}
-                        className="h-12 w-auto max-w-24 object-contain"
-                      />
+                      {verifiedSigUrl && (
+                        <img src={verifiedSigUrl} alt="Verifier signature" style={{ height: '3rem', width: 'auto', maxWidth: '6rem', objectFit: 'contain' }} />
+                      )}
                       <p style={{ fontSize: '0.75rem', textAlign: 'center', color: '#4b5563', marginTop: '0.25rem' }}>
                         {purchaseOrder.verified_by_profile?.full_name}
                       </p>
