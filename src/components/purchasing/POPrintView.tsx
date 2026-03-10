@@ -1,8 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { formatCurrency } from "@/lib/currency";
 import { dateFormatters } from "@/lib/datetime";
-import { SignatureDisplay } from "@/components/signature/SignatureDisplay";
+import { supabase } from "@/integrations/supabase/client";
 import tlcLogo from "@/assets/tlc-logo.png";
 
 interface POPrintViewProps {
