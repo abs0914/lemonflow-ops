@@ -253,7 +253,7 @@ export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps)
               </div>
               <div>
                 <div style={{ borderTop: '1px solid #9ca3af', paddingTop: '0.5rem' }}>
-                  <p style={{ fontSize: '0.875rem', textAlign: 'center' }}>Verified By (Accounting)</p>
+                  <p style={{ fontSize: '0.875rem', textAlign: 'center' }}>Received By</p>
                   {purchaseOrder.verified_at ? (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '0.25rem' }}>
                       {verifiedSigUrl && (
