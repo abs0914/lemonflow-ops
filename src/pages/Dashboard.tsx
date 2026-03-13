@@ -162,9 +162,9 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout>
-      <div className="p-8 space-y-8">
+      <div className="p-4 md:p-8 space-y-6 md:space-y-8">
         <div>
-          <h1 className="text-4xl font-bold text-foreground">
+          <h1 className="text-2xl md:text-4xl font-bold text-foreground">
             Welcome back, {profile.full_name}
           </h1>
           <p className="text-muted-foreground mt-2">
