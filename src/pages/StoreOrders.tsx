@@ -81,27 +81,28 @@ export default function StoreOrders() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Store Orders</h1>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Store Orders</h1>
             <p className="text-muted-foreground">
               Manage orders from your assigned stores
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
+              size={isMobile ? "sm" : "default"}
               onClick={() => refetch()}
               disabled={isLoading}
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
               Refresh
             </Button>
-            <Button variant="outline" onClick={() => navigate("/store/orders/quick-entry")}>
+            <Button variant="outline" size={isMobile ? "sm" : "default"} onClick={() => navigate("/store/orders/quick-entry")}>
               <ClipboardPaste className="mr-2 h-4 w-4" />
               Quick Entry
             </Button>
-            <Button onClick={() => navigate("/store/orders/create")}>
+            <Button size={isMobile ? "sm" : "default"} onClick={() => navigate("/store/orders/create")}>
               <Plus className="mr-2 h-4 w-4" />
               New Order
             </Button>
