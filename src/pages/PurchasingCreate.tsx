@@ -390,46 +390,83 @@ export default function PurchasingCreate() {
                 </Button>
               </div>
 
-              {lines.length > 0 && <div className="border rounded-lg overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Item</TableHead>
-                        <TableHead className="w-20">Type</TableHead>
-                        <TableHead className="w-24">Quantity</TableHead>
-                        <TableHead className="w-32">Unit Price</TableHead>
-                        <TableHead className="w-20">UOM</TableHead>
-                        <TableHead className="w-32">Subtotal</TableHead>
-                        <TableHead className="w-20"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {lines.map((line, index) => <TableRow key={index}>
-                          <TableCell className="font-medium">{line.item_name}</TableCell>
-                          <TableCell>
-                            <span className={`text-xs px-2 py-1 rounded-full ${line.item_type === 'raw_material' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+              {lines.length > 0 && (
+                <>
+                  {/* Mobile card view */}
+                  <div className="space-y-3 md:hidden">
+                    {lines.map((line, index) => (
+                      <div key={index} className="border rounded-lg p-3 space-y-2">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-medium text-sm">{line.item_name}</p>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${line.item_type === 'raw_material' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
                               {line.item_type === 'raw_material' ? 'Raw' : 'Inv'}
                             </span>
-                          </TableCell>
-                          <TableCell>
-                            <Input type="number" min="0" step="0.01" value={line.quantity} onChange={e => updateLine(index, "quantity", parseFloat(e.target.value) || 0)} className="w-full" />
-                          </TableCell>
-                          <TableCell>
-                            <Input type="number" min="0" step="0.01" value={line.unit_price} onChange={e => updateLine(index, "unit_price", parseFloat(e.target.value) || 0)} className="w-full" />
-                          </TableCell>
-                          <TableCell>{line.uom}</TableCell>
-                          <TableCell className="font-medium">
-                            {formatCurrency(line.quantity * line.unit_price)}
-                          </TableCell>
-                          <TableCell>
-                            <Button type="button" variant="ghost" size="icon" onClick={() => removeLine(index)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>)}
-                    </TableBody>
-                  </Table>
-                </div>}
+                          </div>
+                          <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeLine(index)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Qty</Label>
+                            <Input type="number" min="0" step="0.01" value={line.quantity} onChange={e => updateLine(index, "quantity", parseFloat(e.target.value) || 0)} className="h-8 text-sm" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Unit Price</Label>
+                            <Input type="number" min="0" step="0.01" value={line.unit_price} onChange={e => updateLine(index, "unit_price", parseFloat(e.target.value) || 0)} className="h-8 text-sm" />
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">UOM: {line.uom}</span>
+                          <span className="font-medium">{formatCurrency(line.quantity * line.unit_price)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Desktop table view */}
+                  <div className="border rounded-lg overflow-hidden hidden md:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Item</TableHead>
+                          <TableHead className="w-20">Type</TableHead>
+                          <TableHead className="w-24">Quantity</TableHead>
+                          <TableHead className="w-32">Unit Price</TableHead>
+                          <TableHead className="w-20">UOM</TableHead>
+                          <TableHead className="w-32">Subtotal</TableHead>
+                          <TableHead className="w-20"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {lines.map((line, index) => <TableRow key={index}>
+                            <TableCell className="font-medium">{line.item_name}</TableCell>
+                            <TableCell>
+                              <span className={`text-xs px-2 py-1 rounded-full ${line.item_type === 'raw_material' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+                                {line.item_type === 'raw_material' ? 'Raw' : 'Inv'}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <Input type="number" min="0" step="0.01" value={line.quantity} onChange={e => updateLine(index, "quantity", parseFloat(e.target.value) || 0)} className="w-full" />
+                            </TableCell>
+                            <TableCell>
+                              <Input type="number" min="0" step="0.01" value={line.unit_price} onChange={e => updateLine(index, "unit_price", parseFloat(e.target.value) || 0)} className="w-full" />
+                            </TableCell>
+                            <TableCell>{line.uom}</TableCell>
+                            <TableCell className="font-medium">
+                              {formatCurrency(line.quantity * line.unit_price)}
+                            </TableCell>
+                            <TableCell>
+                              <Button type="button" variant="ghost" size="icon" onClick={() => removeLine(index)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>)}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
+              )}
 
               <div className="flex justify-end pt-4 border-t">
                 <div className="text-right">
