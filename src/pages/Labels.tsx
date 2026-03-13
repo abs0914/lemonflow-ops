@@ -21,9 +21,9 @@ export default function Labels() {
 
   return (
     <DashboardLayout>
-      <div className="p-8 space-y-8">
+      <div className="p-4 md:p-8 space-y-6 md:space-y-8">
         <div>
-          <h1 className="text-4xl font-bold text-foreground">Label Printing</h1>
+          <h1 className="text-2xl md:text-4xl font-bold text-foreground">Label Printing</h1>
           <p className="text-muted-foreground mt-2">
             Generate and print barcode labels for your products
           </p>

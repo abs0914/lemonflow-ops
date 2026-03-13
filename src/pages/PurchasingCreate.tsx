@@ -477,7 +477,7 @@ export default function PurchasingCreate() {
             </CardContent>
           </Card>
 
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-col-reverse md:flex-row justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => navigate("/purchasing")}>
               Cancel
             </Button>

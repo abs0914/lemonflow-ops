@@ -450,14 +450,14 @@ export default function PurchaseOrderDetail() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => navigate("/purchasing")}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-3xl font-bold">Purchase Order {purchaseOrder.po_number}</h1>
-              <p className="text-muted-foreground">
+              <h1 className="text-xl md:text-3xl font-bold">Purchase Order {purchaseOrder.po_number}</h1>
+              <p className="text-sm text-muted-foreground">
                 Created by {purchaseOrder.user_profiles?.full_name} on{" "}
                 {dateFormatters.short(purchaseOrder.created_at)}
               </p>

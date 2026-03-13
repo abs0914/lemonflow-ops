@@ -300,7 +300,7 @@ export default function CEODashboard() {
                           )}
                         </div>
 
-                        <div className="flex flex-col gap-2">
+                        <div className="flex flex-row md:flex-col gap-2">
                           <Button
                             variant="outline"
                             size="sm"

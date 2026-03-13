@@ -220,10 +220,10 @@ export default function Dashboard() {
                       <p className="font-semibold">{order.products?.name || "Unknown Product"}</p>
                       <p className="text-sm text-muted-foreground">SKU: {order.products?.sku || "N/A"}</p>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-wrap items-center gap-2 md:gap-4">
                       <div className="text-right">
                         <p className="font-medium">Qty: {order.quantity}</p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs md:text-sm text-muted-foreground">
                           {dateFormatters.medium(order.created_at)}
                         </p>
                       </div>

@@ -294,80 +294,136 @@ export default function Production() {
                 No production logs yet. Click "Log Production" to record completed production.
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date & Time</TableHead>
-                    <TableHead>Product</TableHead>
-                    <TableHead>SKU</TableHead>
-                    <TableHead>Quantity</TableHead>
-                    <TableHead>Logged By</TableHead>
-                    <TableHead>Sync Status</TableHead>
-                    <TableHead>Notes</TableHead>
-                    <TableHead className="w-[50px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <>
+                {/* Mobile card view */}
+                <div className="space-y-3 md:hidden">
                   {productionLogs.map((log) => (
-                    <TableRow key={log.id}>
-                      <TableCell>
-                        {format(new Date(log.created_at), "MMM dd, yyyy HH:mm")}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {log.components?.name || "Unknown"}
-                      </TableCell>
-                      <TableCell>{log.components?.sku || "N/A"}</TableCell>
-                      <TableCell>{log.quantity}</TableCell>
-                      <TableCell>
-                        {log.user_profiles?.full_name || "Unknown"}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
+                    <div key={log.id} className="border rounded-lg p-3 space-y-2">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-medium">{log.components?.name || "Unknown"}</p>
+                          <p className="text-xs text-muted-foreground">{log.components?.sku || "N/A"}</p>
+                        </div>
+                        <div className="flex items-center gap-1">
                           {log.autocount_synced ? (
                             <Badge variant="default">Synced</Badge>
                           ) : (
                             <>
                               <Badge variant="secondary">Pending</Badge>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-6 w-6"
-                                    onClick={() => retrySyncMutation.mutate(log.id)}
-                                    disabled={retryingId === log.id}
-                                  >
-                                    <RefreshCw className={`h-3 w-3 ${retryingId === log.id ? "animate-spin" : ""}`} />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Retry sync</TooltipContent>
-                              </Tooltip>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-6 w-6"
+                                onClick={() => retrySyncMutation.mutate(log.id)}
+                                disabled={retryingId === log.id}
+                              >
+                                <RefreshCw className={`h-3 w-3 ${retryingId === log.id ? "animate-spin" : ""}`} />
+                              </Button>
                             </>
                           )}
                         </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {log.notes || "-"}
-                      </TableCell>
-                      <TableCell>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8"
-                              onClick={() => handleEdit(log)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Edit</TooltipContent>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          {format(new Date(log.created_at), "MMM dd, yyyy HH:mm")}
+                        </span>
+                        <span className="font-medium">Qty: {log.quantity}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">{log.user_profiles?.full_name || "Unknown"}</span>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          onClick={() => handleEdit(log)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                      {log.notes && (
+                        <p className="text-xs text-muted-foreground">{log.notes}</p>
+                      )}
+                    </div>
                   ))}
-                </TableBody>
-              </Table>
+                </div>
+                {/* Desktop table view */}
+                <div className="hidden md:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date & Time</TableHead>
+                        <TableHead>Product</TableHead>
+                        <TableHead>SKU</TableHead>
+                        <TableHead>Quantity</TableHead>
+                        <TableHead>Logged By</TableHead>
+                        <TableHead>Sync Status</TableHead>
+                        <TableHead>Notes</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {productionLogs.map((log) => (
+                        <TableRow key={log.id}>
+                          <TableCell>
+                            {format(new Date(log.created_at), "MMM dd, yyyy HH:mm")}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {log.components?.name || "Unknown"}
+                          </TableCell>
+                          <TableCell>{log.components?.sku || "N/A"}</TableCell>
+                          <TableCell>{log.quantity}</TableCell>
+                          <TableCell>
+                            {log.user_profiles?.full_name || "Unknown"}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {log.autocount_synced ? (
+                                <Badge variant="default">Synced</Badge>
+                              ) : (
+                                <>
+                                  <Badge variant="secondary">Pending</Badge>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-6 w-6"
+                                        onClick={() => retrySyncMutation.mutate(log.id)}
+                                        disabled={retryingId === log.id}
+                                      >
+                                        <RefreshCw className={`h-3 w-3 ${retryingId === log.id ? "animate-spin" : ""}`} />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Retry sync</TooltipContent>
+                                  </Tooltip>
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {log.notes || "-"}
+                          </TableCell>
+                          <TableCell>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8"
+                                  onClick={() => handleEdit(log)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Edit</TooltipContent>
+                            </Tooltip>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
