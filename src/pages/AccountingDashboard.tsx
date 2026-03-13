@@ -123,55 +123,89 @@ export default function AccountingDashboard() {
                 No orders pending accounting review
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Order Number</TableHead>
-                    <TableHead>Store</TableHead>
-                    <TableHead>Store Type</TableHead>
-                    <TableHead>Order Date</TableHead>
-                    <TableHead>Payment Ref</TableHead>
-                    <TableHead className="text-right">Total Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <>
+                {/* Mobile card view */}
+                <div className="space-y-3 md:hidden">
                   {filteredOrders?.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-medium">
-                        {order.order_number}
-                      </TableCell>
-                      <TableCell>{order.stores?.store_name || "-"}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="capitalize">
-                          {order.stores?.store_type?.replace("_", " ") || "-"}
+                    <div
+                      key={order.id}
+                      className="border rounded-lg p-3 space-y-2 cursor-pointer hover:bg-muted/50"
+                      onClick={() => navigate(`/accounting/orders/${order.id}`)}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-medium">{order.order_number}</p>
+                          <p className="text-sm text-muted-foreground">{order.stores?.store_name || "-"}</p>
+                        </div>
+                        <Badge className="bg-purple-100 text-purple-800 text-xs">
+                          Pending
                         </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(order.doc_date), "MMM d, yyyy")}
-                      </TableCell>
-                      <TableCell>{order.payment_reference || "-"}</TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatCurrency(order.total_amount || 0)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className="bg-purple-100 text-purple-800">
-                          Pending Accounting
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          onClick={() => navigate(`/accounting/orders/${order.id}`)}
-                        >
-                          Review
-                        </Button>
-                      </TableCell>
-                    </TableRow>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          {format(new Date(order.doc_date), "MMM d, yyyy")}
+                        </span>
+                        <span className="font-bold">{formatCurrency(order.total_amount || 0)}</span>
+                      </div>
+                      {order.payment_reference && (
+                        <p className="text-xs text-muted-foreground">Ref: {order.payment_reference}</p>
+                      )}
+                    </div>
                   ))}
-                </TableBody>
-              </Table>
+                </div>
+                {/* Desktop table view */}
+                <div className="hidden md:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Order Number</TableHead>
+                        <TableHead>Store</TableHead>
+                        <TableHead>Store Type</TableHead>
+                        <TableHead>Order Date</TableHead>
+                        <TableHead>Payment Ref</TableHead>
+                        <TableHead className="text-right">Total Amount</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredOrders?.map((order) => (
+                        <TableRow key={order.id}>
+                          <TableCell className="font-medium">
+                            {order.order_number}
+                          </TableCell>
+                          <TableCell>{order.stores?.store_name || "-"}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="capitalize">
+                              {order.stores?.store_type?.replace("_", " ") || "-"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {format(new Date(order.doc_date), "MMM d, yyyy")}
+                          </TableCell>
+                          <TableCell>{order.payment_reference || "-"}</TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatCurrency(order.total_amount || 0)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className="bg-purple-100 text-purple-800">
+                              Pending Accounting
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              size="sm"
+                              onClick={() => navigate(`/accounting/orders/${order.id}`)}
+                            >
+                              Review
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

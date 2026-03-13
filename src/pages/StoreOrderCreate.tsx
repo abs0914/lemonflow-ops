@@ -301,7 +301,7 @@ export default function StoreOrderCreate() {
             </CardContent>
           </Card>
 
-          <div className="flex justify-end gap-4">
+          <div className="flex flex-col-reverse md:flex-row justify-end gap-2 md:gap-4">
             <Button variant="outline" onClick={() => navigate("/store/orders")}>
               Cancel
             </Button>

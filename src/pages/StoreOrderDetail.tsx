@@ -166,19 +166,19 @@ export default function StoreOrderDetail() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" onClick={() => navigate("/store/orders")}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back
             </Button>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">{order.order_number}</h1>
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{order.order_number}</h1>
               <p className="text-muted-foreground">{order.stores?.store_name}</p>
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {isDraft && (
               <Button
                 variant="outline"

@@ -174,15 +174,15 @@ export default function FulfillmentDashboard() {
                 {filteredOrders.map((order) => (
                   <Card key={order.id} className="hover:shadow-md transition-shadow">
                     <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
                           <input
                             type="checkbox"
                             checked={selectedOrders.includes(order.id)}
                             onChange={() => toggleOrderSelection(order.id)}
                             className="h-4 w-4 rounded border-gray-300"
                           />
-                          <div>
+                          <div className="min-w-0">
                             <div className="font-medium">{order.order_number}</div>
                             <div className="text-sm text-muted-foreground">
                               {order.stores?.store_name}
@@ -190,7 +190,7 @@ export default function FulfillmentDashboard() {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-4">
+                        <div className="flex flex-wrap items-center gap-2 md:gap-4 ml-7 md:ml-0">
                           <div className="text-right hidden md:block">
                             <div className="text-sm text-muted-foreground">Order Date</div>
                             <div className="font-medium">
@@ -206,8 +206,8 @@ export default function FulfillmentDashboard() {
                             </div>
                           )}
                           <div className="text-right">
-                            <div className="text-sm text-muted-foreground">Total</div>
-                            <div className="font-bold">
+                            <div className="text-xs md:text-sm text-muted-foreground">Total</div>
+                            <div className="font-bold text-sm md:text-base">
                               ₱{((order.total_amount || 0) + (order.delivery_fee || 0) + (order.shipping_fee || 0)).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
                             </div>
                           </div>

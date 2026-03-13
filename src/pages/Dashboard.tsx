@@ -162,9 +162,9 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout>
-      <div className="p-8 space-y-8">
+      <div className="p-4 md:p-8 space-y-6 md:space-y-8">
         <div>
-          <h1 className="text-4xl font-bold text-foreground">
+          <h1 className="text-2xl md:text-4xl font-bold text-foreground">
             Welcome back, {profile.full_name}
           </h1>
           <p className="text-muted-foreground mt-2">
@@ -220,10 +220,10 @@ export default function Dashboard() {
                       <p className="font-semibold">{order.products?.name || "Unknown Product"}</p>
                       <p className="text-sm text-muted-foreground">SKU: {order.products?.sku || "N/A"}</p>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-wrap items-center gap-2 md:gap-4">
                       <div className="text-right">
                         <p className="font-medium">Qty: {order.quantity}</p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs md:text-sm text-muted-foreground">
                           {dateFormatters.medium(order.created_at)}
                         </p>
                       </div>

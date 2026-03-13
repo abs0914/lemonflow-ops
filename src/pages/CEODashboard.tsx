@@ -263,9 +263,9 @@ export default function CEODashboard() {
                 {pendingPOs.map((po: any) => (
                   <Card key={po.id} className="border-2 border-primary/20">
                     <CardContent className="pt-6">
-                      <div className="flex items-start justify-between gap-4">
+                      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                         <div className="flex-1 space-y-2">
-                          <div className="flex items-center gap-3">
+                          <div className="flex flex-wrap items-center gap-2 md:gap-3">
                             <h3 className="text-lg font-semibold">{po.po_number}</h3>
                             <Badge variant="secondary">
                               <Clock className="h-3 w-3 mr-1" />
@@ -273,7 +273,7 @@ export default function CEODashboard() {
                             </Badge>
                           </div>
                           
-                          <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm">
                             <div>
                               <span className="text-muted-foreground">Supplier:</span>{" "}
                               <span className="font-medium">{po.suppliers?.company_name}</span>
@@ -300,7 +300,7 @@ export default function CEODashboard() {
                           )}
                         </div>
 
-                        <div className="flex flex-col gap-2">
+                        <div className="flex flex-row md:flex-col gap-2">
                           <Button
                             variant="outline"
                             size="sm"
