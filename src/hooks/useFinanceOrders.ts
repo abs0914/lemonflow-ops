@@ -109,15 +109,17 @@ export function useRejectPayment() {
       if (releaseError) throw releaseError;
 
       // Then update the order status
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("sales_orders")
         .update({
           status: "cancelled",
           cancellation_reason: reason,
         })
-        .eq("id", orderId);
+        .eq("id", orderId)
+        .select();
 
       if (error) throw error;
+      if (!data || data.length === 0) throw new Error("Update failed — no rows were affected. You may not have permission to perform this action.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["finance-orders"] });
