@@ -56,7 +56,7 @@ export function useConfirmPayment() {
       if (!user) throw new Error("User not authenticated");
 
       // Update order with fees and send to franchisee for proof of payment
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("sales_orders")
         .update({
           status: "awaiting_proof",
@@ -74,9 +74,11 @@ export function useConfirmPayment() {
           overpayment: overpayment ?? 0,
           discount_amount: discountAmount ?? 0,
         } as any)
-        .eq("id", orderId);
+        .eq("id", orderId)
+        .select();
 
       if (error) throw error;
+      if (!data || data.length === 0) throw new Error("Update failed — no rows were affected. You may not have permission to perform this action.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["finance-orders"] });
@@ -107,15 +109,17 @@ export function useRejectPayment() {
       if (releaseError) throw releaseError;
 
       // Then update the order status
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("sales_orders")
         .update({
           status: "cancelled",
           cancellation_reason: reason,
         })
-        .eq("id", orderId);
+        .eq("id", orderId)
+        .select();
 
       if (error) throw error;
+      if (!data || data.length === 0) throw new Error("Update failed — no rows were affected. You may not have permission to perform this action.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["finance-orders"] });
@@ -133,16 +137,18 @@ export function useValidateProof() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("sales_orders")
         .update({
           status: "pending_accounting",
           delivery_date: deliveryDate,
           ...(fulfillmentType ? { delivery_notes: fulfillmentType } : {}),
         } as any)
-        .eq("id", orderId);
+        .eq("id", orderId)
+        .select();
 
       if (error) throw error;
+      if (!data || data.length === 0) throw new Error("Update failed — no rows were affected. You may not have permission to perform this action.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["finance-orders"] });
