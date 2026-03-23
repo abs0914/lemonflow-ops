@@ -56,7 +56,7 @@ export function useConfirmPayment() {
       if (!user) throw new Error("User not authenticated");
 
       // Update order with fees and send to franchisee for proof of payment
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("sales_orders")
         .update({
           status: "awaiting_proof",
@@ -74,9 +74,11 @@ export function useConfirmPayment() {
           overpayment: overpayment ?? 0,
           discount_amount: discountAmount ?? 0,
         } as any)
-        .eq("id", orderId);
+        .eq("id", orderId)
+        .select();
 
       if (error) throw error;
+      if (!data || data.length === 0) throw new Error("Update failed — no rows were affected. You may not have permission to perform this action.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["finance-orders"] });
