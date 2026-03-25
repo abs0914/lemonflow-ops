@@ -190,7 +190,7 @@ export default function IncomingInventory() {
           </TabsContent>
 
           <TabsContent value="receive" className="space-y-4">
-            <EnhancedGoodsReceivedForm />
+            <EnhancedGoodsReceivedForm preselectedPOId={preselectedPOId} />
           </TabsContent>
 
           <TabsContent value="direct" className="space-y-4">
