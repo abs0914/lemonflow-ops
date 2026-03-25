@@ -162,7 +162,7 @@ export function EnhancedGoodsReceivedForm({ preselectedPOId }: EnhancedGoodsRece
       prev.map((line) => ({
         ...line,
         selected: checked,
-        quantityReceived: checked ? String(line.quantity - (receivedData?.[line.id] || 0)) : "",
+        quantityReceived: checked ? String(line.quantity - (line.received_quantity || 0)) : "",
       }))
     );
   };
