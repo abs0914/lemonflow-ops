@@ -134,31 +134,11 @@ export function EnhancedGoodsReceivedForm({ preselectedPOId }: EnhancedGoodsRece
     enabled: !!selectedPO,
   });
 
-  // Fetch already received quantities
-  const { data: receivedData } = useQuery({
-    queryKey: ["received-quantities", selectedPO],
-    queryFn: async () => {
-      if (!selectedPO) return {};
-
-      const { data, error } = await supabase
-        .from("stock_movements")
-        .select("reference_id, quantity")
-        .eq("purchase_order_id", selectedPO)
-        .eq("movement_type", "receipt");
-
-      if (error) throw error;
-
-      // Sum quantities by reference_id (line id)
-      const received: Record<string, number> = {};
-      data?.forEach((m) => {
-        if (m.reference_id) {
-          received[m.reference_id] = (received[m.reference_id] || 0) + m.quantity;
-        }
-      });
-      return received;
-    },
-    enabled: !!selectedPO,
-  });
+  // Helper to get already received quantity from the line's received_quantity field
+  const getReceivedQty = (lineId: string): number => {
+    const line = poLines?.find(l => l.id === lineId);
+    return line?.received_quantity || 0;
+  };
 
   // Update lines state when PO lines change
   useEffect(() => {
