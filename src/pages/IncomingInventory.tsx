@@ -27,6 +27,7 @@ export default function IncomingInventory() {
   const { profile, loading } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("pending");
+  const [preselectedPOId, setPreselectedPOId] = useState<string>("");
 
   useEffect(() => {
     if (!loading && (!profile || !["Admin", "Warehouse", "Fulfillment", "Production", "Accounting"].includes(profile.role))) {
