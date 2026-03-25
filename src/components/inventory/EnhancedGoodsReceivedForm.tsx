@@ -323,6 +323,9 @@ export function EnhancedGoodsReceivedForm({ preselectedPOId }: EnhancedGoodsRece
       queryClient.invalidateQueries({ queryKey: ["components"] });
       queryClient.invalidateQueries({ queryKey: ["raw-materials"] });
       queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
+      queryClient.invalidateQueries({ queryKey: ["approved-pos-for-receiving"] });
+      queryClient.invalidateQueries({ queryKey: ["po-lines-for-receiving"] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
     },
     onError: (error: Error) => {
       toast({
