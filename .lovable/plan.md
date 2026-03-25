@@ -1,29 +1,25 @@
 
 
-# Update PO Status on Goods Receipt
+# Consolidation Report: Date Range on Order Date
 
-## Problem
-When goods are received via the Receiving Report, the PO's `goods_received` flag and per-line received quantities are never updated. The system only tracks receipts through `stock_movements` lookups.
+## Summary
+Update the consolidation report to use a date range picker filtering by **order date** (`doc_date`) instead of `delivery_date`. Include all processing orders in the results.
 
 ## Changes
 
-### 1. Database migration: Add `received_quantity` to `purchase_order_lines`
-- Add column `received_quantity NUMERIC NOT NULL DEFAULT 0`
-- This becomes the authoritative tracker for partial receipts per line
+### 1. `src/hooks/useFulfillment.ts` — `useFulfillmentConsolidation`
+- Change signature from `(date: string)` to `(fromDate: string, toDate: string)`
+- Replace `.eq("delivery_date", date)` with `.gte("doc_date", fromDate).lte("doc_date", toDate)`
+- Add second query for all `processing` status orders with no `doc_date` filter (to ensure none are missed)
+- Merge and deduplicate order IDs before fetching lines
+- Update query key to `["fulfillment-consolidation", fromDate, toDate]`
 
-### 2. Update `EnhancedGoodsReceivedForm.tsx` receive mutation
-After inserting stock movements, add these steps:
-- For each received line, increment `purchase_order_lines.received_quantity` by the quantity received (using current value + new qty via a read-then-update or raw SQL increment)
-- After all lines are updated, re-fetch all lines for the PO and check if every line has `received_quantity >= quantity`
-- If fully received: update `purchase_orders` set `goods_received = true`, `received_at = now()`, `received_by = profile.id`
-- Invalidate the `approved-pos-for-receiving` query so the PO disappears from the dropdown once fully received
+### 2. `src/components/fulfillment/ConsolidationReport.tsx`
+- Replace single `selectedDate` state with `dateRange: { from: Date; to: Date }` defaulting to today-to-today
+- Switch Calendar to `mode="range"` with `pointer-events-auto`
+- Update button label to show "MMM dd – MMM dd, yyyy" range format
+- Pass `fromDate` and `toDate` strings to the updated hook
+- Update print header, CSV filename, and empty-state message to reflect date range and "Order Date" label
 
-### 3. UI enhancement
-- Use the new `received_quantity` column from `purchase_order_lines` instead of summing `stock_movements` (replace the `receivedData` query)
-- Already-received and remaining columns will use this authoritative field
-
-## Technical Detail
-- The increment must handle concurrent receives safely. We'll use Supabase RPC or read-then-write pattern since `purchase_order_lines` doesn't support SQL increments via the JS client directly. A simple approach: read current `received_quantity`, add new qty, write back. Acceptable for this use case (low concurrency).
-- Existing RLS policies on `purchase_order_lines` already allow Admin/Warehouse/Production to update, so no new policies needed.
-- The `purchase_orders` table already has `goods_received`, `received_at`, and `received_by` columns ready to use.
+### 3. No database changes needed
 
