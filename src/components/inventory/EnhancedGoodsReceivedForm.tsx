@@ -121,6 +121,7 @@ export function EnhancedGoodsReceivedForm({ preselectedPOId }: EnhancedGoodsRece
           quantity,
           unit_price,
           uom,
+          received_quantity,
           components(id, name, sku, unit, autocount_item_code),
           raw_materials(id, name, sku, unit, autocount_item_code)
         `)
