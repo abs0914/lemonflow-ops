@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { formatCurrency } from "@/lib/currency";
 import { dateFormatters } from "@/lib/datetime";
@@ -7,14 +7,15 @@ import tlcLogo from "@/assets/tlc-logo.png";
 interface SalesOrderPrintViewProps {
   order: any;
   lines: any[];
+  mode: "print" | "download";
   onClose: () => void;
 }
 
-export function SalesOrderPrintView({ order, lines, onClose }: SalesOrderPrintViewProps) {
+export function SalesOrderPrintView({ order, lines, mode, onClose }: SalesOrderPrintViewProps) {
   const [ready, setReady] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Small delay to ensure portal is rendered
     const timer = setTimeout(() => setReady(true), 100);
     return () => clearTimeout(timer);
   }, []);
@@ -22,18 +23,75 @@ export function SalesOrderPrintView({ order, lines, onClose }: SalesOrderPrintVi
   useEffect(() => {
     if (!ready) return;
 
-    const timer = setTimeout(() => {
-      window.print();
-    }, 200);
+    if (mode === "print") {
+      const timer = setTimeout(() => {
+        window.print();
+      }, 200);
 
-    const handleAfterPrint = () => onClose();
-    window.addEventListener("afterprint", handleAfterPrint);
+      const handleAfterPrint = () => onClose();
+      window.addEventListener("afterprint", handleAfterPrint);
 
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener("afterprint", handleAfterPrint);
-    };
-  }, [ready, onClose]);
+      return () => {
+        clearTimeout(timer);
+        window.removeEventListener("afterprint", handleAfterPrint);
+      };
+    }
+
+    if (mode === "download") {
+      const timer = setTimeout(async () => {
+        try {
+          const el = contentRef.current;
+          if (!el) return;
+
+          // Temporarily make the portal visible for capture
+          const portal = document.getElementById("so-print-portal");
+          if (portal) {
+            portal.style.display = "block";
+            portal.style.position = "absolute";
+            portal.style.left = "-9999px";
+            portal.style.top = "0";
+          }
+
+          const html2canvas = (await import("html2canvas")).default;
+          const { jsPDF } = await import("jspdf");
+
+          const canvas = await html2canvas(el, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: "#ffffff",
+          });
+
+          const imgData = canvas.toDataURL("image/png");
+          const pdf = new jsPDF("p", "mm", "a4");
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = pdf.internal.pageSize.getHeight();
+          const imgWidth = pdfWidth - 20; // 10mm margin each side
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+          let heightLeft = imgHeight;
+          let position = 10; // top margin
+
+          pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
+          heightLeft -= (pdfHeight - 20);
+
+          while (heightLeft > 0) {
+            position = -(pdfHeight - 20) + 10;
+            pdf.addPage();
+            pdf.addImage(imgData, "PNG", 10, position + (pdfHeight - 20) - imgHeight + heightLeft, imgWidth, imgHeight);
+            heightLeft -= (pdfHeight - 20);
+          }
+
+          pdf.save(`${order.order_number}.pdf`);
+        } catch (error) {
+          console.error("PDF generation failed:", error);
+        } finally {
+          onClose();
+        }
+      }, 300);
+
+      return () => clearTimeout(timer);
+    }
+  }, [ready, mode, onClose, order.order_number]);
 
   const totalAmount = order.total_amount || 0;
   const deliveryFee = order.delivery_fee || 0;
@@ -63,7 +121,7 @@ export function SalesOrderPrintView({ order, lines, onClose }: SalesOrderPrintVi
         }
       `}</style>
 
-      <div style={{ padding: "2rem" }}>
+      <div ref={contentRef} style={{ padding: "2rem", backgroundColor: "#ffffff", width: "210mm", fontFamily: "Arial, sans-serif" }}>
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "2rem", borderBottom: "2px solid #1f2937", paddingBottom: "1rem" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>

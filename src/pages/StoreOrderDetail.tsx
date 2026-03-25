@@ -35,7 +35,7 @@ export default function StoreOrderDetail() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isUploadingProof, setIsUploadingProof] = useState(false);
-  const [showPrintView, setShowPrintView] = useState(false);
+  const [printMode, setPrintMode] = useState<"print" | "download" | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: order, isLoading } = useSalesOrder(id);
