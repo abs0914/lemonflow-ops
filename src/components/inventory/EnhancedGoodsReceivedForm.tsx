@@ -134,11 +134,6 @@ export function EnhancedGoodsReceivedForm({ preselectedPOId }: EnhancedGoodsRece
     enabled: !!selectedPO,
   });
 
-  // Helper to get already received quantity from the line's received_quantity field
-  const getReceivedQty = (lineId: string): number => {
-    const line = poLines?.find(l => l.id === lineId);
-    return line?.received_quantity || 0;
-  };
 
   // Update lines state when PO lines change
   useEffect(() => {
