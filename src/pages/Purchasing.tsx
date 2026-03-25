@@ -233,9 +233,16 @@ export default function Purchasing() {
       submitted: "secondary",
       approved: "default",
       verified: "default",
+      partially_received: "secondary",
+      received: "default",
       cancelled: "destructive"
     };
-    return <Badge variant={variants[status] || "outline"}>{status.charAt(0).toUpperCase() + status.slice(1)}</Badge>;
+    const labels: Record<string, string> = {
+      partially_received: "Partial",
+      received: "Received",
+    };
+    const label = labels[status] || status.charAt(0).toUpperCase() + status.slice(1);
+    return <Badge variant={variants[status] || "outline"}>{label}</Badge>;
   };
 
   const getSyncStatusBadge = (order: any) => {
@@ -395,6 +402,8 @@ export default function Purchasing() {
                     <TabsTrigger value="submitted">Submitted</TabsTrigger>
                     <TabsTrigger value="approved">Approved</TabsTrigger>
                     <TabsTrigger value="verified">Verified</TabsTrigger>
+                    <TabsTrigger value="partially_received">Partial</TabsTrigger>
+                    <TabsTrigger value="received">Received</TabsTrigger>
                   </TabsList>
                 </Tabs>
               )}

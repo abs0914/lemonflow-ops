@@ -96,7 +96,7 @@ export interface PurchaseOrder {
   supplier_id: string;
   doc_date: string;
   delivery_date: string | null;
-  status: 'draft' | 'submitted' | 'approved' | 'verified' | 'cancelled';
+  status: 'draft' | 'submitted' | 'approved' | 'verified' | 'partially_received' | 'received' | 'cancelled';
   total_amount: number;
   remarks: string | null;
   created_by: string;
@@ -129,6 +129,7 @@ export interface PurchaseOrderLine {
   raw_material_id: string | null;
   item_type: 'component' | 'raw_material';
   quantity: number;
+  received_quantity: number;
   unit_price: number;
   uom: string;
   line_remarks: string | null;

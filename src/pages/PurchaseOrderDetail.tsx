@@ -1,6 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Edit, Trash2, FileText, CheckCircle, X, Upload, PackageCheck, Printer, ShieldCheck, ImagePlus } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, FileText, CheckCircle, X, Upload, PackageCheck, Printer, ShieldCheck, ImagePlus, ChevronDown, ChevronRight } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { usePurchaseOrder, usePurchaseOrderLines } from "@/hooks/usePurchaseOrders";
+import { usePurchaseOrder, usePurchaseOrderLines, usePOLineReceipts } from "@/hooks/usePurchaseOrders";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -40,6 +40,27 @@ export default function PurchaseOrderDetail() {
 
   const { data: purchaseOrder, isLoading: loadingPO } = usePurchaseOrder(id);
   const { data: lines, isLoading: loadingLines } = usePurchaseOrderLines(id);
+  const { data: lineReceipts } = usePOLineReceipts(id);
+  const [expandedLines, setExpandedLines] = useState<Set<string>>(new Set());
+
+  const receiptsByLine = useMemo(() => {
+    const map = new Map<string, typeof lineReceipts>();
+    lineReceipts?.forEach(r => {
+      const existing = map.get(r.reference_id || "") || [];
+      existing.push(r);
+      map.set(r.reference_id || "", existing);
+    });
+    return map;
+  }, [lineReceipts]);
+
+  const toggleLineExpand = (lineId: string) => {
+    setExpandedLines(prev => {
+      const next = new Set(prev);
+      if (next.has(lineId)) next.delete(lineId);
+      else next.add(lineId);
+      return next;
+    });
+  };
 
   const { data: cashGivenByUser } = useQuery({
     queryKey: ["user-profile", purchaseOrder?.cash_given_by],
@@ -414,11 +435,18 @@ export default function PurchaseOrderDetail() {
       submitted: "secondary",
       approved: "default",
       verified: "default",
+      partially_received: "secondary",
+      received: "default",
       cancelled: "destructive",
     };
+    const labels: Record<string, string> = {
+      partially_received: "Partially Received",
+      received: "Received",
+    };
+    const label = labels[status] || status.charAt(0).toUpperCase() + status.slice(1);
     return (
       <Badge variant={variants[status] || "outline"}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {label}
       </Badge>
     );
   };
@@ -565,7 +593,7 @@ export default function PurchaseOrderDetail() {
                 </Button>
               </>
             )}
-            {purchaseOrder.status === "verified" && (
+            {(purchaseOrder.status === "verified" || purchaseOrder.status === "partially_received" || purchaseOrder.status === "received") && (
               <>
                 <Button
                   variant="outline"
@@ -753,10 +781,12 @@ export default function PurchaseOrderDetail() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8"></TableHead>
                   <TableHead className="w-12">#</TableHead>
-                  <TableHead>Component</TableHead>
+                  <TableHead>Item</TableHead>
                   <TableHead>SKU</TableHead>
-                  <TableHead className="text-right">Quantity</TableHead>
+                  <TableHead className="text-right">Ordered</TableHead>
+                  <TableHead className="text-right">Received</TableHead>
                   <TableHead className="text-right">Unit Price</TableHead>
                   <TableHead>UOM</TableHead>
                   <TableHead className="text-right">Subtotal</TableHead>
@@ -765,18 +795,65 @@ export default function PurchaseOrderDetail() {
               <TableBody>
                 {lines?.map((line) => {
                   const item = line.item_type === 'raw_material' ? line.raw_materials : line.components;
+                  const receipts = receiptsByLine.get(line.id) || [];
+                  const receivedQty = (line as any).received_quantity || 0;
+                  const isExpanded = expandedLines.has(line.id);
+                  const hasReceipts = receipts.length > 0;
+
                   return (
-                    <TableRow key={line.id}>
-                      <TableCell className="font-medium">{line.line_number}</TableCell>
-                      <TableCell>{item?.name}</TableCell>
-                      <TableCell className="font-mono text-sm">{item?.sku}</TableCell>
-                      <TableCell className="text-right">{line.quantity}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(line.unit_price)}</TableCell>
-                      <TableCell>{line.uom}</TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatCurrency(line.quantity * line.unit_price)}
-                      </TableCell>
-                    </TableRow>
+                    <>
+                      <TableRow
+                        key={line.id}
+                        className={hasReceipts ? "cursor-pointer hover:bg-accent/50" : ""}
+                        onClick={() => hasReceipts && toggleLineExpand(line.id)}
+                      >
+                        <TableCell>
+                          {hasReceipts && (
+                            isExpanded
+                              ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                              : <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </TableCell>
+                        <TableCell className="font-medium">{line.line_number}</TableCell>
+                        <TableCell>{item?.name}</TableCell>
+                        <TableCell className="font-mono text-sm">{item?.sku}</TableCell>
+                        <TableCell className="text-right">{line.quantity}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <span className={receivedQty >= line.quantity ? "text-emerald-600 font-medium" : ""}>
+                              {receivedQty}/{line.quantity}
+                            </span>
+                            {receivedQty >= line.quantity && (
+                              <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">✓</Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">{formatCurrency(line.unit_price)}</TableCell>
+                        <TableCell>{line.uom}</TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCurrency(line.quantity * line.unit_price)}
+                        </TableCell>
+                      </TableRow>
+                      {isExpanded && receipts.map((receipt) => (
+                        <TableRow key={receipt.id} className="bg-muted/30">
+                          <TableCell />
+                          <TableCell />
+                          <TableCell colSpan={2} className="text-sm text-muted-foreground">
+                            <span className="font-mono">{receipt.batch_number || "No batch"}</span>
+                            {receipt.warehouse_location && (
+                              <span className="ml-2">@ {receipt.warehouse_location}</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right text-sm">{receipt.quantity}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {dateFormatters.short(receipt.created_at)}
+                          </TableCell>
+                          <TableCell colSpan={3} className="text-sm text-muted-foreground">
+                            by {receipt.performer_name}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </>
                   );
                 })}
               </TableBody>

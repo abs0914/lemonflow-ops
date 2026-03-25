@@ -17,6 +17,8 @@ export function MobilePOCard({ order, onClick }: MobilePOCardProps) {
       submitted: "secondary",
       approved: "default",
       verified: "default",
+      partially_received: "secondary",
+      received: "default",
       cancelled: "destructive"
     };
     return variants[status] || "outline";
@@ -41,7 +43,7 @@ export function MobilePOCard({ order, onClick }: MobilePOCardProps) {
           </div>
           <div className="flex gap-2 flex-wrap justify-end">
             <Badge variant={getStatusVariant(order.status)} className="text-xs">
-              {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+              {order.status === 'partially_received' ? 'Partial' : order.status === 'received' ? 'Received' : order.status.charAt(0).toUpperCase() + order.status.slice(1)}
             </Badge>
             <Badge variant={order.autocount_synced ? "default" : "outline"} className="text-xs">
               {order.autocount_synced ? "Synced" : "Not Synced"}

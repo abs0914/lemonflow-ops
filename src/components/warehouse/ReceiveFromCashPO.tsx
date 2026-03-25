@@ -117,14 +117,29 @@ export function ReceiveFromCashPO({
         }
       }
 
-      // Mark PO as goods received
+      // Check if all lines are fully received and update PO status
+      const { data: allLines } = await supabase
+        .from("purchase_order_lines")
+        .select("quantity, received_quantity")
+        .eq("purchase_order_id", purchaseOrderId);
+
+      const isFullyReceived = allLines?.every(
+        (l) => (l.received_quantity || 0) >= l.quantity
+      );
+
+      const poUpdate: any = {};
+      if (isFullyReceived) {
+        poUpdate.status = "received";
+        poUpdate.goods_received = true;
+        poUpdate.received_at = new Date().toISOString();
+        poUpdate.received_by = user.id;
+      } else {
+        poUpdate.status = "partially_received";
+      }
+
       const { error: poError } = await supabase
         .from("purchase_orders")
-        .update({
-          goods_received: true,
-          received_at: new Date().toISOString(),
-          received_by: user.id,
-        })
+        .update(poUpdate)
         .eq("id", purchaseOrderId);
 
       if (poError) throw poError;

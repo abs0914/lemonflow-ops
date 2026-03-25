@@ -95,7 +95,7 @@ export function EnhancedGoodsReceivedForm({ preselectedPOId }: EnhancedGoodsRece
           is_cash_purchase,
           suppliers(company_name, supplier_code)
         `)
-        .eq("status", "verified")
+        .in("status", ["verified", "partially_received"])
         .or("goods_received.is.null,goods_received.eq.false")
         .order("doc_date", { ascending: false });
 
@@ -257,11 +257,15 @@ export function EnhancedGoodsReceivedForm({ preselectedPOId }: EnhancedGoodsRece
         const isFullyReceived = allLines.every(
           (l) => (l.received_quantity || 0) >= l.quantity
         );
+        const hasAnyReceived = allLines.some(
+          (l) => (l.received_quantity || 0) > 0
+        );
 
         if (isFullyReceived) {
           const { data: updateData, error: updateError } = await supabase
             .from("purchase_orders")
             .update({
+              status: "received",
               goods_received: true,
               received_at: new Date().toISOString(),
               received_by: profile.id,
@@ -270,9 +274,18 @@ export function EnhancedGoodsReceivedForm({ preselectedPOId }: EnhancedGoodsRece
             .select();
 
           if (updateError) {
-            console.error("Error updating PO goods_received:", updateError);
+            console.error("Error updating PO to received:", updateError);
           } else if (!updateData || updateData.length === 0) {
             console.error("PO update returned 0 rows - possible RLS block");
+          }
+        } else if (hasAnyReceived) {
+          const { error: updateError } = await supabase
+            .from("purchase_orders")
+            .update({ status: "partially_received" })
+            .eq("id", selectedPO);
+
+          if (updateError) {
+            console.error("Error updating PO to partially_received:", updateError);
           }
         }
       }
