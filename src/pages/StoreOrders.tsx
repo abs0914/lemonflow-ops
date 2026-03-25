@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -41,8 +42,12 @@ export default function StoreOrders() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
 
+  const { profile } = useAuth();
+  const operationalRoles = ["Admin", "Warehouse", "Fulfillment", "Production", "Accounting"];
+  const isOperational = operationalRoles.includes(profile?.role || "");
+
   const { data: userStores } = useAllUserStores();
-  const storeIds = userStores?.map(s => s.store_id);
+  const storeIds = isOperational ? undefined : userStores?.map(s => s.store_id);
   const { data: orders, isLoading, refetch } = useSalesOrders(storeIds);
 
   const filteredOrders = useMemo(() => {
