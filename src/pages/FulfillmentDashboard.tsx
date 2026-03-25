@@ -157,77 +157,83 @@ export default function FulfillmentDashboard() {
             <TabsTrigger value="consolidation">Consolidation</TabsTrigger>
           </TabsList>
 
-          <TabsContent value={activeTab} className="mt-4">
-            {isLoading ? (
-              <div className="space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-24 w-full" />
-                ))}
-              </div>
-            ) : filteredOrders.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <Package className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                  <p className="mt-4 text-muted-foreground">No orders found</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                {filteredOrders.map((order) => (
-                  <Card key={order.id} className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-4">
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="checkbox"
-                            checked={selectedOrders.includes(order.id)}
-                            onChange={() => toggleOrderSelection(order.id)}
-                            className="h-4 w-4 rounded border-gray-300"
-                          />
-                          <div className="min-w-0">
-                            <div className="font-medium">{order.order_number}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {order.stores?.store_name}
-                            </div>
-                          </div>
-                        </div>
+          <TabsContent value="consolidation" className="mt-4">
+            <ConsolidationReport />
+          </TabsContent>
 
-                        <div className="flex flex-wrap items-center gap-2 md:gap-4 ml-7 md:ml-0">
-                          <div className="text-right hidden md:block">
-                            <div className="text-sm text-muted-foreground">Order Date</div>
-                            <div className="font-medium">
-                              {format(new Date(order.doc_date), "MMM dd, yyyy")}
-                            </div>
-                          </div>
-                          {order.delivery_date && (
-                            <div className="text-right hidden md:block">
-                              <div className="text-sm text-muted-foreground">Delivery</div>
-                              <div className="font-medium">
-                                {format(new Date(order.delivery_date), "MMM dd, yyyy")}
+          <TabsContent value={activeTab} className="mt-4">
+            {activeTab !== "consolidation" && (
+              isLoading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-24 w-full" />
+                  ))}
+                </div>
+              ) : filteredOrders.length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <Package className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                    <p className="mt-4 text-muted-foreground">No orders found</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {filteredOrders.map((order) => (
+                    <Card key={order.id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="p-4">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="checkbox"
+                              checked={selectedOrders.includes(order.id)}
+                              onChange={() => toggleOrderSelection(order.id)}
+                              className="h-4 w-4 rounded border-gray-300"
+                            />
+                            <div className="min-w-0">
+                              <div className="font-medium">{order.order_number}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {order.stores?.store_name}
                               </div>
                             </div>
-                          )}
-                          <div className="text-right">
-                            <div className="text-xs md:text-sm text-muted-foreground">Total</div>
-                            <div className="font-bold text-sm md:text-base">
-                              ₱{((order.total_amount || 0) + (order.delivery_fee || 0) + (order.shipping_fee || 0)).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
-                            </div>
                           </div>
-                          {getStatusBadge(order.status)}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigate(`/fulfillment/orders/${order.id}`)}
-                          >
-                            <Eye className="mr-2 h-4 w-4" />
-                            View
-                          </Button>
+
+                          <div className="flex flex-wrap items-center gap-2 md:gap-4 ml-7 md:ml-0">
+                            <div className="text-right hidden md:block">
+                              <div className="text-sm text-muted-foreground">Order Date</div>
+                              <div className="font-medium">
+                                {format(new Date(order.doc_date), "MMM dd, yyyy")}
+                              </div>
+                            </div>
+                            {order.delivery_date && (
+                              <div className="text-right hidden md:block">
+                                <div className="text-sm text-muted-foreground">Delivery</div>
+                                <div className="font-medium">
+                                  {format(new Date(order.delivery_date), "MMM dd, yyyy")}
+                                </div>
+                              </div>
+                            )}
+                            <div className="text-right">
+                              <div className="text-xs md:text-sm text-muted-foreground">Total</div>
+                              <div className="font-bold text-sm md:text-base">
+                                ₱{((order.total_amount || 0) + (order.delivery_fee || 0) + (order.shipping_fee || 0)).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                              </div>
+                            </div>
+                            {getStatusBadge(order.status)}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigate(`/fulfillment/orders/${order.id}`)}
+                            >
+                              <Eye className="mr-2 h-4 w-4" />
+                              View
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )
             )}
           </TabsContent>
         </Tabs>
