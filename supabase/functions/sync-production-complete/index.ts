@@ -134,15 +134,15 @@ Deno.serve(async (req) => {
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
       );
 
-      const { movement_id } = await req.json();
-
-      await supabase.from("autocount_sync_log").insert({
-        reference_id: movement_id,
-        reference_type: "stock_movement",
-        sync_type: "production_complete",
-        sync_status: "failed",
-        error_message: errorMessage,
-      });
+      if (body?.movement_id) {
+        await supabase.from("autocount_sync_log").insert({
+          reference_id: body.movement_id,
+          reference_type: "stock_movement",
+          sync_type: "production_complete",
+          sync_status: "failed",
+          error_message: errorMessage,
+        });
+      }
     } catch (logError) {
       console.error("Failed to log sync error:", logError);
     }
