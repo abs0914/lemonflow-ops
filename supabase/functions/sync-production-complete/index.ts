@@ -17,14 +17,16 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let body: ProductionCompleteRequest | null = null;
+
   try {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { movement_id, component_id, quantity }: ProductionCompleteRequest =
-      await req.json();
+    body = await req.json();
+    const { movement_id, component_id, quantity } = body!;
 
     console.log("Processing production complete sync:", {
       movement_id,
