@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Edit, Trash2, FileText, CheckCircle, X, Upload, PackageCheck, Printer, ShieldCheck, ImagePlus } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
