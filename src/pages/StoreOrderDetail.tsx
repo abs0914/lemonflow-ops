@@ -380,11 +380,12 @@ export default function StoreOrderDetail() {
         orderNumber={order.order_number}
       />
 
-      {showPrintView && order && (
+      {printMode && order && (
         <SalesOrderPrintView
           order={order}
           lines={lines || []}
-          onClose={() => setShowPrintView(false)}
+          mode={printMode}
+          onClose={() => setPrintMode(null)}
         />
       )}
     </DashboardLayout>
