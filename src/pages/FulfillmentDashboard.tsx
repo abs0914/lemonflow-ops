@@ -11,6 +11,7 @@ import { useFulfillmentOrders } from "@/hooks/useFulfillment";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { ManifestGenerator } from "@/components/fulfillment/ManifestGenerator";
+import { ConsolidationReport } from "@/components/fulfillment/ConsolidationReport";
 
 const statusColors: Record<string, string> = {
   submitted: "bg-blue-100 text-blue-800",
