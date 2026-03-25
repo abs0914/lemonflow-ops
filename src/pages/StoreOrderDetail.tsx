@@ -379,6 +379,14 @@ export default function StoreOrderDetail() {
         onConfirm={handleDeleteOrder}
         orderNumber={order.order_number}
       />
+
+      {showPrintView && order && (
+        <SalesOrderPrintView
+          order={order}
+          lines={lines || []}
+          onClose={() => setShowPrintView(false)}
+        />
+      )}
     </DashboardLayout>
   );
 }
