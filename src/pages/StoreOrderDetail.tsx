@@ -211,6 +211,14 @@ export default function StoreOrderDetail() {
                 Sync to AutoCount
               </Button>
             )}
+            <Button variant="outline" onClick={() => setShowPrintView(true)}>
+              <Printer className="mr-2 h-4 w-4" />
+              Print
+            </Button>
+            <Button variant="outline" onClick={() => setShowPrintView(true)}>
+              <Download className="mr-2 h-4 w-4" />
+              Download PDF
+            </Button>
           </div>
         </div>
 
