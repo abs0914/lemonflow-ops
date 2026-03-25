@@ -154,6 +154,7 @@ export default function FulfillmentDashboard() {
             <TabsTrigger value="processing">Processing ({processingCount})</TabsTrigger>
             <TabsTrigger value="completed">Completed</TabsTrigger>
             <TabsTrigger value="all">All Orders</TabsTrigger>
+            <TabsTrigger value="consolidation">Consolidation</TabsTrigger>
           </TabsList>
 
           <TabsContent value={activeTab} className="mt-4">
