@@ -29,6 +29,7 @@ interface POLine {
   quantity: number;
   unit_price: number;
   uom: string;
+  received_quantity: number;
   components: {
     id: string;
     name: string;
@@ -120,6 +121,7 @@ export function EnhancedGoodsReceivedForm({ preselectedPOId }: EnhancedGoodsRece
           quantity,
           unit_price,
           uom,
+          received_quantity,
           components(id, name, sku, unit, autocount_item_code),
           raw_materials(id, name, sku, unit, autocount_item_code)
         `)
@@ -132,31 +134,6 @@ export function EnhancedGoodsReceivedForm({ preselectedPOId }: EnhancedGoodsRece
     enabled: !!selectedPO,
   });
 
-  // Fetch already received quantities
-  const { data: receivedData } = useQuery({
-    queryKey: ["received-quantities", selectedPO],
-    queryFn: async () => {
-      if (!selectedPO) return {};
-
-      const { data, error } = await supabase
-        .from("stock_movements")
-        .select("reference_id, quantity")
-        .eq("purchase_order_id", selectedPO)
-        .eq("movement_type", "receipt");
-
-      if (error) throw error;
-
-      // Sum quantities by reference_id (line id)
-      const received: Record<string, number> = {};
-      data?.forEach((m) => {
-        if (m.reference_id) {
-          received[m.reference_id] = (received[m.reference_id] || 0) + m.quantity;
-        }
-      });
-      return received;
-    },
-    enabled: !!selectedPO,
-  });
 
   // Update lines state when PO lines change
   useEffect(() => {
@@ -180,7 +157,7 @@ export function EnhancedGoodsReceivedForm({ preselectedPOId }: EnhancedGoodsRece
       prev.map((line) => ({
         ...line,
         selected: checked,
-        quantityReceived: checked ? String(line.quantity - (receivedData?.[line.id] || 0)) : "",
+        quantityReceived: checked ? String(line.quantity - (line.received_quantity || 0)) : "",
       }))
     );
   };
@@ -194,7 +171,7 @@ export function EnhancedGoodsReceivedForm({ preselectedPOId }: EnhancedGoodsRece
               ...line,
               selected: checked,
               quantityReceived: checked
-                ? String(line.quantity - (receivedData?.[line.id] || 0))
+                ? String(line.quantity - (line.received_quantity || 0))
                 : "",
             }
           : line
@@ -258,6 +235,48 @@ export function EnhancedGoodsReceivedForm({ preselectedPOId }: EnhancedGoodsRece
       const { error } = await supabase.from("stock_movements").insert(movements);
       if (error) throw error;
 
+      // Increment received_quantity on each PO line atomically
+      for (const line of selectedLines) {
+        const qty = parseFloat(line.quantityReceived || "0");
+        const { error: rpcError } = await supabase.rpc("increment_po_line_received", {
+          p_line_id: line.id,
+          p_qty: qty,
+        });
+        if (rpcError) {
+          console.error("Error incrementing received_quantity:", rpcError);
+        }
+      }
+
+      // Check if all lines are now fully received
+      const { data: allLines, error: linesError } = await supabase
+        .from("purchase_order_lines")
+        .select("quantity, received_quantity")
+        .eq("purchase_order_id", selectedPO);
+
+      if (!linesError && allLines) {
+        const isFullyReceived = allLines.every(
+          (l) => (l.received_quantity || 0) >= l.quantity
+        );
+
+        if (isFullyReceived) {
+          const { data: updateData, error: updateError } = await supabase
+            .from("purchase_orders")
+            .update({
+              goods_received: true,
+              received_at: new Date().toISOString(),
+              received_by: profile.id,
+            })
+            .eq("id", selectedPO)
+            .select();
+
+          if (updateError) {
+            console.error("Error updating PO goods_received:", updateError);
+          } else if (!updateData || updateData.length === 0) {
+            console.error("PO update returned 0 rows - possible RLS block");
+          }
+        }
+      }
+
       // Sync each movement to AutoCount
       for (const line of selectedLines) {
         const itemId = line.item_type === "raw_material" 
@@ -299,6 +318,9 @@ export function EnhancedGoodsReceivedForm({ preselectedPOId }: EnhancedGoodsRece
       queryClient.invalidateQueries({ queryKey: ["components"] });
       queryClient.invalidateQueries({ queryKey: ["raw-materials"] });
       queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
+      queryClient.invalidateQueries({ queryKey: ["approved-pos-for-receiving"] });
+      queryClient.invalidateQueries({ queryKey: ["po-lines-for-receiving"] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
     },
     onError: (error: Error) => {
       toast({
@@ -418,7 +440,7 @@ export function EnhancedGoodsReceivedForm({ preselectedPOId }: EnhancedGoodsRece
                       const item = line.item_type === "raw_material" 
                         ? line.raw_materials 
                         : line.components;
-                      const alreadyReceived = receivedData?.[line.id] || 0;
+                      const alreadyReceived = line.received_quantity || 0;
                       const remaining = line.quantity - alreadyReceived;
 
                       return (
@@ -508,7 +530,7 @@ export function EnhancedGoodsReceivedForm({ preselectedPOId }: EnhancedGoodsRece
                 const item = line.item_type === "raw_material" 
                   ? line.raw_materials 
                   : line.components;
-                const alreadyReceived = receivedData?.[line.id] || 0;
+                const alreadyReceived = line.received_quantity || 0;
                 const remaining = line.quantity - alreadyReceived;
 
                 return (
