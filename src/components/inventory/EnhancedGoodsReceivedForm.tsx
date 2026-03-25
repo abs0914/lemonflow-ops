@@ -240,6 +240,48 @@ export function EnhancedGoodsReceivedForm({ preselectedPOId }: EnhancedGoodsRece
       const { error } = await supabase.from("stock_movements").insert(movements);
       if (error) throw error;
 
+      // Increment received_quantity on each PO line atomically
+      for (const line of selectedLines) {
+        const qty = parseFloat(line.quantityReceived || "0");
+        const { error: rpcError } = await supabase.rpc("increment_po_line_received", {
+          p_line_id: line.id,
+          p_qty: qty,
+        });
+        if (rpcError) {
+          console.error("Error incrementing received_quantity:", rpcError);
+        }
+      }
+
+      // Check if all lines are now fully received
+      const { data: allLines, error: linesError } = await supabase
+        .from("purchase_order_lines")
+        .select("quantity, received_quantity")
+        .eq("purchase_order_id", selectedPO);
+
+      if (!linesError && allLines) {
+        const isFullyReceived = allLines.every(
+          (l) => (l.received_quantity || 0) >= l.quantity
+        );
+
+        if (isFullyReceived) {
+          const { data: updateData, error: updateError } = await supabase
+            .from("purchase_orders")
+            .update({
+              goods_received: true,
+              received_at: new Date().toISOString(),
+              received_by: profile.id,
+            })
+            .eq("id", selectedPO)
+            .select();
+
+          if (updateError) {
+            console.error("Error updating PO goods_received:", updateError);
+          } else if (!updateData || updateData.length === 0) {
+            console.error("PO update returned 0 rows - possible RLS block");
+          }
+        }
+      }
+
       // Sync each movement to AutoCount
       for (const line of selectedLines) {
         const itemId = line.item_type === "raw_material" 
