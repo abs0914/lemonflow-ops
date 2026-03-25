@@ -17,6 +17,8 @@ export function MobilePOCard({ order, onClick }: MobilePOCardProps) {
       submitted: "secondary",
       approved: "default",
       verified: "default",
+      partially_received: "secondary",
+      received: "default",
       cancelled: "destructive"
     };
     return variants[status] || "outline";

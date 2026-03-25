@@ -414,11 +414,18 @@ export default function PurchaseOrderDetail() {
       submitted: "secondary",
       approved: "default",
       verified: "default",
+      partially_received: "secondary",
+      received: "default",
       cancelled: "destructive",
     };
+    const labels: Record<string, string> = {
+      partially_received: "Partially Received",
+      received: "Received",
+    };
+    const label = labels[status] || status.charAt(0).toUpperCase() + status.slice(1);
     return (
       <Badge variant={variants[status] || "outline"}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {label}
       </Badge>
     );
   };

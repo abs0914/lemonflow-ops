@@ -74,7 +74,7 @@ export default function IncomingInventory() {
           id,
           purchase_orders!inner(status, goods_received)
         `)
-        .eq("purchase_orders.status", "verified");
+        .in("purchase_orders.status", ["verified", "partially_received"]);
 
       if (linesError) throw linesError;
 

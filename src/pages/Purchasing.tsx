@@ -402,6 +402,8 @@ export default function Purchasing() {
                     <TabsTrigger value="submitted">Submitted</TabsTrigger>
                     <TabsTrigger value="approved">Approved</TabsTrigger>
                     <TabsTrigger value="verified">Verified</TabsTrigger>
+                    <TabsTrigger value="partially_received">Partial</TabsTrigger>
+                    <TabsTrigger value="received">Received</TabsTrigger>
                   </TabsList>
                 </Tabs>
               )}
