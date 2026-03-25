@@ -98,3 +98,49 @@ export function usePurchaseOrderLines(purchaseOrderId?: string) {
     enabled: !!purchaseOrderId,
   });
 }
+
+export interface POLineReceipt {
+  id: string;
+  created_at: string;
+  quantity: number;
+  batch_number: string | null;
+  warehouse_location: string | null;
+  unit_received: string | null;
+  reference_id: string | null;
+  performed_by: string;
+  performer_name?: string;
+}
+
+export function usePOLineReceipts(purchaseOrderId?: string) {
+  return useQuery({
+    queryKey: ["po-line-receipts", purchaseOrderId],
+    queryFn: async () => {
+      if (!purchaseOrderId) return [];
+
+      const { data, error } = await supabase
+        .from("stock_movements")
+        .select("id, created_at, quantity, batch_number, warehouse_location, unit_received, reference_id, performed_by")
+        .eq("purchase_order_id", purchaseOrderId)
+        .eq("movement_type", "receipt")
+        .eq("reference_type", "purchase_order_line")
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+
+      // Fetch performer profiles
+      const userIds = [...new Set(data?.map(m => m.performed_by) || [])];
+      const { data: profiles } = await supabase
+        .from("user_profiles")
+        .select("id, full_name")
+        .in("id", userIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.id, p.full_name]) || []);
+
+      return (data || []).map(m => ({
+        ...m,
+        performer_name: profileMap.get(m.performed_by) || "Unknown",
+      })) as POLineReceipt[];
+    },
+    enabled: !!purchaseOrderId,
+  });
+}
