@@ -41,19 +41,36 @@ export function useFulfillmentOrdersByIds(orderIds: string[]) {
   });
 }
 
-export function useFulfillmentConsolidation(date: string) {
+export function useFulfillmentConsolidation(fromDate: string, toDate: string) {
   return useQuery({
-    queryKey: ["fulfillment-consolidation", date],
+    queryKey: ["fulfillment-consolidation", fromDate, toDate],
     queryFn: async () => {
-      // Get orders for the selected date
-      const { data: orders, error: ordersError } = await supabase
+      // Get orders in date range by order date (doc_date)
+      const { data: rangeOrders, error: rangeError } = await supabase
         .from("sales_orders")
         .select("id, order_number, stores(store_name)")
-        .eq("delivery_date", date)
+        .gte("doc_date", fromDate)
+        .lte("doc_date", toDate)
         .in("status", ["submitted", "processing"]);
 
-      if (ordersError) throw ordersError;
-      if (!orders || orders.length === 0) return { orders: [], lines: [] };
+      if (rangeError) throw rangeError;
+
+      // Also get ALL processing orders to ensure none are missed
+      const { data: processingOrders, error: procError } = await supabase
+        .from("sales_orders")
+        .select("id, order_number, stores(store_name)")
+        .eq("status", "processing");
+
+      if (procError) throw procError;
+
+      // Merge and deduplicate
+      const orderMap = new Map<string, any>();
+      for (const o of [...(rangeOrders || []), ...(processingOrders || [])]) {
+        orderMap.set(o.id, o);
+      }
+      const orders = Array.from(orderMap.values());
+
+      if (orders.length === 0) return { orders: [], lines: [] };
 
       const orderIds = orders.map((o) => o.id);
 
@@ -66,7 +83,7 @@ export function useFulfillmentConsolidation(date: string) {
       if (linesError) throw linesError;
       return { orders: orders as any[], lines: lines || [] };
     },
-    enabled: !!date,
+    enabled: !!fromDate && !!toDate,
   });
 }
 
