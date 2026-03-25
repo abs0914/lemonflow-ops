@@ -43,7 +43,7 @@ export default function IncomingInventory() {
       const { data: pendingPOs, error: poError } = await supabase
         .from("purchase_orders")
         .select("id")
-        .eq("status", "verified")
+        .in("status", ["verified", "partially_received"])
         .or("goods_received.is.null,goods_received.eq.false");
 
       if (poError) throw poError;
