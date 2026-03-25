@@ -1,31 +1,29 @@
 
 
-# Fulfillment Daily Consolidation Report
+# Update PO Status on Goods Receipt
 
-## What it does
-Adds a new "Consolidation" tab to the Fulfillment Dashboard that shows a consolidated view of all items that need to be pulled/prepared for the day. It aggregates line items across all processing/submitted orders for a selected date, grouping by item code so fulfillment staff can see total quantities at a glance.
+## Problem
+When goods are received via the Receiving Report, the PO's `goods_received` flag and per-line received quantities are never updated. The system only tracks receipts through `stock_movements` lookups.
 
 ## Changes
 
-### 1. New hook: `useFulfillmentConsolidation` in `src/hooks/useFulfillment.ts`
-- Query `sales_orders` filtered by delivery_date (or doc_date) matching selected date and status in `['submitted', 'processing']`
-- Join `sales_order_lines` to get all line items
-- Return raw data for client-side aggregation
+### 1. Database migration: Add `received_quantity` to `purchase_order_lines`
+- Add column `received_quantity NUMERIC NOT NULL DEFAULT 0`
+- This becomes the authoritative tracker for partial receipts per line
 
-### 2. New component: `src/components/fulfillment/ConsolidationReport.tsx`
-- Date picker defaulting to today
-- Aggregates line items by `item_code` + `item_name`, summing quantities across all orders
-- Shows a table: Item Code, Item Name, UOM, Total Qty, Number of Orders
-- Print button for the consolidated pull-out list
-- Export to CSV option
+### 2. Update `EnhancedGoodsReceivedForm.tsx` receive mutation
+After inserting stock movements, add these steps:
+- For each received line, increment `purchase_order_lines.received_quantity` by the quantity received (using current value + new qty via a read-then-update or raw SQL increment)
+- After all lines are updated, re-fetch all lines for the PO and check if every line has `received_quantity >= quantity`
+- If fully received: update `purchase_orders` set `goods_received = true`, `received_at = now()`, `received_by = profile.id`
+- Invalidate the `approved-pos-for-receiving` query so the PO disappears from the dropdown once fully received
 
-### 3. Update `src/pages/FulfillmentDashboard.tsx`
-- Add a "Consolidation" tab trigger alongside existing tabs
-- Render `ConsolidationReport` in that tab content
+### 3. UI enhancement
+- Use the new `received_quantity` column from `purchase_order_lines` instead of summing `stock_movements` (replace the `receivedData` query)
+- Already-received and remaining columns will use this authoritative field
 
 ## Technical Detail
-- No database changes needed -- uses existing `sales_orders` + `sales_order_lines` tables
-- Query filters orders by delivery_date = selected date AND status in submitted/processing
-- Client-side grouping using a Map keyed by item_code to sum quantities
-- Print uses `window.print()` with a print-optimized container (same pattern as ManifestGenerator)
+- The increment must handle concurrent receives safely. We'll use Supabase RPC or read-then-write pattern since `purchase_order_lines` doesn't support SQL increments via the JS client directly. A simple approach: read current `received_quantity`, add new qty, write back. Acceptable for this use case (low concurrency).
+- Existing RLS policies on `purchase_order_lines` already allow Admin/Warehouse/Production to update, so no new policies needed.
+- The `purchase_orders` table already has `goods_received`, `received_at`, and `received_by` columns ready to use.
 
