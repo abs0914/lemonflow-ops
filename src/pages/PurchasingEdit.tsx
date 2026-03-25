@@ -335,18 +335,19 @@ export default function PurchasingEdit() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="supplier_id">Supplier *</Label>
-                  <Select value={watch("supplier_id")} onValueChange={(value) => setValue("supplier_id", value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select supplier" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {suppliers?.map((supplier) => (
-                        <SelectItem key={supplier.id} value={supplier.id}>
-                          {supplier.company_name} ({supplier.supplier_code})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    value={watch("supplier_id") || ""}
+                    onValueChange={(value) => setValue("supplier_id", value)}
+                    placeholder="Select supplier"
+                    searchPlaceholder="Search suppliers..."
+                    emptyMessage="No suppliers found."
+                    options={
+                      suppliers?.map(supplier => ({
+                        value: supplier.id,
+                        label: `${supplier.company_name} (${supplier.supplier_code})`,
+                      })) || []
+                    }
+                  />
                   {errors.supplier_id && (
                     <p className="text-sm text-destructive">{errors.supplier_id.message}</p>
                   )}
