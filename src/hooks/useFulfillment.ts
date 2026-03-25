@@ -41,6 +41,35 @@ export function useFulfillmentOrdersByIds(orderIds: string[]) {
   });
 }
 
+export function useFulfillmentConsolidation(date: string) {
+  return useQuery({
+    queryKey: ["fulfillment-consolidation", date],
+    queryFn: async () => {
+      // Get orders for the selected date
+      const { data: orders, error: ordersError } = await supabase
+        .from("sales_orders")
+        .select("id, order_number, stores(store_name)")
+        .eq("delivery_date", date)
+        .in("status", ["submitted", "processing"]);
+
+      if (ordersError) throw ordersError;
+      if (!orders || orders.length === 0) return { orders: [], lines: [] };
+
+      const orderIds = orders.map((o) => o.id);
+
+      const { data: lines, error: linesError } = await supabase
+        .from("sales_order_lines")
+        .select("*")
+        .in("sales_order_id", orderIds)
+        .order("item_code", { ascending: true });
+
+      if (linesError) throw linesError;
+      return { orders: orders as any[], lines: lines || [] };
+    },
+    enabled: !!date,
+  });
+}
+
 export function useFulfillmentOrderLines(orderIds: string[]) {
   return useQuery({
     queryKey: ["fulfillment-order-lines", orderIds],
