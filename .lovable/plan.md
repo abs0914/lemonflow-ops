@@ -1,35 +1,31 @@
 
 
-# Single-Click Receive from Pending Receipts
+# Fulfillment Daily Consolidation Report
 
-## Problem
-When clicking "Receive" on a pending PO, the app switches to the Receive tab but the user must manually select the same PO again from a dropdown -- a redundant 2-click process.
-
-## Solution
-Pass the selected PO ID from `PendingReceiptsList` through the parent `IncomingInventory` page into `EnhancedGoodsReceivedForm`, so the PO is auto-selected when switching tabs.
+## What it does
+Adds a new "Consolidation" tab to the Fulfillment Dashboard that shows a consolidated view of all items that need to be pulled/prepared for the day. It aggregates line items across all processing/submitted orders for a selected date, grouping by item code so fulfillment staff can see total quantities at a glance.
 
 ## Changes
 
-### 1. `src/pages/IncomingInventory.tsx`
-- Add state: `const [preselectedPOId, setPreselectedPOId] = useState<string>("")`
-- In `onReceive` callback, set the preselected PO ID before switching tabs
-- Pass `preselectedPOId` as a prop to `EnhancedGoodsReceivedForm`
-- Clear `preselectedPOId` when user manually switches to the receive tab without clicking a PO
+### 1. New hook: `useFulfillmentConsolidation` in `src/hooks/useFulfillment.ts`
+- Query `sales_orders` filtered by delivery_date (or doc_date) matching selected date and status in `['submitted', 'processing']`
+- Join `sales_order_lines` to get all line items
+- Return raw data for client-side aggregation
 
-### 2. `src/components/inventory/EnhancedGoodsReceivedForm.tsx`
-- Accept optional `preselectedPOId` prop
-- Add a `useEffect` that sets `selectedPO` when `preselectedPOId` changes and is non-empty
-- This auto-triggers the existing PO lines query since it's already keyed on `selectedPO`
+### 2. New component: `src/components/fulfillment/ConsolidationReport.tsx`
+- Date picker defaulting to today
+- Aggregates line items by `item_code` + `item_name`, summing quantities across all orders
+- Shows a table: Item Code, Item Name, UOM, Total Qty, Number of Orders
+- Print button for the consolidated pull-out list
+- Export to CSV option
+
+### 3. Update `src/pages/FulfillmentDashboard.tsx`
+- Add a "Consolidation" tab trigger alongside existing tabs
+- Render `ConsolidationReport` in that tab content
 
 ## Technical Detail
-```
-PendingReceiptsList clicks "Receive" on PO-X
-  → onReceive(poId) fires
-  → Parent sets preselectedPOId = poId, activeTab = "receive"
-  → EnhancedGoodsReceivedForm receives preselectedPOId prop
-  → useEffect sets selectedPO = preselectedPOId
-  → PO lines query auto-fires, form is ready
-```
-
-No database changes needed. Two files edited.
+- No database changes needed -- uses existing `sales_orders` + `sales_order_lines` tables
+- Query filters orders by delivery_date = selected date AND status in submitted/processing
+- Client-side grouping using a Map keyed by item_code to sum quantities
+- Print uses `window.print()` with a print-optimized container (same pattern as ManifestGenerator)
 
