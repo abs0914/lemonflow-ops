@@ -60,12 +60,23 @@ interface PurchaseOrder {
   };
 }
 
-export function EnhancedGoodsReceivedForm() {
+interface EnhancedGoodsReceivedFormProps {
+  preselectedPOId?: string;
+}
+
+export function EnhancedGoodsReceivedForm({ preselectedPOId }: EnhancedGoodsReceivedFormProps) {
   const { profile } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const [selectedPO, setSelectedPO] = useState<string>("");
+
+  // Auto-select PO when coming from Pending Receipts
+  useEffect(() => {
+    if (preselectedPOId) {
+      setSelectedPO(preselectedPOId);
+    }
+  }, [preselectedPOId]);
   const [warehouseLocation, setWarehouseLocation] = useState("MAIN");
   const [lines, setLines] = useState<POLine[]>([]);
   const [selectAll, setSelectAll] = useState(false);

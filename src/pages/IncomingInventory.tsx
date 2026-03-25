@@ -27,6 +27,7 @@ export default function IncomingInventory() {
   const { profile, loading } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("pending");
+  const [preselectedPOId, setPreselectedPOId] = useState<string>("");
 
   useEffect(() => {
     if (!loading && (!profile || !["Admin", "Warehouse", "Fulfillment", "Production", "Accounting"].includes(profile.role))) {
@@ -183,12 +184,13 @@ export default function IncomingInventory() {
 
           <TabsContent value="pending" className="space-y-4">
             <PendingReceiptsList onReceive={(poId) => {
+              setPreselectedPOId(poId);
               setActiveTab("receive");
             }} />
           </TabsContent>
 
           <TabsContent value="receive" className="space-y-4">
-            <EnhancedGoodsReceivedForm />
+            <EnhancedGoodsReceivedForm preselectedPOId={preselectedPOId} />
           </TabsContent>
 
           <TabsContent value="direct" className="space-y-4">
