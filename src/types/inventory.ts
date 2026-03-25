@@ -129,6 +129,7 @@ export interface PurchaseOrderLine {
   raw_material_id: string | null;
   item_type: 'component' | 'raw_material';
   quantity: number;
+  received_quantity: number;
   unit_price: number;
   uom: string;
   line_remarks: string | null;
