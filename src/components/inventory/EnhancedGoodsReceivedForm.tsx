@@ -490,7 +490,7 @@ export function EnhancedGoodsReceivedForm({ preselectedPOId }: EnhancedGoodsRece
                 const item = line.item_type === "raw_material" 
                   ? line.raw_materials 
                   : line.components;
-                const alreadyReceived = receivedData?.[line.id] || 0;
+                const alreadyReceived = line.received_quantity || 0;
                 const remaining = line.quantity - alreadyReceived;
 
                 return (
