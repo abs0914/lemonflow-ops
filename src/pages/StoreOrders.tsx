@@ -41,8 +41,12 @@ export default function StoreOrders() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
 
+  const { profile } = useAuth();
+  const operationalRoles = ["Admin", "Warehouse", "Fulfillment", "Production", "Accounting"];
+  const isOperational = operationalRoles.includes(profile?.role || "");
+
   const { data: userStores } = useAllUserStores();
-  const storeIds = userStores?.map(s => s.store_id);
+  const storeIds = isOperational ? undefined : userStores?.map(s => s.store_id);
   const { data: orders, isLoading, refetch } = useSalesOrders(storeIds);
 
   const filteredOrders = useMemo(() => {
