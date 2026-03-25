@@ -95,7 +95,7 @@ export function EnhancedGoodsReceivedForm({ preselectedPOId }: EnhancedGoodsRece
           is_cash_purchase,
           suppliers(company_name, supplier_code)
         `)
-        .eq("status", "verified")
+        .in("status", ["verified", "partially_received"])
         .or("goods_received.is.null,goods_received.eq.false")
         .order("doc_date", { ascending: false });
 
