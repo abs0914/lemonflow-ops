@@ -176,7 +176,7 @@ export function EnhancedGoodsReceivedForm({ preselectedPOId }: EnhancedGoodsRece
               ...line,
               selected: checked,
               quantityReceived: checked
-                ? String(line.quantity - (receivedData?.[line.id] || 0))
+                ? String(line.quantity - (line.received_quantity || 0))
                 : "",
             }
           : line
