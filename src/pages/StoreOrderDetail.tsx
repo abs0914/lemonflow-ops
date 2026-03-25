@@ -4,7 +4,8 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Trash2, Send, RefreshCw, Upload, Image } from "lucide-react";
+import { ArrowLeft, Trash2, Send, RefreshCw, Upload, Image, Printer, Download } from "lucide-react";
+import { SalesOrderPrintView } from "@/components/store-orders/SalesOrderPrintView";
 import { useSalesOrder, useSalesOrderLines, useUpdateSalesOrder, useDeleteSalesOrder } from "@/hooks/useSalesOrders";
 import { DeleteOrderDialog } from "@/components/store-orders/DeleteOrderDialog";
 import { OrderLineForm } from "@/components/store-orders/OrderLineForm";
@@ -34,6 +35,7 @@ export default function StoreOrderDetail() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isUploadingProof, setIsUploadingProof] = useState(false);
+  const [showPrintView, setShowPrintView] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: order, isLoading } = useSalesOrder(id);
@@ -209,6 +211,14 @@ export default function StoreOrderDetail() {
                 Sync to AutoCount
               </Button>
             )}
+            <Button variant="outline" onClick={() => setShowPrintView(true)}>
+              <Printer className="mr-2 h-4 w-4" />
+              Print
+            </Button>
+            <Button variant="outline" onClick={() => setShowPrintView(true)}>
+              <Download className="mr-2 h-4 w-4" />
+              Download PDF
+            </Button>
           </div>
         </div>
 
@@ -369,6 +379,14 @@ export default function StoreOrderDetail() {
         onConfirm={handleDeleteOrder}
         orderNumber={order.order_number}
       />
+
+      {showPrintView && order && (
+        <SalesOrderPrintView
+          order={order}
+          lines={lines || []}
+          onClose={() => setShowPrintView(false)}
+        />
+      )}
     </DashboardLayout>
   );
 }

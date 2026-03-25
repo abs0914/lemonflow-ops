@@ -103,10 +103,12 @@ export default function StoreOrders() {
               <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
               Refresh
             </Button>
-            <Button variant="outline" size={isMobile ? "sm" : "default"} onClick={() => navigate("/store/orders/quick-entry")}>
-              <ClipboardPaste className="mr-2 h-4 w-4" />
-              Quick Entry
-            </Button>
+            {(isOperational || !userStores?.every(s => s.stores?.store_type === 'franchisee')) && (
+              <Button variant="outline" size={isMobile ? "sm" : "default"} onClick={() => navigate("/store/orders/quick-entry")}>
+                <ClipboardPaste className="mr-2 h-4 w-4" />
+                Quick Entry
+              </Button>
+            )}
             <Button size={isMobile ? "sm" : "default"} onClick={() => navigate("/store/orders/create")}>
               <Plus className="mr-2 h-4 w-4" />
               New Order
