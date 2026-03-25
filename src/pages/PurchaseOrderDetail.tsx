@@ -593,7 +593,7 @@ export default function PurchaseOrderDetail() {
                 </Button>
               </>
             )}
-            {purchaseOrder.status === "verified" && (
+            {(purchaseOrder.status === "verified" || purchaseOrder.status === "partially_received" || purchaseOrder.status === "received") && (
               <>
                 <Button
                   variant="outline"
