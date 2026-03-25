@@ -40,6 +40,27 @@ export default function PurchaseOrderDetail() {
 
   const { data: purchaseOrder, isLoading: loadingPO } = usePurchaseOrder(id);
   const { data: lines, isLoading: loadingLines } = usePurchaseOrderLines(id);
+  const { data: lineReceipts } = usePOLineReceipts(id);
+  const [expandedLines, setExpandedLines] = useState<Set<string>>(new Set());
+
+  const receiptsByLine = useMemo(() => {
+    const map = new Map<string, typeof lineReceipts>();
+    lineReceipts?.forEach(r => {
+      const existing = map.get(r.reference_id || "") || [];
+      existing.push(r);
+      map.set(r.reference_id || "", existing);
+    });
+    return map;
+  }, [lineReceipts]);
+
+  const toggleLineExpand = (lineId: string) => {
+    setExpandedLines(prev => {
+      const next = new Set(prev);
+      if (next.has(lineId)) next.delete(lineId);
+      else next.add(lineId);
+      return next;
+    });
+  };
 
   const { data: cashGivenByUser } = useQuery({
     queryKey: ["user-profile", purchaseOrder?.cash_given_by],
