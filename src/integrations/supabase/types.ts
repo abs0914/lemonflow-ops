@@ -528,6 +528,7 @@ export type Database = {
           purchase_order_id: string
           quantity: number
           raw_material_id: string | null
+          received_quantity: number
           unit_price: number
           uom: string
           updated_at: string
@@ -542,6 +543,7 @@ export type Database = {
           purchase_order_id: string
           quantity: number
           raw_material_id?: string | null
+          received_quantity?: number
           unit_price: number
           uom: string
           updated_at?: string
@@ -556,6 +558,7 @@ export type Database = {
           purchase_order_id?: string
           quantity?: number
           raw_material_id?: string | null
+          received_quantity?: number
           unit_price?: number
           uom?: string
           updated_at?: string
@@ -1292,6 +1295,10 @@ export type Database = {
       get_next_item_code: { Args: never; Returns: string }
       get_next_raw_material_code: { Args: never; Returns: string }
       get_next_supplier_code: { Args: never; Returns: string }
+      increment_po_line_received: {
+        Args: { p_line_id: string; p_qty: number }
+        Returns: number
+      }
       is_accounting: { Args: { user_id: string }; Returns: boolean }
       is_admin: { Args: { user_id: string }; Returns: boolean }
       is_ceo: { Args: { user_id: string }; Returns: boolean }
