@@ -35,7 +35,7 @@ export default function StoreOrderDetail() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isUploadingProof, setIsUploadingProof] = useState(false);
-  const [showPrintView, setShowPrintView] = useState(false);
+  const [printMode, setPrintMode] = useState<"print" | "download" | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: order, isLoading } = useSalesOrder(id);
@@ -211,11 +211,11 @@ export default function StoreOrderDetail() {
                 Sync to AutoCount
               </Button>
             )}
-            <Button variant="outline" onClick={() => setShowPrintView(true)}>
+            <Button variant="outline" onClick={() => setPrintMode("print")}>
               <Printer className="mr-2 h-4 w-4" />
               Print
             </Button>
-            <Button variant="outline" onClick={() => setShowPrintView(true)}>
+            <Button variant="outline" onClick={() => setPrintMode("download")}>
               <Download className="mr-2 h-4 w-4" />
               Download PDF
             </Button>
@@ -380,11 +380,12 @@ export default function StoreOrderDetail() {
         orderNumber={order.order_number}
       />
 
-      {showPrintView && order && (
+      {printMode && order && (
         <SalesOrderPrintView
           order={order}
           lines={lines || []}
-          onClose={() => setShowPrintView(false)}
+          mode={printMode}
+          onClose={() => setPrintMode(null)}
         />
       )}
     </DashboardLayout>
