@@ -184,6 +184,7 @@ export default function IncomingInventory() {
 
           <TabsContent value="pending" className="space-y-4">
             <PendingReceiptsList onReceive={(poId) => {
+              setPreselectedPOId(poId);
               setActiveTab("receive");
             }} />
           </TabsContent>
