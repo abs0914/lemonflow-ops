@@ -29,6 +29,7 @@ interface POLine {
   quantity: number;
   unit_price: number;
   uom: string;
+  received_quantity: number;
   components: {
     id: string;
     name: string;
