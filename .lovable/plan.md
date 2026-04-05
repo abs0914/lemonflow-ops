@@ -1,72 +1,55 @@
 
 
-# Add `partially_received` Status + Batch Receipt Sub-rows to Purchase Orders
+# Franchisee Store-Specific Notifications
 
-## Summary
-Introduce a `partially_received` status to the PO lifecycle. When at least one line has received goods but not all are fully received, the PO transitions to `partially_received`. When all lines are fully received, it transitions to `received`. On the PO Detail page, each line item shows expandable sub-rows displaying individual receipt batches (from `stock_movements`).
+## Problem
+`notify_roles()` broadcasts to all users of a role. Franchisee users should only receive notifications about their own store's orders, and they should get updates at more lifecycle stages.
 
-## Database Changes
+## Solution
 
-### Migration 1: Update PO status constraint + add `partially_received`
+### 1. New database function: `notify_store_users(p_store_id, p_title, p_message, p_type, p_entity_type, p_entity_id)`
+- Inserts notifications only for users assigned to the given store via `user_store_assignments`
+- Replaces `notify_roles(ARRAY['Store'], ...)` calls in the sales order trigger
+
+### 2. Update `on_sales_order_change()` trigger function
+Replace all `notify_roles(ARRAY['Store'], ...)` calls with `notify_store_users(NEW.store_id, ...)` and add new status transitions:
+
+| Status transition | Notification to store users |
+|---|---|
+| `submitted` → `pending_payment` | "Order Under Review — Finance is reviewing your order" |
+| `pending_payment` → `awaiting_proof` | "Upload Proof of Payment" (existing, but now store-filtered) |
+| `awaiting_proof` → `pending_accounting` | "Payment Received — Awaiting final verification" |
+| `pending_accounting` → `processing` | "Order Approved — Your order is now being processed" |
+| any → `fulfilled` | "Order Fulfilled" (existing, but now store-filtered) |
+| any → `cancelled` | "Order Cancelled" |
+
+### 3. No code changes needed
+- The client-side `useNotifications` hook already filters by `user_id`, so store-specific inserts will just work
+- `NotificationBell` routing for `sales_order` entity type already navigates to the order detail
+
+## Database Migration
 ```sql
-ALTER TABLE public.purchase_orders
-DROP CONSTRAINT IF EXISTS purchase_orders_status_check;
+-- 1. Create store-specific notification function
+CREATE OR REPLACE FUNCTION public.notify_store_users(
+  p_store_id uuid, p_title text, p_message text,
+  p_type text DEFAULT 'info', p_entity_type text DEFAULT NULL,
+  p_entity_id text DEFAULT NULL
+) RETURNS void LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public AS $$
+BEGIN
+  INSERT INTO notifications (user_id, title, message, type, entity_type, entity_id)
+  SELECT usa.user_id, p_title, p_message, p_type, p_entity_type, p_entity_id
+  FROM user_store_assignments usa
+  WHERE usa.store_id = p_store_id;
+END;
+$$;
 
-ALTER TABLE public.purchase_orders
-ADD CONSTRAINT purchase_orders_status_check
-CHECK (status = ANY (ARRAY[
-  'draft'::text, 'submitted'::text, 'approved'::text, 
-  'verified'::text, 'partially_received'::text, 'received'::text, 
-  'cancelled'::text
-]));
+-- 2. Replace on_sales_order_change with store-filtered version
+--    (full function replacement updating all Store notification calls)
 ```
 
-No new columns needed -- `goods_received` boolean is kept for backward compatibility but the `status` field now drives the lifecycle.
-
-## Code Changes
-
-### 1. `src/types/inventory.ts` — PurchaseOrder type
-- Add `'partially_received' | 'received'` to the `status` union type
-
-### 2. `src/components/inventory/EnhancedGoodsReceivedForm.tsx` — Receipt logic
-- After incrementing `received_quantity` on lines, check:
-  - If ALL lines fully received → set `status = 'received'`, `goods_received = true`, `received_at`, `received_by`
-  - Else if ANY line has `received_quantity > 0` → set `status = 'partially_received'`
-- Update the PO query filter to include `partially_received` status (so partially received POs still appear for further receipts)
-
-### 3. `src/components/inventory/PendingReceiptsList.tsx`
-- Update query to also show `partially_received` POs (not just `verified`)
-
-### 4. `src/pages/IncomingInventory.tsx`
-- Update KPI queries to include `partially_received` status in pending PO counts
-
-### 5. `src/pages/Purchasing.tsx` — Status display
-- Add `partially_received` and `received` to `getStatusBadge()` with appropriate colors (amber for partial, green for received)
-- Add tab triggers for new statuses
-- Update finance filter logic to recognize new statuses
-
-### 6. `src/components/purchasing/MobilePOCard.tsx`
-- Add `partially_received` and `received` to status variant map
-
-### 7. `src/pages/PurchaseOrderDetail.tsx` — Batch sub-rows
-- After the line items table, for each PO line, fetch `stock_movements` where `reference_type = 'purchase_order_line'` and `reference_id = line.id`
-- Add a `received_quantity` column and a progress indicator (e.g., "5/10") to each line row
-- Make each line expandable: clicking reveals sub-rows showing each receipt batch with: date received, batch number, quantity received, warehouse location, performed by
-- Show delivery date tracking on the PO header (already exists as `delivery_date` column)
-
-### 8. `src/hooks/usePurchaseOrders.ts` — Fetch receipt batches
-- Add a new hook `usePOLineReceipts(purchaseOrderId)` that fetches stock movements grouped by PO line (`reference_type = 'purchase_order_line'`, `purchase_order_id = poId`) with performer profile names
-
-### 9. `src/components/warehouse/ReceiveFromCashPO.tsx`
-- Apply same partially_received / received logic as EnhancedGoodsReceivedForm
-
-### 10. RLS — No changes needed
-- Stock movements already allow authenticated reads; PO update policies for Warehouse/Admin cover the status update
-
-## Status Lifecycle
-```text
-draft → submitted → approved → verified → partially_received → received
-                                    └──────────────────────────→ received
-                                                                  (if all lines received at once)
-```
+## What changes for users
+- Franchisees only see notifications for their own store
+- They get progress updates at every stage, not just "upload proof" and "fulfilled"
+- Operational roles (Admin, Fulfillment, etc.) continue receiving notifications as before via `notify_roles`
 
