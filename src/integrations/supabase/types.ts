@@ -1315,6 +1315,17 @@ export type Database = {
         }
         Returns: undefined
       }
+      notify_store_users: {
+        Args: {
+          p_entity_id?: string
+          p_entity_type?: string
+          p_message: string
+          p_store_id: string
+          p_title: string
+          p_type?: string
+        }
+        Returns: undefined
+      }
       release_sales_order_stock: {
         Args: { p_sales_order_id: string }
         Returns: undefined
