@@ -16,7 +16,7 @@ import { RawMaterialsCsvUpload } from "@/components/inventory/RawMaterialsCsvUpl
 import { FloatingActionButton } from "@/components/ui/floating-action-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, AlertCircle, Database, Plus, RefreshCw } from "lucide-react";
+import { Package, AlertCircle, Database, Plus, RefreshCw, Download } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { RawMaterial } from "@/types/inventory";
