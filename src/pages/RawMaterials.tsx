@@ -223,6 +223,10 @@ export default function RawMaterials() {
           </div>
           {!isMobile && (
             <div className="flex gap-2">
+              <Button variant="outline" onClick={handleExportCsv}>
+                <Download className="mr-2 h-4 w-4" />
+                Export CSV
+              </Button>
               <RawMaterialsCsvUpload />
               <Button onClick={() => setAddDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
