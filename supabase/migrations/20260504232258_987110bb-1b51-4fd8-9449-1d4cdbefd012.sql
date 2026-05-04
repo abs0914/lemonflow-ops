@@ -1,0 +1,1 @@
+DELETE FROM stock_movements WHERE movement_type = 'assembly_produce';
