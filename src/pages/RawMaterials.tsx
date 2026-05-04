@@ -16,7 +16,7 @@ import { RawMaterialsCsvUpload } from "@/components/inventory/RawMaterialsCsvUpl
 import { FloatingActionButton } from "@/components/ui/floating-action-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, AlertCircle, Database, Plus, RefreshCw } from "lucide-react";
+import { Package, AlertCircle, Database, Plus, RefreshCw, Download } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { RawMaterial } from "@/types/inventory";
@@ -169,6 +169,42 @@ export default function RawMaterials() {
     setDeleteDialogOpen(true);
   };
 
+  const handleExportCsv = () => {
+    if (!rawMaterials || rawMaterials.length === 0) {
+      toast({ title: "No data", description: "There are no raw materials to export.", variant: "destructive" });
+      return;
+    }
+
+    const headers = [
+      "name","sku","autocount_item_code","description","unit",
+      "stock_quantity","reserved_quantity","item_group","item_type",
+      "cost_per_unit","price","low_stock_threshold","recommended_cost_price",
+    ];
+
+    const escape = (v: any) => {
+      if (v === null || v === undefined) return "";
+      const s = String(v);
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+
+    const rows = rawMaterials.map((rm: any) =>
+      headers.map(h => escape(rm[h])).join(",")
+    );
+    const csv = [headers.join(","), ...rows].join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `raw_materials_${new Date().toISOString().split("T")[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({ title: "Export Complete", description: `${rawMaterials.length} raw materials exported.` });
+  };
+
   const handleConfirmDelete = () => {
     if (itemToDelete) {
       deleteMutation.mutate(itemToDelete);
@@ -187,6 +223,10 @@ export default function RawMaterials() {
           </div>
           {!isMobile && (
             <div className="flex gap-2">
+              <Button variant="outline" onClick={handleExportCsv}>
+                <Download className="mr-2 h-4 w-4" />
+                Export CSV
+              </Button>
               <RawMaterialsCsvUpload />
               <Button onClick={() => setAddDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
