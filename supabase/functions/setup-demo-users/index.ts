@@ -111,7 +111,8 @@ Deno.serve(async (req) => {
         results.push({
           email: user.email,
           status: 'success',
-          userId: data.user?.id
+          userId: data.user?.id,
+          password: user.password
         })
       }
     }
