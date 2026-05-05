@@ -69,7 +69,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
     const { data: __profile } = await __admin.from('user_profiles').select('role').eq('id', __user.id).single();
-    if (!__profile || !['Admin','Warehouse'].includes(__profile.role)) {
+    if (!__profile || !['Admin','Warehouse','Finance','Accounting','CEO','Fulfillment','Production'].includes(__profile.role)) {
       return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     // --- end auth ---
