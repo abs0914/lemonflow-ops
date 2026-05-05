@@ -210,7 +210,11 @@ export default function Suppliers() {
                 </TableHeader>
                 <TableBody>
                   {sortedData?.map(supplier => (
-                    <TableRow key={supplier.id}>
+                    <TableRow
+                      key={supplier.id}
+                      onClick={() => handleEdit(supplier.id)}
+                      className="cursor-pointer hover:bg-muted/50"
+                    >
                       <TableCell className="font-mono">{supplier.supplier_code}</TableCell>
                       <TableCell className="font-medium">{supplier.company_name}</TableCell>
                       <TableCell>{supplier.contact_person || "-"}</TableCell>
