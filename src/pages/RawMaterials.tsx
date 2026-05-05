@@ -42,6 +42,8 @@ export default function RawMaterials() {
   const [selectedRawMaterial, setSelectedRawMaterial] = useState<RawMaterial | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [itemToEdit, setItemToEdit] = useState<RawMaterial | null>(null);
+  const [perishablesDialogOpen, setPerishablesDialogOpen] = useState(false);
+  const [shrinkageDialogOpen, setShrinkageDialogOpen] = useState(false);
 
   // Redirect if not authenticated or not authorized
   if (!user) {
