@@ -13,10 +13,12 @@ import { DeleteInventoryDialog } from "@/components/inventory/DeleteInventoryDia
 import { AddInventoryDialog } from "@/components/inventory/AddInventoryDialog";
 import { EditInventoryDialog } from "@/components/inventory/EditInventoryDialog";
 import { RawMaterialsCsvUpload } from "@/components/inventory/RawMaterialsCsvUpload";
+import { ManagePerishablesDialog } from "@/components/inventory/ManagePerishablesDialog";
+import { LogShrinkageDialog } from "@/components/inventory/LogShrinkageDialog";
 import { FloatingActionButton } from "@/components/ui/floating-action-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, AlertCircle, Database, Plus, RefreshCw, Download } from "lucide-react";
+import { Package, AlertCircle, Database, Plus, RefreshCw, Download, Leaf, Scale } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { RawMaterial } from "@/types/inventory";
@@ -40,16 +42,21 @@ export default function RawMaterials() {
   const [selectedRawMaterial, setSelectedRawMaterial] = useState<RawMaterial | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [itemToEdit, setItemToEdit] = useState<RawMaterial | null>(null);
+  const [perishablesDialogOpen, setPerishablesDialogOpen] = useState(false);
+  const [shrinkageDialogOpen, setShrinkageDialogOpen] = useState(false);
 
   // Redirect if not authenticated or not authorized
   if (!user) {
     navigate("/login");
     return null;
   }
-  if (profile?.role !== "Admin" && profile?.role !== "Warehouse" && profile?.role !== "Fulfillment") {
+  if (profile?.role !== "Admin" && profile?.role !== "Warehouse" && profile?.role !== "Fulfillment" && profile?.role !== "Production") {
     navigate("/login");
     return null;
   }
+
+  const canLogShrinkage = profile?.role === "Admin" || profile?.role === "Warehouse" || profile?.role === "Production";
+  const canManagePerishables = profile?.role === "Admin" || profile?.role === "Warehouse";
 
   // Fetch raw materials data
   const { data: rawMaterials, isLoading, refetch } = useQuery({
@@ -222,7 +229,19 @@ export default function RawMaterials() {
             </p>
           </div>
           {!isMobile && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              {canLogShrinkage && (
+                <Button variant="outline" onClick={() => setShrinkageDialogOpen(true)}>
+                  <Scale className="mr-2 h-4 w-4 text-amber-600" />
+                  Log Shrinkage
+                </Button>
+              )}
+              {canManagePerishables && (
+                <Button variant="outline" onClick={() => setPerishablesDialogOpen(true)}>
+                  <Leaf className="mr-2 h-4 w-4 text-emerald-600" />
+                  Perishables
+                </Button>
+              )}
               <Button variant="outline" onClick={handleExportCsv}>
                 <Download className="mr-2 h-4 w-4" />
                 Export CSV
@@ -361,6 +380,16 @@ export default function RawMaterials() {
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         component={itemToEdit as any}
+      />
+
+      <ManagePerishablesDialog
+        open={perishablesDialogOpen}
+        onOpenChange={setPerishablesDialogOpen}
+      />
+
+      <LogShrinkageDialog
+        open={shrinkageDialogOpen}
+        onOpenChange={setShrinkageDialogOpen}
       />
     </DashboardLayout>
   );
