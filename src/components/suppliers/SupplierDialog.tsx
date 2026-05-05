@@ -238,6 +238,23 @@ export function SupplierDialog({ open, onOpenChange, supplierId }: SupplierDialo
                 placeholder="30"
               />
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="payment_terms">Payment Terms</Label>
+              <Select
+                value={paymentTerms || ""}
+                onValueChange={(v) => setValue("payment_terms", v)}
+              >
+                <SelectTrigger id="payment_terms">
+                  <SelectValue placeholder="Select payment terms" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAYMENT_TERMS_OPTIONS.map((opt) => (
+                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="space-y-2">
