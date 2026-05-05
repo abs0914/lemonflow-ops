@@ -33,6 +33,7 @@ interface SupplierFormData {
   email: string;
   address: string;
   credit_terms: number;
+  payment_terms: string;
   is_active: boolean;
 }
 
