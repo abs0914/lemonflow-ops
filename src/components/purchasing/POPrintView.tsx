@@ -11,18 +11,30 @@ interface POPrintViewProps {
   onClose: () => void;
 }
 
-function resolveSignatureUrl(signatureUrl: string | null | undefined): string | null {
+async function resolveSignatureUrl(signatureUrl: string | null | undefined): Promise<string | null> {
   if (!signatureUrl) return null;
-  if (signatureUrl.startsWith("http")) return signatureUrl;
-  const { data } = supabase.storage.from("user-signatures").getPublicUrl(signatureUrl);
-  return data?.publicUrl || null;
+  let path = signatureUrl;
+  const marker = "/user-signatures/";
+  const idx = signatureUrl.indexOf(marker);
+  if (idx !== -1) path = signatureUrl.substring(idx + marker.length);
+  const { data } = await supabase.storage.from("user-signatures").createSignedUrl(path, 600);
+  return data?.signedUrl || null;
 }
 
 export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps) {
   const [ready, setReady] = useState(false);
+  const [approvedSigUrl, setApprovedSigUrl] = useState<string | null>(null);
+  const [verifiedSigUrl, setVerifiedSigUrl] = useState<string | null>(null);
 
-  const approvedSigUrl = resolveSignatureUrl(purchaseOrder.approved_by_profile?.signature_url);
-  const verifiedSigUrl = resolveSignatureUrl(purchaseOrder.verified_by_profile?.signature_url);
+  useEffect(() => {
+    Promise.all([
+      resolveSignatureUrl(purchaseOrder.approved_by_profile?.signature_url),
+      resolveSignatureUrl(purchaseOrder.verified_by_profile?.signature_url),
+    ]).then(([a, v]) => {
+      setApprovedSigUrl(a);
+      setVerifiedSigUrl(v);
+    });
+  }, [purchaseOrder]);
 
   // Wait for signature images to load, then print
   useEffect(() => {
