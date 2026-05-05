@@ -57,6 +57,7 @@ export function SupplierDialog({ open, onOpenChange, supplierId }: SupplierDialo
   });
 
   const isActive = watch("is_active");
+  const paymentTerms = watch("payment_terms");
 
   // Auto-generate supplier code when creating new supplier
   useEffect(() => {
