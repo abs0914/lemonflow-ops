@@ -7,7 +7,33 @@ const corsHeaders = {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders }
+  try {
+    // --- Auth + role check ---
+    const __authHeader = req.headers.get('Authorization');
+    if (!__authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const __token = __authHeader.replace('Bearer ', '');
+    const __authClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    );
+    const { data: { user: __user }, error: __userErr } = await __authClient.auth.getUser(__token);
+    if (__userErr || !__user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const __admin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+    const { data: __profile } = await __admin.from('user_profiles').select('role').eq('id', __user.id).single();
+    if (!__profile || !['Admin','Warehouse'].includes(__profile.role)) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    // --- end auth ---
+  } catch (__e) { return new Response(JSON.stringify({error:String(__e)}),{status:500,headers:{...corsHeaders,"Content-Type":"application/json"}}); }
+);
   }
 
   try {
