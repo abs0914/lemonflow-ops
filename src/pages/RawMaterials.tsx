@@ -229,7 +229,19 @@ export default function RawMaterials() {
             </p>
           </div>
           {!isMobile && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              {canLogShrinkage && (
+                <Button variant="outline" onClick={() => setShrinkageDialogOpen(true)}>
+                  <Scale className="mr-2 h-4 w-4 text-amber-600" />
+                  Log Shrinkage
+                </Button>
+              )}
+              {canManagePerishables && (
+                <Button variant="outline" onClick={() => setPerishablesDialogOpen(true)}>
+                  <Leaf className="mr-2 h-4 w-4 text-emerald-600" />
+                  Perishables
+                </Button>
+              )}
               <Button variant="outline" onClick={handleExportCsv}>
                 <Download className="mr-2 h-4 w-4" />
                 Export CSV
