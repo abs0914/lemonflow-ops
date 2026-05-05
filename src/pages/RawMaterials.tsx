@@ -381,6 +381,16 @@ export default function RawMaterials() {
         onOpenChange={setEditDialogOpen}
         component={itemToEdit as any}
       />
+
+      <ManagePerishablesDialog
+        open={perishablesDialogOpen}
+        onOpenChange={setPerishablesDialogOpen}
+      />
+
+      <LogShrinkageDialog
+        open={shrinkageDialogOpen}
+        onOpenChange={setShrinkageDialogOpen}
+      />
     </DashboardLayout>
   );
 }
