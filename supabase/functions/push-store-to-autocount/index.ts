@@ -222,7 +222,9 @@ async function updateDebtor(apiUrl: string, token: string, store: Store): Promis
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders }
+    return new Response('ok', { headers: corsHeaders });
+  }
+
     // --- Auth + role check ---
     const __authHeader = req.headers.get('Authorization');
     if (!__authHeader?.startsWith('Bearer ')) {
