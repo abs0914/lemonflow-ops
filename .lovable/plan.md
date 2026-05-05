@@ -1,55 +1,57 @@
+## Goal
 
+Let Warehouse, Production, and Admin write down weight loss on perishable raw materials (fruits, etc.) so stock figures match physical reality before items hit production.
 
-# Franchisee Store-Specific Notifications
+## Approach
 
-## Problem
-`notify_roles()` broadcasts to all users of a role. Franchisee users should only receive notifications about their own store's orders, and they should get updates at more lifecycle stages.
+Manual Shrinkage Adjustment — flag perishable items, then post a `shrinkage` stock movement whenever a recount shows weight loss. No automatic depletion, no batch tracking. Fully auditable via existing `stock_movements` infrastructure.
 
-## Solution
+---
 
-### 1. New database function: `notify_store_users(p_store_id, p_title, p_message, p_type, p_entity_type, p_entity_id)`
-- Inserts notifications only for users assigned to the given store via `user_store_assignments`
-- Replaces `notify_roles(ARRAY['Store'], ...)` calls in the sales order trigger
+## Database changes (migration)
 
-### 2. Update `on_sales_order_change()` trigger function
-Replace all `notify_roles(ARRAY['Store'], ...)` calls with `notify_store_users(NEW.store_id, ...)` and add new status transitions:
+1. **`raw_materials.is_perishable`** — new `boolean` column, default `false`. Marks fruit/produce items eligible for shrinkage tracking.
+2. **`stock_movements` `valid_movement_type` constraint** — extend to allow `'shrinkage'` as a movement_type (alongside existing receipt/issue/adjustment/assembly_produce/etc).
+3. **`post_shrinkage_adjustment` RPC** — security-definer function that:
+   - Verifies caller is Admin/Warehouse/Production
+   - Verifies the raw material has `is_perishable = true`
+   - Inserts a `stock_movements` row (`movement_type = 'shrinkage'`, negative `quantity`, notes, `performed_by`)
+   - Decrements `raw_materials.stock_quantity` by the loss amount (clamped at 0)
+   - Returns the new stock quantity
+   - Uses `.select()`-style verification per the RLS Mutation core rule
 
-| Status transition | Notification to store users |
-|---|---|
-| `submitted` → `pending_payment` | "Order Under Review — Finance is reviewing your order" |
-| `pending_payment` → `awaiting_proof` | "Upload Proof of Payment" (existing, but now store-filtered) |
-| `awaiting_proof` → `pending_accounting` | "Payment Received — Awaiting final verification" |
-| `pending_accounting` → `processing` | "Order Approved — Your order is now being processed" |
-| any → `fulfilled` | "Order Fulfilled" (existing, but now store-filtered) |
-| any → `cancelled` | "Order Cancelled" |
+No CHECK constraints based on time; pure structural changes only.
 
-### 3. No code changes needed
-- The client-side `useNotifications` hook already filters by `user_id`, so store-specific inserts will just work
-- `NotificationBell` routing for `sales_order` entity type already navigates to the order detail
+## UI changes
 
-## Database Migration
-```sql
--- 1. Create store-specific notification function
-CREATE OR REPLACE FUNCTION public.notify_store_users(
-  p_store_id uuid, p_title text, p_message text,
-  p_type text DEFAULT 'info', p_entity_type text DEFAULT NULL,
-  p_entity_id text DEFAULT NULL
-) RETURNS void LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = public AS $$
-BEGIN
-  INSERT INTO notifications (user_id, title, message, type, entity_type, entity_id)
-  SELECT usa.user_id, p_title, p_message, p_type, p_entity_type, p_entity_id
-  FROM user_store_assignments usa
-  WHERE usa.store_id = p_store_id;
-END;
-$$;
+**`src/pages/RawMaterials.tsx`**
+- Add a "Perishable" toggle column (Admin-editable) in the raw material table/edit form.
+- Add a "Log Shrinkage" action button on each perishable row (visible to Admin/Warehouse/Production).
+- Visual badge ("Perishable") on perishable rows so operators can spot them at a glance.
 
--- 2. Replace on_sales_order_change with store-filtered version
---    (full function replacement updating all Store notification calls)
-```
+**New `src/components/inventory/LogShrinkageDialog.tsx`**
+- Inputs: current stock (read-only), recounted weight (numeric), auto-calculated loss, reason notes (required), date.
+- On submit: calls `post_shrinkage_adjustment` RPC; toasts success; invalidates raw materials + stock movements queries.
 
-## What changes for users
-- Franchisees only see notifications for their own store
-- They get progress updates at every stage, not just "upload proof" and "fulfilled"
-- Operational roles (Admin, Fulfillment, etc.) continue receiving notifications as before via `notify_roles`
+**`src/pages/Inventory.tsx` / movement history views**
+- Render `shrinkage` movements with a distinct label/color (e.g. amber "Shrinkage") so they're visually separate from regular issues/receipts.
 
+## Reporting touch-up
+
+- In existing stock movement listings, ensure `shrinkage` rows show up under raw material history with the negative quantity and reason.
+- Optional (small): add a "Total shrinkage (last 30 days)" stat to the raw material detail/row for visibility. Confirm if you want this now or later.
+
+## Production interaction
+
+No change to BOM consumption logic. Because shrinkage is written down before production runs, the existing assembly reservation/consumption math stays correct — it always operates on the latest `stock_quantity`.
+
+## Memory updates
+
+- Update `mem://inventory/perishables-expiry-workflow` to also cover shrinkage adjustments, OR add a new memory `mem://inventory/perishables-shrinkage-workflow` describing: perishable flag, manual shrinkage movement type, allowed roles (Admin/Warehouse/Production), no auto-depletion.
+- Update Core rule for Stock Movements to include `'shrinkage'` as a recognized movement type.
+
+## Out of scope (can revisit later)
+
+- Auto time-based shrinkage curves
+- Per-batch tracking with FIFO
+- Yield % auto-inflation on BOM consumption
