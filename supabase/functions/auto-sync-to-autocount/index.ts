@@ -75,6 +75,31 @@ Deno.serve(async (req) => {
   const results: SyncResult[] = [];
 
   try {
+    // Auth: require shared cron secret OR an authenticated Admin user
+    const cronSecret = Deno.env.get('CRON_SECRET');
+    const headerSecret = req.headers.get('x-cron-secret');
+    const authHeader = req.headers.get('Authorization');
+    let authorized = !!(cronSecret && headerSecret && headerSecret === cronSecret);
+    if (!authorized && authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.replace('Bearer ', '');
+      const anonClient = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      );
+      const { data: { user } } = await anonClient.auth.getUser(token);
+      if (user) {
+        const adminClient = createClient(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+        );
+        const { data: profile } = await adminClient.from('user_profiles').select('role').eq('id', user.id).single();
+        if (profile?.role === 'Admin') authorized = true;
+      }
+    }
+    if (!authorized) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     console.log('[auto-sync] Starting automatic sync batch...');
 
     const apiUrl = Deno.env.get('LEMONCO_API_URL');
