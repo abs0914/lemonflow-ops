@@ -27,14 +27,10 @@ export function SignatureManager() {
         .upload(filePath, blob, { contentType: "image/png", upsert: true });
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
-        .from("user-signatures")
-        .getPublicUrl(filePath);
-
       const { error: updateError } = await supabase
         .from("user_profiles")
         .update({
-          signature_url: urlData.publicUrl,
+          signature_url: filePath,
           signature_type: type,
           signature_updated_at: new Date().toISOString(),
         })
