@@ -75,22 +75,28 @@ Deno.serve(async (req) => {
   const results: SyncResult[] = [];
 
   try {
-    // Auth: require shared cron secret OR an authenticated Admin user
+    // Auth: accept either (a) shared cron secret header, (b) Bearer = service role key (used by pg_cron),
+    // or (c) an authenticated Admin user token.
     const cronSecret = Deno.env.get('CRON_SECRET');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     const headerSecret = req.headers.get('x-cron-secret');
     const authHeader = req.headers.get('Authorization');
+    const bearer = authHeader?.startsWith('Bearer ') ? authHeader.replace('Bearer ', '') : '';
+
     let authorized = !!(cronSecret && headerSecret && headerSecret === cronSecret);
-    if (!authorized && authHeader?.startsWith('Bearer ')) {
-      const token = authHeader.replace('Bearer ', '');
+    if (!authorized && bearer && serviceRoleKey && bearer === serviceRoleKey) {
+      authorized = true;
+    }
+    if (!authorized && bearer) {
       const anonClient = createClient(
         Deno.env.get('SUPABASE_URL') ?? '',
         Deno.env.get('SUPABASE_ANON_KEY') ?? ''
       );
-      const { data: { user } } = await anonClient.auth.getUser(token);
+      const { data: { user } } = await anonClient.auth.getUser(bearer);
       if (user) {
         const adminClient = createClient(
           Deno.env.get('SUPABASE_URL') ?? '',
-          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+          serviceRoleKey
         );
         const { data: profile } = await adminClient.from('user_profiles').select('role').eq('id', user.id).single();
         if (profile?.role === 'Admin') authorized = true;
