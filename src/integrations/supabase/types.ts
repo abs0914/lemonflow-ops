@@ -1310,6 +1310,7 @@ export type Database = {
       is_ceo: { Args: { user_id: string }; Returns: boolean }
       is_finance: { Args: { user_id: string }; Returns: boolean }
       is_fulfillment: { Args: { user_id: string }; Returns: boolean }
+      next_batch_number: { Args: never; Returns: string }
       notify_roles: {
         Args: {
           p_entity_id?: string

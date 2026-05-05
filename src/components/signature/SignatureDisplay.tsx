@@ -11,19 +11,28 @@ export function SignatureDisplay({ signatureUrl, className = "h-16 w-auto", fall
   const [url, setUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!signatureUrl) return;
-
-    // If it's already a full URL (public bucket), use directly
-    if (signatureUrl.startsWith("http")) {
-      setUrl(signatureUrl);
+    let cancelled = false;
+    if (!signatureUrl) {
+      setUrl(null);
       return;
     }
 
-    // Otherwise get public URL from storage
-    const { data } = supabase.storage
+    // Extract storage object path. Supports both bare paths and full public URLs.
+    let path = signatureUrl;
+    const marker = "/user-signatures/";
+    const idx = signatureUrl.indexOf(marker);
+    if (idx !== -1) path = signatureUrl.substring(idx + marker.length);
+
+    supabase.storage
       .from("user-signatures")
-      .getPublicUrl(signatureUrl);
-    if (data?.publicUrl) setUrl(data.publicUrl);
+      .createSignedUrl(path, 300)
+      .then(({ data }) => {
+        if (!cancelled && data?.signedUrl) setUrl(data.signedUrl);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [signatureUrl]);
 
   if (!url) {
@@ -34,4 +43,3 @@ export function SignatureDisplay({ signatureUrl, className = "h-16 w-auto", fall
 
   return <img src={url} alt="Digital signature" className={className} />;
 }
-
