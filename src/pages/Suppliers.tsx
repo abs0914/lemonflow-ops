@@ -230,7 +230,7 @@ export default function Suppliers() {
                           {supplier.autocount_synced ? "Synced" : "Not Synced"}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <div className="flex gap-2">
                           <Button variant="outline" size="sm" onClick={() => handleEdit(supplier.id)}>
                             Edit
