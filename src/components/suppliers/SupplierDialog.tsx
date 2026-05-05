@@ -97,6 +97,7 @@ export function SupplierDialog({ open, onOpenChange, supplierId }: SupplierDialo
         email: supplier.email || "",
         address: supplier.address || "",
         credit_terms: supplier.credit_terms || 0,
+        payment_terms: (supplier as any).payment_terms || "",
         is_active: supplier.is_active,
       });
     } else {
