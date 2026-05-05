@@ -51,22 +51,24 @@ Deno.serve(async (req) => {
       }
     )
 
+    // Generate strong random passwords (returned once in response)
+    const genPwd = () => crypto.randomUUID() + '!Aa1';
     const demoUsers: DemoUser[] = [
       {
         email: 'admin@lemonco.com',
-        password: 'admin123',
+        password: genPwd(),
         fullName: 'Admin User',
         role: 'Admin'
       },
       {
         email: 'production@lemonco.com',
-        password: 'prod123',
+        password: genPwd(),
         fullName: 'Production Manager',
         role: 'Production'
       },
       {
         email: 'warehouse@lemonco.com',
-        password: 'wh123',
+        password: genPwd(),
         fullName: 'Warehouse Operator',
         role: 'Warehouse'
       }
