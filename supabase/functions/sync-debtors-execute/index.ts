@@ -23,8 +23,8 @@ interface AutoCountDebtor {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders }
-  try {
+    return new Response(null, { headers: corsHeaders });
+  }
     // --- Auth + role check ---
     const __authHeader = req.headers.get('Authorization');
     if (!__authHeader?.startsWith('Bearer ')) {
@@ -48,10 +48,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     // --- end auth ---
-  } catch (__e) { return new Response(JSON.stringify({error:String(__e)}),{status:500,headers:{...corsHeaders,"Content-Type":"application/json"}}); }
-);
-  }
-
+  
   try {
     console.log('[sync-debtors-execute] Starting sync execution');
 

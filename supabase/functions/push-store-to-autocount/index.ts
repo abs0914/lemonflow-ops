@@ -223,7 +223,6 @@ Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders }
-  try {
     // --- Auth + role check ---
     const __authHeader = req.headers.get('Authorization');
     if (!__authHeader?.startsWith('Bearer ')) {
@@ -247,10 +246,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     // --- end auth ---
-  } catch (__e) { return new Response(JSON.stringify({error:String(__e)}),{status:500,headers:{...corsHeaders,"Content-Type":"application/json"}}); }
-);
-  }
-
+  
   try {
     // Get environment variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
