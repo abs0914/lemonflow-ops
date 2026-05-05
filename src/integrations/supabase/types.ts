@@ -728,6 +728,7 @@ export type Database = {
           description: string | null
           has_batch_no: boolean | null
           id: string
+          is_perishable: boolean
           item_group: string | null
           item_type: string | null
           last_synced_at: string | null
@@ -749,6 +750,7 @@ export type Database = {
           description?: string | null
           has_batch_no?: boolean | null
           id?: string
+          is_perishable?: boolean
           item_group?: string | null
           item_type?: string | null
           last_synced_at?: string | null
@@ -770,6 +772,7 @@ export type Database = {
           description?: string | null
           has_batch_no?: boolean | null
           id?: string
+          is_perishable?: boolean
           item_group?: string | null
           item_type?: string | null
           last_synced_at?: string | null
@@ -1325,6 +1328,14 @@ export type Database = {
           p_type?: string
         }
         Returns: undefined
+      }
+      post_shrinkage_adjustment: {
+        Args: {
+          p_loss_quantity: number
+          p_notes: string
+          p_raw_material_id: string
+        }
+        Returns: Json
       }
       release_sales_order_stock: {
         Args: { p_sales_order_id: string }
