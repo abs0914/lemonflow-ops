@@ -13,10 +13,12 @@ import { DeleteInventoryDialog } from "@/components/inventory/DeleteInventoryDia
 import { AddInventoryDialog } from "@/components/inventory/AddInventoryDialog";
 import { EditInventoryDialog } from "@/components/inventory/EditInventoryDialog";
 import { RawMaterialsCsvUpload } from "@/components/inventory/RawMaterialsCsvUpload";
+import { ManagePerishablesDialog } from "@/components/inventory/ManagePerishablesDialog";
+import { LogShrinkageDialog } from "@/components/inventory/LogShrinkageDialog";
 import { FloatingActionButton } from "@/components/ui/floating-action-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, AlertCircle, Database, Plus, RefreshCw, Download } from "lucide-react";
+import { Package, AlertCircle, Database, Plus, RefreshCw, Download, Leaf, Scale } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { RawMaterial } from "@/types/inventory";
@@ -46,10 +48,13 @@ export default function RawMaterials() {
     navigate("/login");
     return null;
   }
-  if (profile?.role !== "Admin" && profile?.role !== "Warehouse" && profile?.role !== "Fulfillment") {
+  if (profile?.role !== "Admin" && profile?.role !== "Warehouse" && profile?.role !== "Fulfillment" && profile?.role !== "Production") {
     navigate("/login");
     return null;
   }
+
+  const canLogShrinkage = profile?.role === "Admin" || profile?.role === "Warehouse" || profile?.role === "Production";
+  const canManagePerishables = profile?.role === "Admin" || profile?.role === "Warehouse";
 
   // Fetch raw materials data
   const { data: rawMaterials, isLoading, refetch } = useQuery({
