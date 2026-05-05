@@ -14,7 +14,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSupplier } from "@/hooks/useSuppliers";
+
+const PAYMENT_TERMS_OPTIONS = ["COD", "2 weeks", "15 days", "30 days"];
 
 interface SupplierDialogProps {
   open: boolean;
@@ -30,6 +33,7 @@ interface SupplierFormData {
   email: string;
   address: string;
   credit_terms: number;
+  payment_terms: string;
   is_active: boolean;
 }
 
@@ -53,6 +57,7 @@ export function SupplierDialog({ open, onOpenChange, supplierId }: SupplierDialo
   });
 
   const isActive = watch("is_active");
+  const paymentTerms = watch("payment_terms");
 
   // Auto-generate supplier code when creating new supplier
   useEffect(() => {
@@ -92,6 +97,7 @@ export function SupplierDialog({ open, onOpenChange, supplierId }: SupplierDialo
         email: supplier.email || "",
         address: supplier.address || "",
         credit_terms: supplier.credit_terms || 0,
+        payment_terms: (supplier as any).payment_terms || "",
         is_active: supplier.is_active,
       });
     } else {
@@ -231,6 +237,23 @@ export function SupplierDialog({ open, onOpenChange, supplierId }: SupplierDialo
                 {...register("credit_terms", { valueAsNumber: true })}
                 placeholder="30"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="payment_terms">Payment Terms</Label>
+              <Select
+                value={paymentTerms || ""}
+                onValueChange={(v) => setValue("payment_terms", v)}
+              >
+                <SelectTrigger id="payment_terms">
+                  <SelectValue placeholder="Select payment terms" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAYMENT_TERMS_OPTIONS.map((opt) => (
+                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
