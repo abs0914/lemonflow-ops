@@ -151,11 +151,30 @@ export function FulfillmentOrderActions({
                   </p>
                 )}
               </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Delivery Price (₱) <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={deliveryFee}
+                  onChange={(e) => setDeliveryFee(parseFloat(e.target.value) || 0)}
+                  placeholder="0.00"
+                />
+                {suggestedRate > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Suggested rate for {order.stores?.store_name}: ₱{suggestedRate.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                  </p>
+                )}
+              </div>
               
               <Button
                 className="w-full"
                 onClick={() => setShowApproveDialog(true)}
-                disabled={isLoading || !deliveryDate}
+                disabled={isLoading || !deliveryDate || deliveryFee < 0}
               >
                 {isLoading ? (
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
