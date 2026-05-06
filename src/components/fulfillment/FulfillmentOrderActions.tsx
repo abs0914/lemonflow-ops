@@ -21,18 +21,22 @@ import {
 } from "@/components/ui/alert-dialog";
 import { CheckCircle, XCircle, Truck, RefreshCw, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { getDeliveryRate } from "@/lib/deliveryRates";
 
 interface FulfillmentOrderActionsProps {
   order: {
     id: string;
     status: string;
     delivery_date?: string;
+    delivery_fee?: number;
     autocount_synced?: boolean;
     stores?: {
+      store_name?: string;
       store_type?: string;
     };
   };
-  onApprove: (deliveryDate: Date) => Promise<void>;
+  onApprove: (deliveryDate: Date, deliveryFee: number) => Promise<void>;
   onReject: (reason: string) => Promise<void>;
   onComplete: () => Promise<void>;
   onMarkWithIssues: (notes: string) => Promise<void>;
@@ -55,6 +59,10 @@ export function FulfillmentOrderActions({
   const [issuesNotes, setIssuesNotes] = useState("");
   const [deliveryDate, setDeliveryDate] = useState<Date | undefined>(
     order.delivery_date ? new Date(order.delivery_date) : undefined
+  );
+  const suggestedRate = getDeliveryRate(order.stores?.store_name);
+  const [deliveryFee, setDeliveryFee] = useState<number>(
+    order.delivery_fee != null && order.delivery_fee > 0 ? order.delivery_fee : suggestedRate
   );
 
   const isSubmitted = order.status === "submitted";
@@ -81,7 +89,7 @@ export function FulfillmentOrderActions({
 
   const handleApproveConfirm = async () => {
     if (!deliveryDate) return;
-    await onApprove(deliveryDate);
+    await onApprove(deliveryDate, deliveryFee);
     setShowApproveDialog(false);
   };
 
@@ -143,11 +151,30 @@ export function FulfillmentOrderActions({
                   </p>
                 )}
               </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Delivery Price (₱) <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={deliveryFee}
+                  onChange={(e) => setDeliveryFee(parseFloat(e.target.value) || 0)}
+                  placeholder="0.00"
+                />
+                {suggestedRate > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Suggested rate for {order.stores?.store_name}: ₱{suggestedRate.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                  </p>
+                )}
+              </div>
               
               <Button
                 className="w-full"
                 onClick={() => setShowApproveDialog(true)}
-                disabled={isLoading || !deliveryDate}
+                disabled={isLoading || !deliveryDate || deliveryFee < 0}
               >
                 {isLoading ? (
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
@@ -259,7 +286,8 @@ export function FulfillmentOrderActions({
             <AlertDialogTitle>Confirm Approval</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to approve this order with delivery date{" "}
-              <strong>{deliveryDate ? format(deliveryDate, "PPP") : ""}</strong>?
+              <strong>{deliveryDate ? format(deliveryDate, "PPP") : ""}</strong> and delivery price{" "}
+              <strong>₱{deliveryFee.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</strong>?
               This will sync the order to AutoCount.
             </AlertDialogDescription>
           </AlertDialogHeader>

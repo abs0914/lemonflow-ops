@@ -1,57 +1,46 @@
 ## Goal
+When Fulfillment approves an order, require them to confirm the **delivery price** in addition to the delivery date. The price should auto-populate from a per-location rate table but remain editable.
 
-Let Warehouse, Production, and Admin write down weight loss on perishable raw materials (fruits, etc.) so stock figures match physical reality before items hit production.
+## Location → Delivery Price Table
+Store these as a constants map (keyed by store name, case-insensitive match):
 
-## Approach
+| Location | Amount (₱) |
+|---|---|
+| PASEO | 900.00 |
+| VIBO PLACE | 850.00 |
+| SM SEASIDE | 900.00 |
+| BTC | 800.00 |
+| ROBINSONS GALLERIA | 800.00 |
+| IT PARK | 800.00 |
+| BASELINE | 850.00 |
+| SM CEBU | 800.00 |
+| 8 BANAWA | 900.00 |
+| GRUBHUB MINGLANILLA | 1,150.00 |
+| PUSO VILLAGE | 850.00 |
+| OUTLETS-PUEBLO VERDE | 800.00 |
+| NU | 800.00 |
+| MANDANI | 750.00 |
+| LG GARDEN | 900.00 |
+| MACTAN AIRPORT | 800.00 |
 
-Manual Shrinkage Adjustment — flag perishable items, then post a `shrinkage` stock movement whenever a recount shows weight loss. No automatic depletion, no batch tracking. Fully auditable via existing `stock_movements` infrastructure.
+## Changes
 
----
+1. **New file `src/lib/deliveryRates.ts`**
+   - Export `DELIVERY_RATES` map and `getDeliveryRate(storeName)` helper that does a normalized lookup (uppercase, trim) and returns the matching amount or `0` if unknown.
 
-## Database changes (migration)
+2. **`src/components/fulfillment/FulfillmentOrderActions.tsx`**
+   - Add `deliveryFee` state next to `deliveryDate`, initialized from `order.delivery_fee` if set, otherwise `getDeliveryRate(order.stores?.store_name)`.
+   - Add a labeled numeric input ("Delivery Price ₱") below the date picker for `submitted` non-franchisee orders.
+   - Show a small hint when the value comes from the rate table ("Suggested rate for {store}").
+   - Update `onApprove` signature to `(deliveryDate: Date, deliveryFee: number) => Promise<void>` and pass both in `handleApproveConfirm`.
+   - Disable Approve button until both date and a non-negative fee are set.
+   - Show the confirmed fee in the approval AlertDialog summary.
 
-1. **`raw_materials.is_perishable`** — new `boolean` column, default `false`. Marks fruit/produce items eligible for shrinkage tracking.
-2. **`stock_movements` `valid_movement_type` constraint** — extend to allow `'shrinkage'` as a movement_type (alongside existing receipt/issue/adjustment/assembly_produce/etc).
-3. **`post_shrinkage_adjustment` RPC** — security-definer function that:
-   - Verifies caller is Admin/Warehouse/Production
-   - Verifies the raw material has `is_perishable = true`
-   - Inserts a `stock_movements` row (`movement_type = 'shrinkage'`, negative `quantity`, notes, `performed_by`)
-   - Decrements `raw_materials.stock_quantity` by the loss amount (clamped at 0)
-   - Returns the new stock quantity
-   - Uses `.select()`-style verification per the RLS Mutation core rule
+3. **`src/pages/FulfillmentOrderDetail.tsx`**
+   - Update `handleApproveOrder` to accept `deliveryFee` and include `delivery_fee: deliveryFee` in the `updateMutation` updates payload (alongside status/delivery_date/etc).
+   - Total amount display already sums in `delivery_fee`, so it will reflect the new value automatically.
 
-No CHECK constraints based on time; pure structural changes only.
-
-## UI changes
-
-**`src/pages/RawMaterials.tsx`**
-- Add a "Perishable" toggle column (Admin-editable) in the raw material table/edit form.
-- Add a "Log Shrinkage" action button on each perishable row (visible to Admin/Warehouse/Production).
-- Visual badge ("Perishable") on perishable rows so operators can spot them at a glance.
-
-**New `src/components/inventory/LogShrinkageDialog.tsx`**
-- Inputs: current stock (read-only), recounted weight (numeric), auto-calculated loss, reason notes (required), date.
-- On submit: calls `post_shrinkage_adjustment` RPC; toasts success; invalidates raw materials + stock movements queries.
-
-**`src/pages/Inventory.tsx` / movement history views**
-- Render `shrinkage` movements with a distinct label/color (e.g. amber "Shrinkage") so they're visually separate from regular issues/receipts.
-
-## Reporting touch-up
-
-- In existing stock movement listings, ensure `shrinkage` rows show up under raw material history with the negative quantity and reason.
-- Optional (small): add a "Total shrinkage (last 30 days)" stat to the raw material detail/row for visibility. Confirm if you want this now or later.
-
-## Production interaction
-
-No change to BOM consumption logic. Because shrinkage is written down before production runs, the existing assembly reservation/consumption math stays correct — it always operates on the latest `stock_quantity`.
-
-## Memory updates
-
-- Update `mem://inventory/perishables-expiry-workflow` to also cover shrinkage adjustments, OR add a new memory `mem://inventory/perishables-shrinkage-workflow` describing: perishable flag, manual shrinkage movement type, allowed roles (Admin/Warehouse/Production), no auto-depletion.
-- Update Core rule for Stock Movements to include `'shrinkage'` as a recognized movement type.
-
-## Out of scope (can revisit later)
-
-- Auto time-based shrinkage curves
-- Per-batch tracking with FIFO
-- Yield % auto-inflation on BOM consumption
+## Out of scope
+- Franchisee orders (Finance handles their fees in the existing finance flow — unchanged).
+- Editing the rate table from the UI (hardcoded for now; can be promoted to `app_configs` later if needed).
+- No DB migration required — `sales_orders.delivery_fee` already exists.
