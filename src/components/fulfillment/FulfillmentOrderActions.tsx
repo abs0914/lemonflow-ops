@@ -60,6 +60,10 @@ export function FulfillmentOrderActions({
   const [deliveryDate, setDeliveryDate] = useState<Date | undefined>(
     order.delivery_date ? new Date(order.delivery_date) : undefined
   );
+  const suggestedRate = getDeliveryRate(order.stores?.store_name);
+  const [deliveryFee, setDeliveryFee] = useState<number>(
+    order.delivery_fee != null && order.delivery_fee > 0 ? order.delivery_fee : suggestedRate
+  );
 
   const isSubmitted = order.status === "submitted";
   const isProcessing = order.status === "processing";
