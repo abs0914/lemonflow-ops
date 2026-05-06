@@ -154,7 +154,19 @@ export default function Suppliers() {
             <p className="text-muted-foreground">Manage your suppliers and creditors</p>
           </div>
           {!isMobile && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              <Button variant="outline" onClick={() => setSyncDialogOpen(true)}>
+                <Download className="mr-2 h-4 w-4" />
+                Pull from AutoCount
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleSyncToAutoCount}
+                disabled={isPushing || unsyncedCount === 0}
+              >
+                <Upload className={`mr-2 h-4 w-4 ${isPushing ? 'animate-spin' : ''}`} />
+                {isPushing ? 'Syncing...' : `Sync to AutoCount${unsyncedCount > 0 ? ` (${unsyncedCount})` : ''}`}
+              </Button>
               <Button onClick={handleCreate}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add Supplier
