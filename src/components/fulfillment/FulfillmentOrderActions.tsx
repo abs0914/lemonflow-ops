@@ -89,7 +89,7 @@ export function FulfillmentOrderActions({
 
   const handleApproveConfirm = async () => {
     if (!deliveryDate) return;
-    await onApprove(deliveryDate);
+    await onApprove(deliveryDate, deliveryFee);
     setShowApproveDialog(false);
   };
 
