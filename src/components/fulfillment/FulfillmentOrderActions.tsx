@@ -21,18 +21,22 @@ import {
 } from "@/components/ui/alert-dialog";
 import { CheckCircle, XCircle, Truck, RefreshCw, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { getDeliveryRate } from "@/lib/deliveryRates";
 
 interface FulfillmentOrderActionsProps {
   order: {
     id: string;
     status: string;
     delivery_date?: string;
+    delivery_fee?: number;
     autocount_synced?: boolean;
     stores?: {
+      store_name?: string;
       store_type?: string;
     };
   };
-  onApprove: (deliveryDate: Date) => Promise<void>;
+  onApprove: (deliveryDate: Date, deliveryFee: number) => Promise<void>;
   onReject: (reason: string) => Promise<void>;
   onComplete: () => Promise<void>;
   onMarkWithIssues: (notes: string) => Promise<void>;
