@@ -286,7 +286,8 @@ export function FulfillmentOrderActions({
             <AlertDialogTitle>Confirm Approval</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to approve this order with delivery date{" "}
-              <strong>{deliveryDate ? format(deliveryDate, "PPP") : ""}</strong>?
+              <strong>{deliveryDate ? format(deliveryDate, "PPP") : ""}</strong> and delivery price{" "}
+              <strong>₱{deliveryFee.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</strong>?
               This will sync the order to AutoCount.
             </AlertDialogDescription>
           </AlertDialogHeader>
