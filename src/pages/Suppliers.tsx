@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, Search, RefreshCw, Upload, Trash2 } from "lucide-react";
+import { Plus, Search, RefreshCw, Upload, Download, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { DashboardLayout } from "@/components/DashboardLayout";
@@ -28,6 +28,7 @@ export default function Suppliers() {
   const [syncDialogOpen, setSyncDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
+  const [isPushing, setIsPushing] = useState(false);
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
 
@@ -102,46 +103,45 @@ export default function Suppliers() {
     }
   };
 
+  const unsyncedSuppliers = useMemo(
+    () => suppliers?.filter(s => !s.autocount_synced) || [],
+    [suppliers]
+  );
+  const unsyncedCount = unsyncedSuppliers.length;
+
   const handleSyncToAutoCount = async () => {
-    const unsyncedSuppliers = filteredSuppliers?.filter(s => !s.autocount_synced) || [];
-    
-    if (unsyncedSuppliers.length === 0) {
+    if (unsyncedCount === 0) {
       toast.info("All suppliers are already synced to AutoCount");
       return;
     }
 
-    toast.info(`Syncing ${unsyncedSuppliers.length} supplier(s) to AutoCount...`);
-    
-    let successCount = 0;
-    let failCount = 0;
+    setIsPushing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        'push-supplier-to-autocount',
+        { body: { supplierIds: unsyncedSuppliers.map(s => s.id) } }
+      );
 
-    for (const supplier of unsyncedSuppliers) {
-      try {
-        const { data, error } = await supabase.functions.invoke(
-          'create-autocount-supplier',
-          { body: { supplierId: supplier.id } }
-        );
+      if (error) throw error;
 
-        if (error || !data?.success) {
-          failCount++;
-          console.error(`Failed to sync supplier ${supplier.supplier_code}:`, error || data?.error);
-        } else {
-          successCount++;
-        }
-      } catch (error) {
-        failCount++;
-        console.error(`Exception syncing supplier ${supplier.supplier_code}:`, error);
+      const successCount = data?.results?.success?.length || 0;
+      const failCount = data?.results?.failed?.length || 0;
+      const skippedCount = data?.results?.skipped?.length || 0;
+
+      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+
+      if (failCount === 0) {
+        toast.success(`Synced ${successCount} supplier(s)${skippedCount ? ` (${skippedCount} skipped)` : ''} to AutoCount`);
+      } else if (successCount > 0) {
+        toast.warning(`Synced ${successCount}, ${failCount} failed. Check sync logs.`);
+      } else {
+        toast.error(`Failed to sync suppliers. Check sync logs for details.`);
       }
-    }
-
-    queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-
-    if (successCount > 0 && failCount === 0) {
-      toast.success(`Successfully synced ${successCount} supplier(s) to AutoCount`);
-    } else if (successCount > 0 && failCount > 0) {
-      toast.warning(`Synced ${successCount} supplier(s), ${failCount} failed. Check sync logs for details.`);
-    } else {
-      toast.error(`Failed to sync all suppliers. Check sync logs for details.`);
+    } catch (err: any) {
+      console.error('[Suppliers] Push error:', err);
+      toast.error(err.message || 'Failed to sync suppliers to AutoCount');
+    } finally {
+      setIsPushing(false);
     }
   };
 
@@ -154,7 +154,19 @@ export default function Suppliers() {
             <p className="text-muted-foreground">Manage your suppliers and creditors</p>
           </div>
           {!isMobile && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              <Button variant="outline" onClick={() => setSyncDialogOpen(true)}>
+                <Download className="mr-2 h-4 w-4" />
+                Pull from AutoCount
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleSyncToAutoCount}
+                disabled={isPushing || unsyncedCount === 0}
+              >
+                <Upload className={`mr-2 h-4 w-4 ${isPushing ? 'animate-spin' : ''}`} />
+                {isPushing ? 'Syncing...' : `Sync to AutoCount${unsyncedCount > 0 ? ` (${unsyncedCount})` : ''}`}
+              </Button>
               <Button onClick={handleCreate}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add Supplier

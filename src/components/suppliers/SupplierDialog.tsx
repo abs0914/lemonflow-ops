@@ -113,7 +113,7 @@ export function SupplierDialog({ open, onOpenChange, supplierId }: SupplierDialo
       if (supplierId) {
         const { error } = await supabase
           .from("suppliers")
-          .update(data)
+          .update({ ...data, autocount_synced: false })
           .eq("id", supplierId);
 
         if (error) throw error;

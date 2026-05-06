@@ -1,46 +1,42 @@
+
 ## Goal
-When Fulfillment approves an order, require them to confirm the **delivery price** in addition to the delivery date. The price should auto-populate from a per-location rate table but remain editable.
+Let users manually trigger the existing AutoCount sync edge functions from the Suppliers and Stores pages.
 
-## Location → Delivery Price Table
-Store these as a constants map (keyed by store name, case-insensitive match):
-
-| Location | Amount (₱) |
-|---|---|
-| PASEO | 900.00 |
-| VIBO PLACE | 850.00 |
-| SM SEASIDE | 900.00 |
-| BTC | 800.00 |
-| ROBINSONS GALLERIA | 800.00 |
-| IT PARK | 800.00 |
-| BASELINE | 850.00 |
-| SM CEBU | 800.00 |
-| 8 BANAWA | 900.00 |
-| GRUBHUB MINGLANILLA | 1,150.00 |
-| PUSO VILLAGE | 850.00 |
-| OUTLETS-PUEBLO VERDE | 800.00 |
-| NU | 800.00 |
-| MANDANI | 750.00 |
-| LG GARDEN | 900.00 |
-| MACTAN AIRPORT | 800.00 |
+## Backend functions (already deployed)
+- `push-supplier-to-autocount` — push local suppliers → AutoCount creditors
+- `sync-suppliers-execute` (with `sync-suppliers-preview`) — pull AutoCount creditors → local
+- `push-store-to-autocount` — push local stores → AutoCount debtors
+- `sync-debtors-execute` — pull AutoCount debtors → local
 
 ## Changes
 
-1. **New file `src/lib/deliveryRates.ts`**
-   - Export `DELIVERY_RATES` map and `getDeliveryRate(storeName)` helper that does a normalized lookup (uppercase, trim) and returns the matching amount or `0` if unknown.
+### 1. `src/pages/Suppliers.tsx`
+- Replace the existing `handleSyncToAutoCount` (which loops `create-autocount-supplier` per supplier) with a single bulk call to `push-supplier-to-autocount` sending `{ supplierIds: [unsynced ids] }`.
+- Add `isPushing` loading state.
+- Compute `unsyncedCount = suppliers.filter(s => !s.autocount_synced).length`.
+- Add two buttons in the header next to "Add Supplier":
+  - **Pull from AutoCount** → opens existing `SyncSuppliersDialog` (preview + execute).
+  - **Sync to AutoCount** (with badge of `unsyncedCount`) → calls push handler; disabled when `unsyncedCount === 0` or while pushing.
+- On success: invalidate `["suppliers"]` and toast results.
 
-2. **`src/components/fulfillment/FulfillmentOrderActions.tsx`**
-   - Add `deliveryFee` state next to `deliveryDate`, initialized from `order.delivery_fee` if set, otherwise `getDeliveryRate(order.stores?.store_name)`.
-   - Add a labeled numeric input ("Delivery Price ₱") below the date picker for `submitted` non-franchisee orders.
-   - Show a small hint when the value comes from the rate table ("Suggested rate for {store}").
-   - Update `onApprove` signature to `(deliveryDate: Date, deliveryFee: number) => Promise<void>` and pass both in `handleApproveConfirm`.
-   - Disable Approve button until both date and a non-negative fee are set.
-   - Show the confirmed fee in the approval AlertDialog summary.
+### 2. `src/pages/Stores.tsx`
+- Fix `handlePullFromAutoCount` to invoke `sync-debtors-execute` (currently calls non-existent `pull-stores-from-autocount`).
+- Compute `unsyncedCount` (already present).
+- Add two header buttons next to "Add Store":
+  - **Pull from AutoCount** → calls `handlePullFromAutoCount`; spinner while `isPulling`.
+  - **Sync to AutoCount** (badge of `unsyncedCount`) → calls `handleSyncToAutoCount()` (no args = all unsynced); disabled when count is 0 or `isSyncing`.
+- Add a per-row sync icon button (RefreshCw) in the Actions column before Edit:
+  - Visible only when `!store.autocount_synced`.
+  - Calls `handleSyncToAutoCount(store.id)`.
+  - Shows spinner when `syncingStoreId === store.id`.
 
-3. **`src/pages/FulfillmentOrderDetail.tsx`**
-   - Update `handleApproveOrder` to accept `deliveryFee` and include `delivery_fee: deliveryFee` in the `updateMutation` updates payload (alongside status/delivery_date/etc).
-   - Total amount display already sums in `delivery_fee`, so it will reflect the new value automatically.
+### 3. `src/hooks/useStores.ts`
+- In `useUpdateStore`, force `autocount_synced: false` in the update payload so edits flag the store for re-sync.
 
-## Out of scope
-- Franchisee orders (Finance handles their fees in the existing finance flow — unchanged).
-- Editing the rate table from the UI (hardcoded for now; can be promoted to `app_configs` later if needed).
-- No DB migration required — `sales_orders.delivery_fee` already exists.
+### 4. `src/components/suppliers/SupplierDialog.tsx`
+- On edit (update path), include `autocount_synced: false` so edits re-flag the supplier.
+- (View file first to confirm exact mutation location.)
+
+## Notes
+- All edge functions already enforce auth + role checks server-side; no RLS / migration changes needed.
+- No new dependencies. Uses existing `sonner` toast, `lucide-react` icons (`RefreshCw`, `Upload`, `Download`), and `react-query` invalidation.

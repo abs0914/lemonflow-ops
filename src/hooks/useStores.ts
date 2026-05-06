@@ -68,7 +68,7 @@ export function useUpdateStore() {
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Store> }) => {
       const { data, error } = await supabase
         .from("stores")
-        .update(updates)
+        .update({ ...updates, autocount_synced: false })
         .eq("id", id)
         .select()
         .single();

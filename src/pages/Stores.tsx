@@ -134,14 +134,14 @@ export default function Stores() {
   const handlePullFromAutoCount = async () => {
     setIsPulling(true);
     try {
-      const { data, error } = await supabase.functions.invoke('pull-stores-from-autocount');
+      const { data, error } = await supabase.functions.invoke('sync-debtors-execute');
       
       if (error) throw error;
       
       if (data?.success) {
-        toast.success(`Synced ${data.synced} stores from AutoCount (${data.created} new, ${data.updated} updated)`);
-      } else if (data?.synced > 0) {
-        toast.warning(`Synced ${data.synced} of ${data.total} stores. ${data.errors?.length || 0} failed.`);
+        const created = data.results?.created ?? data.created ?? 0;
+        const updated = data.results?.updated ?? data.updated ?? 0;
+        toast.success(`Pulled stores from AutoCount (${created} new, ${updated} updated)`);
       } else {
         toast.error(data?.error || 'Failed to pull stores from AutoCount');
       }
@@ -168,6 +168,18 @@ export default function Stores() {
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" onClick={handlePullFromAutoCount} disabled={isPulling}>
+              <Download className={`mr-2 h-4 w-4 ${isPulling ? 'animate-spin' : ''}`} />
+              {isPulling ? 'Pulling...' : 'Pull from AutoCount'}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => handleSyncToAutoCount()}
+              disabled={isSyncing || unsyncedCount === 0}
+            >
+              <Upload className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+              {isSyncing ? 'Syncing...' : `Sync to AutoCount${unsyncedCount > 0 ? ` (${unsyncedCount})` : ''}`}
+            </Button>
             <Button onClick={() => setShowStoreDialog(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Add Store
@@ -254,7 +266,17 @@ export default function Stores() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        
+                        {!store.autocount_synced && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSyncToAutoCount(store.id)}
+                            disabled={syncingStoreId === store.id}
+                            title="Sync to AutoCount"
+                          >
+                            <RefreshCw className={`h-4 w-4 ${syncingStoreId === store.id ? 'animate-spin' : ''}`} />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
