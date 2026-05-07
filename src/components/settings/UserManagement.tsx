@@ -166,10 +166,38 @@ export function UserManagement() {
                 Manage system users and their roles
               </CardDescription>
             </div>
-            <Button onClick={() => setIsAddDialogOpen(true)}>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Add User
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => {
+                if (!users || users.length === 0) return;
+                const headers = ["Name", "Email", "Role", "Created"];
+                const rows = users.map(u => [
+                  u.full_name,
+                  u.email || "",
+                  u.role,
+                  new Date(u.created_at).toLocaleDateString(),
+                ]);
+                const csv = [headers, ...rows]
+                  .map(r => r.map(v => {
+                    const s = String(v ?? "");
+                    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+                  }).join(","))
+                  .join("\n");
+                const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `users-${new Date().toISOString().split("T")[0]}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}>
+                <Download className="h-4 w-4 mr-2" />
+                Export CSV
+              </Button>
+              <Button onClick={() => setIsAddDialogOpen(true)}>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add User
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
