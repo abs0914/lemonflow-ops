@@ -32,7 +32,7 @@ const statusColors: Record<string, string> = {
 export default function FulfillmentOrderDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [isSyncing, setIsSyncing] = useState(false);
   const [showDeliveryOrder, setShowDeliveryOrder] = useState(false);
   const [deliveryNotes, setDeliveryNotes] = useState("");
