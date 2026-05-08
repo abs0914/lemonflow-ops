@@ -15,6 +15,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { FulfillmentOrderActions } from "@/components/fulfillment/FulfillmentOrderActions";
 import { DeliveryOrderDocument } from "@/components/fulfillment/DeliveryOrderDocument";
 import { OrderLineForm } from "@/components/store-orders/OrderLineForm";
+import { EditOrderLinesPanel } from "@/components/fulfillment/EditOrderLinesPanel";
+import { OrderChangeHistory } from "@/components/fulfillment/OrderChangeHistory";
 
 const statusColors: Record<string, string> = {
   draft: "bg-gray-100 text-gray-800",
