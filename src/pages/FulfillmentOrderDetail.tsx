@@ -329,9 +329,16 @@ export default function FulfillmentOrderDetail() {
                 <CardTitle>Order Items</CardTitle>
               </CardHeader>
               <CardContent>
-                <OrderLineForm lines={lines || []} onRemoveLine={() => {}} readOnly />
+                {(profile?.role === "Fulfillment" || profile?.role === "Admin") &&
+                (order.status === "submitted" || order.status === "processing") ? (
+                  <EditOrderLinesPanel orderId={order.id} lines={lines || []} />
+                ) : (
+                  <OrderLineForm lines={lines || []} onRemoveLine={() => {}} readOnly />
+                )}
               </CardContent>
             </Card>
+
+            <OrderChangeHistory orderId={order.id} />
           </div>
 
           <div className="space-y-6">
