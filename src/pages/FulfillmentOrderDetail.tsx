@@ -15,6 +15,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { FulfillmentOrderActions } from "@/components/fulfillment/FulfillmentOrderActions";
 import { DeliveryOrderDocument } from "@/components/fulfillment/DeliveryOrderDocument";
 import { OrderLineForm } from "@/components/store-orders/OrderLineForm";
+import { EditOrderLinesPanel } from "@/components/fulfillment/EditOrderLinesPanel";
+import { OrderChangeHistory } from "@/components/fulfillment/OrderChangeHistory";
 
 const statusColors: Record<string, string> = {
   draft: "bg-gray-100 text-gray-800",
@@ -30,7 +32,7 @@ const statusColors: Record<string, string> = {
 export default function FulfillmentOrderDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [isSyncing, setIsSyncing] = useState(false);
   const [showDeliveryOrder, setShowDeliveryOrder] = useState(false);
   const [deliveryNotes, setDeliveryNotes] = useState("");
@@ -327,9 +329,16 @@ export default function FulfillmentOrderDetail() {
                 <CardTitle>Order Items</CardTitle>
               </CardHeader>
               <CardContent>
-                <OrderLineForm lines={lines || []} onRemoveLine={() => {}} readOnly />
+                {(profile?.role === "Fulfillment" || profile?.role === "Admin") &&
+                (order.status === "submitted" || order.status === "processing") ? (
+                  <EditOrderLinesPanel orderId={order.id} lines={lines || []} />
+                ) : (
+                  <OrderLineForm lines={lines || []} onRemoveLine={() => {}} readOnly />
+                )}
               </CardContent>
             </Card>
+
+            <OrderChangeHistory orderId={order.id} />
           </div>
 
           <div className="space-y-6">
