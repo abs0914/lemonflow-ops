@@ -235,6 +235,54 @@ export function EnhancedGoodsReceivedForm({ preselectedPOId }: EnhancedGoodsRece
       const { error } = await supabase.from("stock_movements").insert(movements);
       if (error) throw error;
 
+      // Increment local stock_quantity on the destination item (component or raw_material)
+      for (const line of selectedLines) {
+        const qty = parseFloat(line.quantityReceived || "0");
+        if (qty <= 0) continue;
+
+        if (line.item_type === "raw_material" && line.raw_material_id) {
+          const { data: rm, error: rmFetchErr } = await supabase
+            .from("raw_materials")
+            .select("stock_quantity")
+            .eq("id", line.raw_material_id)
+            .single();
+          if (rmFetchErr) {
+            console.error("Failed to fetch raw_material stock:", rmFetchErr);
+            throw new Error(`Failed to read stock for ${line.raw_materials?.name}`);
+          }
+          const newQty = Number(rm?.stock_quantity || 0) + qty;
+          const { data: rmUpd, error: rmUpdErr } = await supabase
+            .from("raw_materials")
+            .update({ stock_quantity: newQty })
+            .eq("id", line.raw_material_id)
+            .select();
+          if (rmUpdErr) throw rmUpdErr;
+          if (!rmUpd || rmUpd.length === 0) {
+            throw new Error(`Stock update blocked by RLS for ${line.raw_materials?.name}`);
+          }
+        } else if (line.component_id) {
+          const { data: cp, error: cpFetchErr } = await supabase
+            .from("components")
+            .select("stock_quantity")
+            .eq("id", line.component_id)
+            .single();
+          if (cpFetchErr) {
+            console.error("Failed to fetch component stock:", cpFetchErr);
+            throw new Error(`Failed to read stock for ${line.components?.name}`);
+          }
+          const newQty = Number(cp?.stock_quantity || 0) + qty;
+          const { data: cpUpd, error: cpUpdErr } = await supabase
+            .from("components")
+            .update({ stock_quantity: newQty })
+            .eq("id", line.component_id)
+            .select();
+          if (cpUpdErr) throw cpUpdErr;
+          if (!cpUpd || cpUpd.length === 0) {
+            throw new Error(`Stock update blocked by RLS for ${line.components?.name}`);
+          }
+        }
+      }
+
       // Increment received_quantity on each PO line atomically
       for (const line of selectedLines) {
         const qty = parseFloat(line.quantityReceived || "0");
