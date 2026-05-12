@@ -1,60 +1,51 @@
-## Investigation findings
+## Goal
 
-When goods are received via the **Receiving Report → Receive** tab (`EnhancedGoodsReceivedForm`), local inventory (`components.stock_quantity` / `raw_materials.stock_quantity`) is **never incremented**. Two independent failures cause this.
+Stop showing "synced to AutoCount" when the `sync-grn-to-autocount` edge function fails. Show the returned `docNo` on success and surface partial-failure counts for multi-line receiving. No backend or DB changes.
 
-### Root cause #1 — No local stock increment
+## Files
 
-`EnhancedGoodsReceivedForm.receiveMutation` does three things:
-1. Inserts rows into `stock_movements`
-2. Calls `increment_po_line_received` (updates the PO line counter only)
-3. Invokes `sync-grn-to-autocount`
+1. `src/components/warehouse/GoodsReceivedForm.tsx` (single-line GRN)
+2. `src/components/inventory/EnhancedGoodsReceivedForm.tsx` (multi-line GRN)
 
-Nothing in this flow updates `components.stock_quantity` or `raw_materials.stock_quantity`.
+## Changes
 
-There is a DB function `update_stock_quantity()` that *would* do it, but:
-- It is **not attached as a trigger** anywhere (`information_schema.triggers` returns 0 rows for the `public` schema).
-- Even if it were, its `IF/ELSIF` branches only handle `'product'`, `'raw_material'`, `'finished_good'` — it has **no branch for `'component'`**, which is the item_type used by every receipt.
+### 1. `GoodsReceivedForm.tsx` — single line
 
-Verified against live data: receipt of 2000 YAKULT (TLC00018) was logged on 2026-05-12, but `components.stock_quantity` is still 150. Same pattern for all recent receipts.
+In the mutation (around line 142–155), replace the silent error-swallow with a proper check that distinguishes the local receipt from the sync result.
 
-### Root cause #2 — AutoCount GRN sync endpoint is broken
+- Capture both `data` and `syncError` from `supabase.functions.invoke(...)`.
+- Treat `syncError` or `data?.success === false` as a **partial success** (local stock is already updated, so do not throw — the receipt is real). Instead, return a structured result `{ docNo, syncFailed, syncMessage }` from `mutationFn`.
+- In `onSuccess`, branch on `syncFailed`:
+  - Success: toast title "Goods Received", description `GRN synced to AutoCount: ${docNo}`.
+  - Sync failed: toast variant `destructive` (or warning style), title "Received locally — AutoCount sync failed", description containing `syncMessage`.
+- Keep the form reset and query invalidation in both branches (the local receipt did succeed).
 
-The local stock could otherwise be backfilled by the 5-minute pg_cron AutoCount pull, but `sync-grn-to-autocount` is failing for every line:
+### 2. `EnhancedGoodsReceivedForm.tsx` — multi line
 
-```
-AutoCount API error: No HTTP resource was found that matches the
-request URI 'http://api.thelemonco.online/api/GoodsReceivedNote'.
-No type was found that matches the controller named 'GoodsReceivedNote'.
-```
+In the per-line sync loop (lines 341–361):
 
-The Backend `Backend.Api/Controllers/` folder has no `GoodsReceivedNoteController`. The endpoint simply does not exist, so AutoCount never records the GRN and the periodic pull never bumps stock either.
+- Track `syncSuccessCount`, `syncFailures: { itemName, message }[]`.
+- For each `supabase.functions.invoke("sync-grn-to-autocount", ...)`:
+  - Read `{ data, error }`. If `error || data?.success === false`, push to `syncFailures` with the line's display name (`components?.name` or `raw_materials?.name`) and the returned message; otherwise increment `syncSuccessCount`.
+- Return `{ count: selectedLines.length, syncSuccessCount, syncFailures }` from `mutationFn`.
+- In `onSuccess`, choose the toast based on `syncFailures.length`:
+  - All synced: "Received and synced N item(s)" with optional comma-joined `docNo`s if returned.
+  - Partial: warning/destructive toast "Received N item(s) locally — AutoCount sync failed for M" and list the failing item names (truncate to first 3 + "and X more").
+- Replace the `try/catch` with explicit `{ data, error }` handling so `data?.success === false` is caught (the edge function returns 200 with `success:false` on some failures).
 
-## Proposed fix
+### 3. Toast styling
 
-### A. Update local stock immediately on receipt (primary fix)
+- Use existing `useToast` from `@/hooks/use-toast` (already imported in both files).
+- For partial-failure variant, use `variant: "destructive"` since the project already uses that in the existing `onError` handlers — keeps it consistent without adding new variants.
 
-Inside `EnhancedGoodsReceivedForm.receiveMutation`, after inserting `stock_movements` and bumping `received_quantity`, increment the destination item's `stock_quantity` for every selected line:
+## Out of scope
 
-```text
-for each selected line:
-  if item_type == 'raw_material':
-    update raw_materials set stock_quantity = stock_quantity + qty where id = raw_material_id
-  else:
-    update components set stock_quantity = stock_quantity + qty where id = component_id
-```
+- No edge function, .NET backend, RLS, schema, or retry-policy changes.
+- No changes to `Stores.tsx` or any other component.
+- No changes to the local stock-update logic — those already throw on failure.
 
-Use the `.select()` + `data.length > 0` pattern (per project memory) to catch any silent RLS failure, and surface a toast on error. Apply the same fix to `src/components/warehouse/GoodsReceivedForm.tsx` and `StockReceiptForm.tsx` if they share the gap (will verify during implementation).
+## Verification
 
-Invalidate `["components"]` / `["raw-materials"]` query keys (already done).
-
-### B. Note about AutoCount GRN sync (out of scope, flagged)
-
-The `sync-grn-to-autocount` failures are a separate backend gap (missing `GoodsReceivedNoteController` on the AutoCount API server). This plan does **not** fix the C# backend, but the local stock fix above means receiving works end-to-end inside the app even while AutoCount GRN sync is broken. I will leave a clear console warning + toast when the sync call fails so it is visible, and recommend addressing the backend controller separately.
-
-### Files to change
-
-- `src/components/inventory/EnhancedGoodsReceivedForm.tsx` — add local stock increment block in mutation.
-- `src/components/warehouse/GoodsReceivedForm.tsx` — same fix if it has the same gap.
-- `src/components/warehouse/StockReceiptForm.tsx` — verify and patch if needed.
-
-No DB migration, no edge function changes, no RLS changes (Warehouse/Admin already have UPDATE on both tables).
+- Trigger a GRN while the edge function returns 404 / `success:false` → confirm destructive toast says "Received locally — AutoCount sync failed" and stock is still incremented locally.
+- Trigger a GRN with a working backend → confirm success toast shows the returned `docNo`.
+- Multi-line: select 3 lines, force one to fail → confirm toast says "Received 3 item(s) locally — AutoCount sync failed for 1" with the failing item's name.
