@@ -100,6 +100,18 @@ export function StockReceiptForm() {
       });
 
       if (error) throw error;
+
+      // Increment local component stock_quantity
+      const newQty = Number(selectedComponent.stock_quantity || 0) + convertedQuantity;
+      const { data: cpUpd, error: cpUpdErr } = await supabase
+        .from("components")
+        .update({ stock_quantity: newQty })
+        .eq("id", selectedComponent.id)
+        .select();
+      if (cpUpdErr) throw cpUpdErr;
+      if (!cpUpd || cpUpd.length === 0) {
+        throw new Error("Stock update blocked by RLS");
+      }
     },
     onSuccess: () => {
       toast({
