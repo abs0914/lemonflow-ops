@@ -1,82 +1,60 @@
-## Goal
+## Investigation findings
 
-Let Fulfillment users edit quantities, remove existing items, or add new items to a sales order (in `submitted` or `processing` status) — instead of only being able to mark the order with issues. Every change is logged in `audit_logs` so the trail is preserved, and reserved stock is re-synced when lines change.
+When goods are received via the **Receiving Report → Receive** tab (`EnhancedGoodsReceivedForm`), local inventory (`components.stock_quantity` / `raw_materials.stock_quantity`) is **never incremented**. Two independent failures cause this.
 
-## UX
+### Root cause #1 — No local stock increment
 
-On `FulfillmentOrderDetail` (Order Items card), when the order status is `submitted` or `processing` and the user is Fulfillment/Admin:
+`EnhancedGoodsReceivedForm.receiveMutation` does three things:
+1. Inserts rows into `stock_movements`
+2. Calls `increment_po_line_received` (updates the PO line counter only)
+3. Invokes `sync-grn-to-autocount`
 
-- Each line row gets two icon buttons: **Edit** (pencil) and **Delete** (trash).
-- Clicking Edit opens a small dialog with Quantity + Unit Price inputs (recomputes subtotal live). Save requires a short "Reason for change" note.
-- Clicking Delete opens a confirm dialog also requiring a reason.
-- An **"Add Item"** button above the table opens the existing item-picker (reusing `ItemSelector` from Store Order Create) to append a new line; also requires a reason.
-- After every change: order `total_amount` is recalculated, line numbers are renumbered, and an `audit_logs` row is written with `entity_type='sales_order'`, `entity_id=<order id>`, `action='line_updated' | 'line_deleted' | 'line_added'`, and `details` containing the before/after snapshot + reason + user.
-- A new **"Order Change History"** collapsible card on the detail page lists those audit log entries (timestamp, user, action, item, qty before/after, reason).
+Nothing in this flow updates `components.stock_quantity` or `raw_materials.stock_quantity`.
 
-The existing **Mark with Issues** button stays as-is for cases where the team wants to flag the whole order without editing it.
+There is a DB function `update_stock_quantity()` that *would* do it, but:
+- It is **not attached as a trigger** anywhere (`information_schema.triggers` returns 0 rows for the `public` schema).
+- Even if it were, its `IF/ELSIF` branches only handle `'product'`, `'raw_material'`, `'finished_good'` — it has **no branch for `'component'`**, which is the item_type used by every receipt.
 
-## Stock handling
+Verified against live data: receipt of 2000 YAKULT (TLC00018) was logged on 2026-05-12, but `components.stock_quantity` is still 150. Same pattern for all recent receipts.
 
-For `processing` orders (stock already reserved/synced) we must keep reservations consistent:
+### Root cause #2 — AutoCount GRN sync endpoint is broken
 
-1. Before applying a line change, call `release_sales_order_stock(order_id)` to free reserved qty.
-2. Apply the line insert/update/delete.
-3. Recalculate and update `sales_orders.total_amount`.
-4. Re-reserve via the existing `reserve_sales_order_stock` RPC (already used at submit time).
-5. If the order is already AutoCount-synced (`autocount_synced=true`), show a warning toast: "Order already synced to AutoCount — please update there manually" (we will not auto-push edits to AutoCount in this iteration).
+The local stock could otherwise be backfilled by the 5-minute pg_cron AutoCount pull, but `sync-grn-to-autocount` is failing for every line:
 
-For `submitted` (not yet approved/reserved) orders, no stock RPC calls are needed — just edit the lines and recalc total.
-
-## Technical changes
-
-**New file `src/components/fulfillment/EditOrderLinesPanel.tsx`**
-- Renders the lines table with Edit/Delete buttons + Add Item button.
-- Internal dialogs for edit/delete/add, each with a required "Reason" textarea.
-- Calls a new hook `useFulfillmentLineMutations` for all mutations.
-
-**New hook `src/hooks/useFulfillmentLineMutations.ts`**
-- `updateLine({ orderId, lineId, quantity, unit_price, reason })`
-- `deleteLine({ orderId, lineId, reason })`
-- `addLine({ orderId, item, quantity, reason })` (item shape from ItemSelector)
-- Each mutation:
-  1. Reads current line (for before-snapshot).
-  2. If order.status === 'processing' && order.stock_reserved → `supabase.rpc('release_sales_order_stock', { p_sales_order_id })`.
-  3. Performs insert/update/delete on `sales_order_lines` (with `.select()` + length check per memory rule).
-  4. Re-fetches lines, recomputes `total_amount = sum(sub_total)`, renumbers `line_number`.
-  5. Updates `sales_orders` total + `updated_at`.
-  6. If was reserved → `supabase.rpc('reserve_sales_order_stock', { p_sales_order_id })`.
-  7. Inserts an `audit_logs` row with full before/after JSON + reason.
-  8. Invalidates `['sales-order-lines', orderId]`, `['sales-orders']`, and a new `['order-audit-logs', orderId]` query.
-
-**New hook `src/hooks/useOrderAuditLogs.ts`**
-- Fetches `audit_logs` where `entity_type='sales_order'` and `entity_id=orderId`, joined with `user_profiles(full_name)` for display.
-
-**New component `src/components/fulfillment/OrderChangeHistory.tsx`**
-- Collapsible card showing the audit log timeline.
-
-**Modify `src/pages/FulfillmentOrderDetail.tsx`**
-- Replace the readonly `OrderLineForm` block with `EditOrderLinesPanel` when the user can edit (status submitted/processing, role Fulfillment/Admin), keeping readonly view otherwise.
-- Add `OrderChangeHistory` card in the right column.
-
-**Modify `src/components/store-orders/OrderLineForm.tsx`**
-- No change required (still used in readonly mode).
-
-**RLS**
-- `sales_order_lines` already has *"Fulfillment can manage order lines"* policy covering submitted/processing — no migration needed.
-- `audit_logs` already has *"Authenticated users can insert audit logs"* — no migration needed.
-- Confirm `reserve_sales_order_stock` exists; if not, a small migration adds it (mirroring `release_sales_order_stock`). I will check during implementation and add only if missing.
-
-**Audit log shape**
-```json
-{
-  "action": "line_updated",
-  "reason": "Customer requested less qty",
-  "before": { "item_code": "...", "quantity": 10, "unit_price": 50, "sub_total": 500 },
-  "after":  { "item_code": "...", "quantity": 6,  "unit_price": 50, "sub_total": 300 }
-}
+```
+AutoCount API error: No HTTP resource was found that matches the
+request URI 'http://api.thelemonco.online/api/GoodsReceivedNote'.
+No type was found that matches the controller named 'GoodsReceivedNote'.
 ```
 
-## Out of scope
+The Backend `Backend.Api/Controllers/` folder has no `GoodsReceivedNoteController`. The endpoint simply does not exist, so AutoCount never records the GRN and the periodic pull never bumps stock either.
 
-- Auto-pushing line edits to AutoCount (warning shown instead).
-- Editing other order fields (delivery date, fees) — already handled elsewhere.
+## Proposed fix
+
+### A. Update local stock immediately on receipt (primary fix)
+
+Inside `EnhancedGoodsReceivedForm.receiveMutation`, after inserting `stock_movements` and bumping `received_quantity`, increment the destination item's `stock_quantity` for every selected line:
+
+```text
+for each selected line:
+  if item_type == 'raw_material':
+    update raw_materials set stock_quantity = stock_quantity + qty where id = raw_material_id
+  else:
+    update components set stock_quantity = stock_quantity + qty where id = component_id
+```
+
+Use the `.select()` + `data.length > 0` pattern (per project memory) to catch any silent RLS failure, and surface a toast on error. Apply the same fix to `src/components/warehouse/GoodsReceivedForm.tsx` and `StockReceiptForm.tsx` if they share the gap (will verify during implementation).
+
+Invalidate `["components"]` / `["raw-materials"]` query keys (already done).
+
+### B. Note about AutoCount GRN sync (out of scope, flagged)
+
+The `sync-grn-to-autocount` failures are a separate backend gap (missing `GoodsReceivedNoteController` on the AutoCount API server). This plan does **not** fix the C# backend, but the local stock fix above means receiving works end-to-end inside the app even while AutoCount GRN sync is broken. I will leave a clear console warning + toast when the sync call fails so it is visible, and recommend addressing the backend controller separately.
+
+### Files to change
+
+- `src/components/inventory/EnhancedGoodsReceivedForm.tsx` — add local stock increment block in mutation.
+- `src/components/warehouse/GoodsReceivedForm.tsx` — same fix if it has the same gap.
+- `src/components/warehouse/StockReceiptForm.tsx` — verify and patch if needed.
+
+No DB migration, no edge function changes, no RLS changes (Warehouse/Admin already have UPDATE on both tables).

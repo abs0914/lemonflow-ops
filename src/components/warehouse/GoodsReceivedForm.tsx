@@ -121,6 +121,24 @@ export function GoodsReceivedForm() {
 
       if (error) throw error;
 
+      // Increment local component stock_quantity
+      const { data: cp, error: cpFetchErr } = await supabase
+        .from("components")
+        .select("stock_quantity")
+        .eq("id", selectedLineData.component_id)
+        .single();
+      if (cpFetchErr) throw cpFetchErr;
+      const newQty = Number(cp?.stock_quantity || 0) + qty;
+      const { data: cpUpd, error: cpUpdErr } = await supabase
+        .from("components")
+        .update({ stock_quantity: newQty })
+        .eq("id", selectedLineData.component_id)
+        .select();
+      if (cpUpdErr) throw cpUpdErr;
+      if (!cpUpd || cpUpd.length === 0) {
+        throw new Error("Stock update blocked by RLS");
+      }
+
       // Call AutoCount sync edge function
       const { error: syncError } = await supabase.functions.invoke("sync-grn-to-autocount", {
         body: {
