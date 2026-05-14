@@ -127,7 +127,7 @@ export function AppSidebar() {
       title: "Store Orders",
       url: "/store/orders",
       icon: ShoppingBag,
-      roles: ["Admin", "Store", "Warehouse", "Fulfillment", "Production", "Accounting"],
+      roles: ["Admin", "Store", "Warehouse", "Fulfillment", "Production", "Accounting", "Finance"],
       subItems: [
         { title: "All Orders", url: "/store/orders", icon: List },
         { title: "New Order", url: "/store/orders/create", icon: Plus },
