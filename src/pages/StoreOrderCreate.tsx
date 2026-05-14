@@ -120,9 +120,32 @@ export default function StoreOrderCreate() {
         return;
       }
 
-      const result = reserveResult as { success: boolean; message?: string } | null;
+      const result = reserveResult as {
+        success: boolean;
+        message?: string;
+        insufficient_items?: Array<{
+          item_code: string;
+          item_name: string;
+          required: number;
+          available: number;
+          shortage: number;
+        }>;
+      } | null;
       if (!result?.success) {
-        toast.error(result?.message || "Failed to reserve stock");
+        const items = result?.insufficient_items ?? [];
+        if (items.length > 0) {
+          const details = items
+            .map((i) => `• ${i.item_code} ${i.item_name}: need ${i.required}, available ${i.available} (short ${i.shortage})`)
+            .join("\n");
+          toast.error("Insufficient stock — please reduce quantities", {
+            description: details,
+            duration: 15000,
+          });
+        } else {
+          toast.error(result?.message || "Failed to reserve stock");
+        }
+        // Keep the draft so user can edit instead of recreating
+        navigate(`/store/orders/${order.id}`);
         return;
       }
 
