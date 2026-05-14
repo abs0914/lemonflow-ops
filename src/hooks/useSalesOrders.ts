@@ -139,11 +139,13 @@ export function useUpdateSalesOrder() {
         .from("sales_orders")
         .update(updates)
         .eq("id", id)
-        .select()
-        .single();
+        .select();
 
       if (error) throw error;
-      return data;
+      if (!data || data.length === 0) {
+        throw new Error("Update blocked — you may not have permission to change this order in its current status. Please refresh and try again.");
+      }
+      return data[0];
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales-orders"] });
