@@ -43,7 +43,7 @@ export default function StoreOrders() {
   const [activeTab, setActiveTab] = useState("all");
 
   const { profile } = useAuth();
-  const operationalRoles = ["Admin", "Warehouse", "Fulfillment", "Production", "Accounting"];
+  const operationalRoles = ["Admin", "Warehouse", "Fulfillment", "Production", "Accounting", "Finance"];
   const isOperational = operationalRoles.includes(profile?.role || "");
 
   const { data: userStores } = useAllUserStores();
