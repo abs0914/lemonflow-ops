@@ -50,11 +50,50 @@ export default function Production() {
     }) => {
       if (!user) throw new Error("User not authenticated");
 
-      // Create stock movement
+      // Resolve to a real component. The dialog may pass a product id when
+      // products.component_id is null; in that case look up the component by
+      // matching SKU so we update the right inventory row.
+      let componentId = data.component_id;
+      let component: { id: string; stock_quantity: number } | null = null;
+
+      const { data: byId } = await supabase
+        .from("components")
+        .select("id, stock_quantity")
+        .eq("id", componentId)
+        .maybeSingle();
+
+      if (byId) {
+        component = byId;
+      } else {
+        // Fallback: treat the id as a product id and find the component by SKU
+        const { data: product, error: productErr } = await supabase
+          .from("products")
+          .select("sku")
+          .eq("id", componentId)
+          .maybeSingle();
+        if (productErr) throw productErr;
+        if (!product) throw new Error("Product/component not found for production log");
+
+        const { data: bySku, error: skuErr } = await supabase
+          .from("components")
+          .select("id, stock_quantity")
+          .eq("sku", product.sku)
+          .maybeSingle();
+        if (skuErr) throw skuErr;
+        if (!bySku) {
+          throw new Error(
+            `No matching component found for SKU ${product.sku}. Link the product to a component before logging production.`
+          );
+        }
+        component = bySku;
+        componentId = bySku.id;
+      }
+
+      // Create stock movement against the resolved component id
       const { data: movement, error: movementError } = await supabase
         .from("stock_movements")
         .insert({
-          item_id: data.component_id,
+          item_id: componentId,
           item_type: "component",
           movement_type: "assembly_produce",
           quantity: data.quantity,
@@ -67,24 +106,22 @@ export default function Production() {
 
       if (movementError) throw movementError;
 
-      // Get current stock quantity
-      const { data: component, error: fetchError } = await supabase
-        .from("components")
-        .select("stock_quantity")
-        .eq("id", data.component_id)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      // Update component stock quantity
-      const { error: updateError } = await supabase
+      // Update component stock quantity (with .select() to surface RLS failures)
+      const { data: updated, error: updateError } = await supabase
         .from("components")
         .update({
-          stock_quantity: (component?.stock_quantity || 0) + data.quantity,
+          stock_quantity: (component.stock_quantity || 0) + data.quantity,
         })
-        .eq("id", data.component_id);
+        .eq("id", componentId)
+        .select("id");
 
       if (updateError) throw updateError;
+      if (!updated || updated.length === 0) {
+        throw new Error("Stock update blocked (insufficient permissions). Movement recorded but inventory not increased.");
+      }
+
+      // Replace downstream component_id with the resolved one for sync
+      data = { ...data, component_id: componentId };
 
       // Sync to AutoCount
       try {
