@@ -100,6 +100,59 @@ export default function StoreOrderCreate() {
       return;
     }
 
+    // Pre-submit stock validation — block before creating the order
+    const codes = lines.map((l) => l.item_code).filter(Boolean);
+    const { data: stockRows, error: stockErr } = await supabase
+      .from("components")
+      .select("autocount_item_code, sku, name, stock_quantity, reserved_quantity")
+      .or(codes.map((c) => `autocount_item_code.eq.${c},sku.eq.${c}`).join(","));
+
+    if (stockErr) {
+      toast.error(`Stock check failed: ${stockErr.message}`);
+      return;
+    }
+
+    const findStock = (code: string) =>
+      stockRows?.find((r) => r.autocount_item_code === code || r.sku === code);
+
+    const unmatched: string[] = [];
+    const insufficient: Array<{ code: string; name: string; need: number; available: number }> = [];
+    for (const line of lines) {
+      const row = findStock(line.item_code);
+      if (!row) {
+        unmatched.push(`${line.item_code} ${line.item_name}`);
+        continue;
+      }
+      const available = Number(row.stock_quantity || 0) - Number(row.reserved_quantity || 0);
+      if (available <= 0 || available < line.quantity) {
+        insufficient.push({
+          code: line.item_code,
+          name: line.item_name,
+          need: line.quantity,
+          available,
+        });
+      }
+    }
+
+    if (unmatched.length > 0) {
+      toast.error("Item not found in inventory — cannot order", {
+        description: unmatched.join("\n"),
+        duration: 15000,
+      });
+      return;
+    }
+
+    if (insufficient.length > 0) {
+      const details = insufficient
+        .map((i) => `• ${i.code} ${i.name}: need ${i.need}, available ${i.available}`)
+        .join("\n");
+      toast.error("Out of stock — order blocked", {
+        description: details,
+        duration: 15000,
+      });
+      return;
+    }
+
     const order = await createMutation.mutateAsync({
       store_id: storeId,
       debtor_code: selectedStore?.debtor_code || "",
