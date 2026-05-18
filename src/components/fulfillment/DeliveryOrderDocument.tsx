@@ -18,6 +18,9 @@ interface DeliveryOrderDocumentProps {
     doc_date: string;
     delivery_date?: string;
     total_amount?: number;
+    delivery_fee?: number;
+    shipping_fee?: number;
+    expedite_fee?: number;
     description?: string;
     debtor_code: string;
     stores?: {
@@ -193,10 +196,40 @@ export function DeliveryOrderDocument({
                   </td>
                 </tr>
               ))}
-              <tr className="total-row" style={{ fontWeight: "bold", backgroundColor: "#f9f9f9" }}>
-                <td colSpan={6} style={{ textAlign: "right" }}>Total Amount</td>
+              <tr style={{ fontWeight: "600" }}>
+                <td colSpan={6} style={{ textAlign: "right" }}>Subtotal</td>
                 <td style={{ textAlign: "right" }}>
                   ₱{(order.total_amount || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                </td>
+              </tr>
+              {(order.delivery_fee || 0) > 0 && (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: "right" }}>Delivery Fee</td>
+                  <td style={{ textAlign: "right" }}>
+                    ₱{(order.delivery_fee || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                  </td>
+                </tr>
+              )}
+              {(order.shipping_fee || 0) > 0 && (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: "right" }}>Shipping Fee</td>
+                  <td style={{ textAlign: "right" }}>
+                    ₱{(order.shipping_fee || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                  </td>
+                </tr>
+              )}
+              {(order.expedite_fee || 0) > 0 && (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: "right" }}>Expedite Fee</td>
+                  <td style={{ textAlign: "right" }}>
+                    ₱{(order.expedite_fee || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                  </td>
+                </tr>
+              )}
+              <tr className="total-row" style={{ fontWeight: "bold", backgroundColor: "#f9f9f9" }}>
+                <td colSpan={6} style={{ textAlign: "right" }}>Grand Total</td>
+                <td style={{ textAlign: "right" }}>
+                  ₱{((order.total_amount || 0) + (order.delivery_fee || 0) + (order.shipping_fee || 0) + (order.expedite_fee || 0)).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
                 </td>
               </tr>
             </tbody>
