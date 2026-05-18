@@ -18,6 +18,9 @@ interface DeliveryOrderDocumentProps {
     doc_date: string;
     delivery_date?: string;
     total_amount?: number;
+    delivery_fee?: number;
+    shipping_fee?: number;
+    expedite_fee?: number;
     description?: string;
     debtor_code: string;
     stores?: {
