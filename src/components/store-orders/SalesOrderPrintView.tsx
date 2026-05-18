@@ -96,7 +96,8 @@ export function SalesOrderPrintView({ order, lines, mode, onClose }: SalesOrderP
   const totalAmount = order.total_amount || 0;
   const deliveryFee = order.delivery_fee || 0;
   const shippingFee = order.shipping_fee || 0;
-  const grandTotal = totalAmount + deliveryFee + shippingFee;
+  const expediteFee = order.expedite_fee || 0;
+  const grandTotal = totalAmount + deliveryFee + shippingFee + expediteFee;
 
   const content = (
     <>
