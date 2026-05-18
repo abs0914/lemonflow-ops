@@ -228,7 +228,17 @@ export function SalesOrderPrintView({ order, lines, mode, onClose }: SalesOrderP
                   </td>
                 </tr>
               )}
-              {(deliveryFee > 0 || shippingFee > 0) && (
+              {expediteFee > 0 && (
+                <tr>
+                  <td colSpan={6} style={{ padding: "0.25rem 0.5rem", textAlign: "right", fontSize: "0.875rem" }}>
+                    Expedite Fee:
+                  </td>
+                  <td style={{ padding: "0.25rem 0.5rem", textAlign: "right", fontSize: "0.875rem" }}>
+                    {formatCurrency(expediteFee)}
+                  </td>
+                </tr>
+              )}
+              {(deliveryFee > 0 || shippingFee > 0 || expediteFee > 0) && (
                 <tr style={{ borderTop: "1px solid #1f2937" }}>
                   <td colSpan={6} style={{ padding: "0.75rem 0.5rem", textAlign: "right", fontWeight: "bold", fontSize: "1.125rem" }}>
                     GRAND TOTAL:
