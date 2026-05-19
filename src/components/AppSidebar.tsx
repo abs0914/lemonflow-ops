@@ -244,7 +244,7 @@ export function AppSidebar() {
               {loading && (
                 <div className="px-2 py-2 text-xs text-sidebar-foreground/70">Loading menu...</div>
               )}
-              {!loading && filteredItems.length === 0 && (
+              {!loading && profile && filteredItems.length === 0 && (
                 <div className="px-2 py-2 text-xs text-sidebar-foreground/70">No menu items for this role.</div>
               )}
               {!loading && filteredItems.map((item) => 
