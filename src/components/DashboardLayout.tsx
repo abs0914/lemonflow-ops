@@ -1,6 +1,9 @@
 import { ReactNode } from "react";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
+import { useAuth } from "@/contexts/AuthContext";
 import tlcLogo from "@/assets/tlc-logo.png";
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -8,6 +11,18 @@ interface DashboardLayoutProps {
 
 function DashboardLayoutInner({ children }: DashboardLayoutProps) {
   const { isMobile, openMobile, setOpenMobile } = useSidebar();
+  const { profile, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && !profile) {
+      navigate("/login", { replace: true });
+    }
+  }, [loading, profile, navigate]);
+
+  if (loading || !profile) {
+    return null;
+  }
 
   const handleMainContentClick = () => {
     if (isMobile && openMobile) {
