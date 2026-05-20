@@ -1,0 +1,1 @@
+UPDATE public.products SET name='STRAWBERRY PUREE', updated_at=now() WHERE sku='TLC00008';
