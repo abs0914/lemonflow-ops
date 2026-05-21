@@ -128,7 +128,9 @@ export function SelectRawMaterialForBomDialog({ open, onOpenChange, onSelect }: 
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleConfirm} disabled={!selected}>Select</Button>
+          <Button onClick={handleConfirm} disabled={!selected || saving}>
+            {saving ? "Adding..." : "Add to BOM"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
