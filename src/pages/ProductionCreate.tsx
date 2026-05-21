@@ -95,19 +95,38 @@ export default function ProductionCreate() {
     },
   });
 
+  // Fetch raw materials
+  const { data: rawMaterials, isLoading: rawMaterialsLoading } = useQuery({
+    queryKey: ["raw-materials-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("raw_materials")
+        .select("id, name, sku")
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // Create order mutation
   const createOrderMutation = useMutation({
     mutationFn: async (data: FormData) => {
       if (!user) throw new Error("User not authenticated");
 
-      const { error } = await supabase.from("assembly_orders").insert({
-        product_id: data.product_id,
+      const payload: any = {
         quantity: data.quantity,
         due_date: data.due_date?.toISOString(),
         notes: data.notes,
         created_by: user.id,
         status: "pending",
-      });
+      };
+      if (data.item_type === "raw_material") {
+        payload.raw_material_id = data.product_id;
+      } else {
+        payload.product_id = data.product_id;
+      }
+
+      const { error } = await supabase.from("assembly_orders").insert(payload);
 
       if (error) throw error;
     },
