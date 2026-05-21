@@ -45,14 +45,50 @@ export default function Production() {
   const logProductionMutation = useMutation({
     mutationFn: async (data: {
       component_id: string;
+      item_type: "component" | "raw_material";
       quantity: number;
       notes?: string;
     }) => {
       if (!user) throw new Error("User not authenticated");
 
-      // Resolve to a real component. The dialog may pass a product id when
-      // products.component_id is null; in that case look up the component by
-      // matching SKU so we update the right inventory row.
+      // ---------- Raw material output ----------
+      if (data.item_type === "raw_material") {
+        const { data: rm, error: rmFetchErr } = await supabase
+          .from("raw_materials")
+          .select("id, stock_quantity")
+          .eq("id", data.component_id)
+          .maybeSingle();
+        if (rmFetchErr) throw rmFetchErr;
+        if (!rm) throw new Error("Raw material not found");
+
+        const { data: movement, error: movementError } = await supabase
+          .from("stock_movements")
+          .insert({
+            item_id: rm.id,
+            item_type: "raw_material",
+            movement_type: "assembly_produce",
+            quantity: data.quantity,
+            performed_by: user.id,
+            notes: data.notes || null,
+            autocount_synced: true,
+          })
+          .select()
+          .single();
+        if (movementError) throw movementError;
+
+        const { data: updated, error: updateError } = await supabase
+          .from("raw_materials")
+          .update({ stock_quantity: (rm.stock_quantity || 0) + data.quantity })
+          .eq("id", rm.id)
+          .select("id");
+        if (updateError) throw updateError;
+        if (!updated || updated.length === 0) {
+          throw new Error("Stock update blocked (insufficient permissions). Movement recorded but inventory not increased.");
+        }
+        return movement;
+      }
+
+      // ---------- Component (product) output ----------
       let componentId = data.component_id;
       let component: { id: string; stock_quantity: number } | null = null;
 
@@ -65,7 +101,6 @@ export default function Production() {
       if (byId) {
         component = byId;
       } else {
-        // Fallback: treat the id as a product id and find the component by SKU
         const { data: product, error: productErr } = await supabase
           .from("products")
           .select("sku")
@@ -89,7 +124,6 @@ export default function Production() {
         componentId = bySku.id;
       }
 
-      // Create stock movement against the resolved component id
       const { data: movement, error: movementError } = await supabase
         .from("stock_movements")
         .insert({
@@ -106,7 +140,6 @@ export default function Production() {
 
       if (movementError) throw movementError;
 
-      // Update component stock quantity (with .select() to surface RLS failures)
       const { data: updated, error: updateError } = await supabase
         .from("components")
         .update({
@@ -120,9 +153,6 @@ export default function Production() {
         throw new Error("Stock update blocked (insufficient permissions). Movement recorded but inventory not increased.");
       }
 
-      // Replace downstream component_id with the resolved one for sync
-      data = { ...data, component_id: componentId };
-
       // Sync to AutoCount
       try {
         const { error: syncError } = await supabase.functions.invoke(
@@ -130,7 +160,7 @@ export default function Production() {
           {
             body: {
               movement_id: movement.id,
-              component_id: data.component_id,
+              component_id: componentId,
               quantity: data.quantity,
             },
           }
@@ -153,12 +183,13 @@ export default function Production() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["production-logs"] });
       queryClient.invalidateQueries({ queryKey: ["components"] });
+      queryClient.invalidateQueries({ queryKey: ["raw-materials"] });
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
       queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
       setShowLogDialog(false);
       toast({
         title: "Production logged successfully",
-        description: "Production has been recorded and synced to AutoCount.",
+        description: "Production has been recorded.",
       });
     },
     onError: (error: Error) => {
@@ -174,13 +205,13 @@ export default function Production() {
     mutationFn: async (data: {
       id: string;
       component_id: string;
+      item_type: "component" | "raw_material";
       quantity: number;
       oldQuantity: number;
       notes?: string;
     }) => {
       if (!user) throw new Error("User not authenticated");
 
-      // Update stock movement
       const { error: movementError } = await supabase
         .from("stock_movements")
         .update({
@@ -191,25 +222,33 @@ export default function Production() {
 
       if (movementError) throw movementError;
 
-      // Calculate quantity difference and update component stock
       const quantityDiff = data.quantity - data.oldQuantity;
       if (quantityDiff !== 0) {
-        const { data: component, error: fetchError } = await supabase
-          .from("components")
-          .select("stock_quantity")
-          .eq("id", data.component_id)
-          .single();
-
-        if (fetchError) throw fetchError;
-
-        const { error: updateError } = await supabase
-          .from("components")
-          .update({
-            stock_quantity: (component?.stock_quantity || 0) + quantityDiff,
-          })
-          .eq("id", data.component_id);
-
-        if (updateError) throw updateError;
+        if (data.item_type === "raw_material") {
+          const { data: rm, error: fetchError } = await supabase
+            .from("raw_materials")
+            .select("stock_quantity")
+            .eq("id", data.component_id)
+            .single();
+          if (fetchError) throw fetchError;
+          const { error: updateError } = await supabase
+            .from("raw_materials")
+            .update({ stock_quantity: (rm?.stock_quantity || 0) + quantityDiff })
+            .eq("id", data.component_id);
+          if (updateError) throw updateError;
+        } else {
+          const { data: component, error: fetchError } = await supabase
+            .from("components")
+            .select("stock_quantity")
+            .eq("id", data.component_id)
+            .single();
+          if (fetchError) throw fetchError;
+          const { error: updateError } = await supabase
+            .from("components")
+            .update({ stock_quantity: (component?.stock_quantity || 0) + quantityDiff })
+            .eq("id", data.component_id);
+          if (updateError) throw updateError;
+        }
       }
 
       return { id: data.id };
@@ -217,6 +256,7 @@ export default function Production() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["production-logs"] });
       queryClient.invalidateQueries({ queryKey: ["components"] });
+      queryClient.invalidateQueries({ queryKey: ["raw-materials"] });
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
       setShowLogDialog(false);
       setEditingLog(null);
