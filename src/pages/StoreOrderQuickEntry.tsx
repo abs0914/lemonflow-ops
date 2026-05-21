@@ -436,26 +436,44 @@ export default function StoreOrderQuickEntry() {
 
           {/* Action Buttons */}
           {isParsed && parsedItems.length > 0 && (
-            <div className="flex justify-end gap-4">
-              <Button variant="outline" onClick={() => navigate("/store/orders")}>
-                Cancel
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleSaveDraft}
-                disabled={createMutation.isPending || parsedItems.length === 0 || hasInvalidItems}
-              >
-                <Save className="mr-2 h-4 w-4" />
-                Save Draft
-              </Button>
-              <Button
-                onClick={handleSubmitOrder}
-                disabled={createMutation.isPending || updateMutation.isPending || parsedItems.length === 0 || hasInvalidItems}
-              >
-                <Send className="mr-2 h-4 w-4" />
-                Submit Order
-              </Button>
-            </div>
+            <>
+              {hasStockIssue && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Some items exceed available stock</AlertTitle>
+                  <AlertDescription>
+                    <ul className="list-disc list-inside text-sm space-y-0.5 mt-1">
+                      {stockIssues.map((s) => (
+                        <li key={s.code}>
+                          {s.code} {s.name}: need {s.need}, available {s.available}
+                        </li>
+                      ))}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              )}
+              <div className="flex justify-end gap-4">
+                <Button variant="outline" onClick={() => navigate("/store/orders")}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleSaveDraft}
+                  disabled={createMutation.isPending || parsedItems.length === 0 || hasInvalidItems}
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Draft
+                </Button>
+                <Button
+                  onClick={handleSubmitOrder}
+                  disabled={createMutation.isPending || updateMutation.isPending || parsedItems.length === 0 || hasInvalidItems || hasStockIssue}
+                  title={hasStockIssue ? "Reduce quantities to available stock before submitting" : undefined}
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  Submit Order
+                </Button>
+              </div>
+            </>
           )}
         </div>
       </div>
