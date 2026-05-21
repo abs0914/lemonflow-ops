@@ -3,24 +3,27 @@ import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { ProductList } from "@/components/bom/ProductList";
-import { BomEditor } from "@/components/bom/BomEditor";
+import { ParentRawMaterialList } from "@/components/bom/ParentRawMaterialList";
+import { BomEditor, BomParentType } from "@/components/bom/BomEditor";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+
+interface BomParent {
+  id: string;
+  name: string;
+  type: BomParentType;
+}
 
 export default function BomManager() {
   const { profile, loading } = useAuth();
   const navigate = useNavigate();
-  const [selectedProduct, setSelectedProduct] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
+  const [parent, setParent] = useState<BomParent | null>(null);
+  const [tab, setTab] = useState<BomParentType>("product");
 
   useEffect(() => {
-    console.log("BomManager - Auth state:", { loading, profile: profile?.role });
     if (!loading && !profile) {
-      console.log("BomManager - No profile, redirecting to login");
       navigate("/login");
     }
     if (!loading && profile && profile.role !== "Admin" && profile.role !== "Warehouse") {
-      console.log("BomManager - No access, redirecting to dashboard. Role:", profile.role);
       navigate("/dashboard");
     }
   }, [profile, loading, navigate]);
@@ -35,20 +38,43 @@ export default function BomManager() {
         <div>
           <h1 className="text-2xl md:text-4xl font-bold text-foreground">BOM Manager</h1>
           <p className="text-muted-foreground mt-2">
-            Manage bills of materials for your products
+            Manage bills of materials for products and raw material recipes
           </p>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <ProductList
-            onSelectProduct={(product) =>
-              setSelectedProduct({ id: product.id, name: product.name })
-            }
-            selectedProductId={selectedProduct?.id}
-          />
+          <Tabs
+            value={tab}
+            onValueChange={(v) => {
+              setTab(v as BomParentType);
+              setParent(null);
+            }}
+          >
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="product">Products</TabsTrigger>
+              <TabsTrigger value="raw_material">Raw Materials</TabsTrigger>
+            </TabsList>
+            <TabsContent value="product" className="mt-4">
+              <ProductList
+                onSelectProduct={(p) =>
+                  setParent({ id: p.id, name: p.name, type: "product" })
+                }
+                selectedProductId={parent?.type === "product" ? parent.id : undefined}
+              />
+            </TabsContent>
+            <TabsContent value="raw_material" className="mt-4">
+              <ParentRawMaterialList
+                onSelect={(rm) =>
+                  setParent({ id: rm.id, name: rm.name, type: "raw_material" })
+                }
+                selectedId={parent?.type === "raw_material" ? parent.id : undefined}
+              />
+            </TabsContent>
+          </Tabs>
           <BomEditor
-            productId={selectedProduct?.id}
-            productName={selectedProduct?.name}
+            parentId={parent?.id}
+            parentName={parent?.name}
+            parentType={parent?.type}
           />
         </div>
       </div>
