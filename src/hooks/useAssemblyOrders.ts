@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface AssemblyOrder {
   id: string;
-  product_id: string;
+  product_id: string | null;
+  raw_material_id: string | null;
   quantity: number;
   status: string;
   created_by: string;
@@ -16,7 +17,11 @@ export interface AssemblyOrder {
   products?: {
     name: string;
     sku: string;
-  };
+  } | null;
+  raw_materials?: {
+    name: string;
+    sku: string;
+  } | null;
   user_profiles?: {
     full_name: string;
   };
@@ -30,7 +35,8 @@ export function useAssemblyOrders(status?: string) {
         .from("assembly_orders")
         .select(`
           *,
-          products(name, sku)
+          products(name, sku),
+          raw_materials(name, sku)
         `)
         .order("created_at", { ascending: false });
 
