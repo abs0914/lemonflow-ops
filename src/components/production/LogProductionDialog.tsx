@@ -2,6 +2,7 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { Check, ChevronsUpDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -24,8 +25,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -72,6 +87,9 @@ export function LogProductionDialog({
   isLoading = false,
   editingLog,
 }: LogProductionDialogProps) {
+  const [typeFilter, setTypeFilter] = React.useState<"all" | "component" | "raw_material">("all");
+  const [comboOpen, setComboOpen] = React.useState(false);
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -176,37 +194,83 @@ export function LogProductionDialog({
             <FormField
               control={form.control}
               name="selection"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Product</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    disabled={isEditing}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a product" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {options.length === 0 ? (
-                        <div className="p-2 text-sm text-muted-foreground text-center">
-                          No items with BOM found
-                        </div>
-                      ) : (
-                        options.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+              render={({ field }) => {
+                const filtered = options.filter(
+                  (o) => typeFilter === "all" || o.itemType === typeFilter
+                );
+                const selected = options.find((o) => o.value === field.value);
+                return (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Product</FormLabel>
+                    <div className="flex gap-2">
+                      <Select
+                        value={typeFilter}
+                        onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}
+                        disabled={isEditing}
+                      >
+                        <SelectTrigger className="w-[160px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Types</SelectItem>
+                          <SelectItem value="component">Products</SelectItem>
+                          <SelectItem value="raw_material">Raw Materials</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Popover open={comboOpen} onOpenChange={setComboOpen}>
+                        <PopoverTrigger asChild disabled={isEditing}>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              className={cn(
+                                "flex-1 justify-between font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              <span className="truncate">
+                                {selected ? selected.label : "Select a product"}
+                              </span>
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search by name or SKU..." />
+                            <CommandList>
+                              <CommandEmpty>No items found.</CommandEmpty>
+                              <CommandGroup>
+                                {filtered.map((opt) => (
+                                  <CommandItem
+                                    key={opt.value}
+                                    value={opt.label}
+                                    onSelect={() => {
+                                      field.onChange(opt.value);
+                                      setComboOpen(false);
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        field.value === opt.value ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    {opt.label}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
+
 
             <FormField
               control={form.control}
