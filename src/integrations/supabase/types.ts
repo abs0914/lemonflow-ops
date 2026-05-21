@@ -42,8 +42,9 @@ export type Database = {
           due_date: string | null
           id: string
           notes: string | null
-          product_id: string
+          product_id: string | null
           quantity: number
+          raw_material_id: string | null
           reservation_notes: string | null
           status: string
           stock_reserved: boolean | null
@@ -55,8 +56,9 @@ export type Database = {
           due_date?: string | null
           id?: string
           notes?: string | null
-          product_id: string
+          product_id?: string | null
           quantity: number
+          raw_material_id?: string | null
           reservation_notes?: string | null
           status?: string
           stock_reserved?: boolean | null
@@ -68,8 +70,9 @@ export type Database = {
           due_date?: string | null
           id?: string
           notes?: string | null
-          product_id?: string
+          product_id?: string | null
           quantity?: number
+          raw_material_id?: string | null
           reservation_notes?: string | null
           status?: string
           stock_reserved?: boolean | null
