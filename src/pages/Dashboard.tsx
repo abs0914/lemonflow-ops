@@ -121,13 +121,6 @@ export default function Dashboard() {
 
   const quickActions = [
     {
-      title: "Create Assembly Order",
-      description: "Start a new production order",
-      icon: Plus,
-      path: "/production/create",
-      roles: ["Admin", "Production"],
-    },
-    {
       title: "Create Purchase Order",
       description: "Order components from suppliers",
       icon: ShoppingCart,
