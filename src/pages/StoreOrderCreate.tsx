@@ -43,6 +43,7 @@ export default function StoreOrderCreate() {
   const primaryStore = usePrimaryStore();
   const createMutation = useCreateSalesOrder();
   const updateMutation = useUpdateSalesOrder();
+  const { data: inventoryItems } = useInventoryItems();
 
   // Operational roles see all stores, Store role sees only assigned stores
   const operationalRoles = ["Admin", "Warehouse", "Fulfillment", "Production", "Finance", "Accounting"];
