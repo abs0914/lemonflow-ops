@@ -92,6 +92,7 @@ export function ParsedOrderTable({
               <TableHead className="w-[120px]">Item Code</TableHead>
               <TableHead>Item Name</TableHead>
               <TableHead className="w-[80px]">Qty</TableHead>
+              <TableHead className="w-[90px] text-right">Available</TableHead>
               <TableHead className="w-[100px]">Unit</TableHead>
               <TableHead>Notes</TableHead>
               <TableHead className="w-[80px]">Status</TableHead>
