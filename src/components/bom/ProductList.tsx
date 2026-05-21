@@ -36,19 +36,24 @@ export function ProductList({ onSelectProduct, selectedProductId }: ProductListP
   const { data: items = [], isLoading } = useQuery({
     queryKey: ["bom-parents"],
     queryFn: async () => {
-      const [productsRes, rawBomRes] = await Promise.all([
+      const [productsRes, rawBomRes, rawFlagRes] = await Promise.all([
         supabase.from("products").select("id, name, sku, unit, stock_quantity").order("name"),
         supabase.from("bom_items").select("parent_raw_material_id").not("parent_raw_material_id", "is", null),
+        supabase.from("raw_materials").select("id").eq("is_bom_product", true),
       ]);
       if (productsRes.error) throw productsRes.error;
       if (rawBomRes.error) throw rawBomRes.error;
+      if (rawFlagRes.error) throw rawFlagRes.error;
 
       const products: BomParentItem[] = (productsRes.data || []).map((p: any) => ({
         ...p,
         type: "product" as BomParentType,
       }));
 
-      const rmIds = [...new Set((rawBomRes.data || []).map((b: any) => b.parent_raw_material_id).filter(Boolean))];
+      const rmIds = Array.from(new Set<string>([
+        ...((rawBomRes.data || []).map((b: any) => b.parent_raw_material_id).filter(Boolean) as string[]),
+        ...((rawFlagRes.data || []).map((r: any) => r.id) as string[]),
+      ]));
       let rawMaterials: BomParentItem[] = [];
       if (rmIds.length > 0) {
         const { data: rms, error: rmErr } = await supabase
@@ -83,12 +88,17 @@ export function ProductList({ onSelectProduct, selectedProductId }: ProductListP
         const { error } = await supabase.from("products").delete().eq("id", item.id);
         if (error) throw error;
       } else {
-        // Only delete BOM lines (don't delete the raw material itself)
-        const { error } = await supabase
+        // Remove BOM lines AND clear the BOM-product flag so it disappears from the list
+        const { error: delErr } = await supabase
           .from("bom_items")
           .delete()
           .eq("parent_raw_material_id", item.id);
-        if (error) throw error;
+        if (delErr) throw delErr;
+        const { error: flagErr } = await supabase
+          .from("raw_materials")
+          .update({ is_bom_product: false })
+          .eq("id", item.id);
+        if (flagErr) throw flagErr;
       }
     },
     onSuccess: () => {

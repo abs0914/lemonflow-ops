@@ -3,8 +3,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface RawMaterial {
   id: string;
@@ -23,6 +24,9 @@ interface Props {
 export function SelectRawMaterialForBomDialog({ open, onOpenChange, onSelect }: Props) {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<RawMaterial | null>(null);
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: rawMaterials = [], isLoading } = useQuery({
     queryKey: ["raw-materials-for-bom-picker"],
@@ -43,13 +47,29 @@ export function SelectRawMaterialForBomDialog({ open, onOpenChange, onSelect }: 
       r.sku.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleConfirm = () => {
-    if (selected) {
-      onSelect(selected);
-      onOpenChange(false);
-      setSelected(null);
-      setSearch("");
+  const handleConfirm = async () => {
+    if (!selected) return;
+    setSaving(true);
+    const { data, error } = await supabase
+      .from("raw_materials")
+      .update({ is_bom_product: true })
+      .eq("id", selected.id)
+      .select("id");
+    setSaving(false);
+    if (error || !data || data.length === 0) {
+      toast({
+        title: "Could not add raw material",
+        description: error?.message || "Permission denied or raw material not found.",
+        variant: "destructive",
+      });
+      return;
     }
+    queryClient.invalidateQueries({ queryKey: ["bom-parents"] });
+    queryClient.invalidateQueries({ queryKey: ["bom-production-options"] });
+    onSelect(selected);
+    onOpenChange(false);
+    setSelected(null);
+    setSearch("");
   };
 
   return (
@@ -108,7 +128,9 @@ export function SelectRawMaterialForBomDialog({ open, onOpenChange, onSelect }: 
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleConfirm} disabled={!selected}>Select</Button>
+          <Button onClick={handleConfirm} disabled={!selected || saving}>
+            {saving ? "Adding..." : "Add to BOM"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

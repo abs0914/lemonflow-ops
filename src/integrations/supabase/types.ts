@@ -741,6 +741,7 @@ export type Database = {
           description: string | null
           has_batch_no: boolean | null
           id: string
+          is_bom_product: boolean
           is_perishable: boolean
           item_group: string | null
           item_type: string | null
@@ -763,6 +764,7 @@ export type Database = {
           description?: string | null
           has_batch_no?: boolean | null
           id?: string
+          is_bom_product?: boolean
           is_perishable?: boolean
           item_group?: string | null
           item_type?: string | null
@@ -785,6 +787,7 @@ export type Database = {
           description?: string | null
           has_batch_no?: boolean | null
           id?: string
+          is_bom_product?: boolean
           is_perishable?: boolean
           item_group?: string | null
           item_type?: string | null
