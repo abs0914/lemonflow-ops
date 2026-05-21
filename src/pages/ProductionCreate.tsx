@@ -46,7 +46,8 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
-  product_id: z.string().min(1, "Please select a product"),
+  item_type: z.enum(["product", "raw_material"]),
+  product_id: z.string().min(1, "Please select an item"),
   quantity: z.coerce.number().positive("Quantity must be greater than 0"),
   due_date: z.date().optional(),
   notes: z.string().optional(),
