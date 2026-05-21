@@ -190,7 +190,7 @@ export function LogProductionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[720px]">
         <DialogHeader>
           <DialogTitle>{isEditing ? "Edit Production Log" : "Log Completed Production"}</DialogTitle>
         </DialogHeader>
