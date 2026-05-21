@@ -155,7 +155,21 @@ export function ParsedOrderTable({
                           className="h-8 w-16"
                         />
                       ) : (
-                        <span className="font-medium">{item.quantity}</span>
+                        <span className={`font-medium ${exceeds ? "text-destructive" : ""}`}>
+                          {item.quantity}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {available === undefined ? (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      ) : exceeds ? (
+                        <Badge variant="destructive" className="gap-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          {available}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">{available}</span>
                       )}
                     </TableCell>
                     <TableCell>
