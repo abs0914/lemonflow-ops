@@ -87,6 +87,9 @@ export function LogProductionDialog({
   isLoading = false,
   editingLog,
 }: LogProductionDialogProps) {
+  const [typeFilter, setTypeFilter] = React.useState<"all" | "component" | "raw_material">("all");
+  const [comboOpen, setComboOpen] = React.useState(false);
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
