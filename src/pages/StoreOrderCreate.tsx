@@ -33,6 +33,7 @@ import { SalesOrderLine } from "@/types/sales-order";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { useInventoryItems, getAvailableForCode } from "@/hooks/useInventoryItems";
 
 export default function StoreOrderCreate() {
   const navigate = useNavigate();
