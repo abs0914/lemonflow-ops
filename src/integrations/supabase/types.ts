@@ -188,7 +188,8 @@ export type Database = {
           id: string
           item_type: string
           notes: string | null
-          product_id: string
+          parent_raw_material_id: string | null
+          product_id: string | null
           quantity: number
           raw_material_id: string | null
           updated_at: string
@@ -199,7 +200,8 @@ export type Database = {
           id?: string
           item_type?: string
           notes?: string | null
-          product_id: string
+          parent_raw_material_id?: string | null
+          product_id?: string | null
           quantity: number
           raw_material_id?: string | null
           updated_at?: string
@@ -210,7 +212,8 @@ export type Database = {
           id?: string
           item_type?: string
           notes?: string | null
-          product_id?: string
+          parent_raw_material_id?: string | null
+          product_id?: string | null
           quantity?: number
           raw_material_id?: string | null
           updated_at?: string
@@ -221,6 +224,13 @@ export type Database = {
             columns: ["component_id"]
             isOneToOne: false
             referencedRelation: "components"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bom_items_parent_raw_material_id_fkey"
+            columns: ["parent_raw_material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
             referencedColumns: ["id"]
           },
           {
