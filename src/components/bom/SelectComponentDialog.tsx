@@ -22,23 +22,29 @@ export function SelectComponentDialog({ open, onOpenChange }: SelectComponentDia
   const { data: components = [], isLoading } = useQuery({
     queryKey: ["available-components-for-products"],
     queryFn: async () => {
-      // Get components that are not already linked to products
+      // Get all existing products (both linked and orphans) to avoid SKU collisions
       const { data: products } = await supabase
         .from("products")
-        .select("component_id")
-        .not("component_id", "is", null);
-      
-      const usedComponentIds = products?.map(p => p.component_id) || [];
-      
+        .select("component_id, sku");
+
+      const usedComponentIds = new Set(
+        (products || []).map((p) => p.component_id).filter(Boolean)
+      );
+      const usedSkus = new Set(
+        (products || []).map((p) => (p.sku || "").toLowerCase()).filter(Boolean)
+      );
+
       const { data, error } = await supabase
         .from("components")
         .select("*")
         .order("name");
-      
+
       if (error) throw error;
-      
-      // Filter out components already used as products
-      return (data as Component[]).filter(c => !usedComponentIds.includes(c.id));
+
+      // Exclude components already linked OR whose SKU is already taken by a product
+      return (data as Component[]).filter(
+        (c) => !usedComponentIds.has(c.id) && !usedSkus.has((c.sku || "").toLowerCase())
+      );
     },
     enabled: open,
   });
