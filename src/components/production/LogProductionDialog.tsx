@@ -24,15 +24,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 const formSchema = z.object({
-  item_type: z.enum(["component", "raw_material"]),
-  component_id: z.string().min(1, "Please select an item"),
+  component_id: z.string().min(1, "Please select a product"),
   quantity: z.coerce.number().positive("Quantity must be positive"),
   notes: z.string().optional(),
 });
@@ -70,27 +68,22 @@ export function LogProductionDialog({
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      item_type: "component",
       component_id: "",
       quantity: 1,
       notes: "",
     },
   });
 
-  const itemType = form.watch("item_type");
-
   React.useEffect(() => {
     if (open) {
       if (editingLog) {
         form.reset({
-          item_type: (editingLog.item_type as "component" | "raw_material") || "component",
           component_id: editingLog.item_id,
           quantity: editingLog.quantity,
           notes: editingLog.notes || "",
         });
       } else {
         form.reset({
-          item_type: "component",
           component_id: "",
           quantity: 1,
           notes: "",
@@ -99,16 +92,17 @@ export function LogProductionDialog({
     }
   }, [open, editingLog, form]);
 
-  // Products with BOMs (component output)
+  // Products with BOMs only
   const { data: products } = useQuery({
     queryKey: ["products-with-bom"],
     queryFn: async () => {
       const { data: bomProducts, error: bomError } = await supabase
         .from("bom_items")
-        .select("product_id");
+        .select("product_id")
+        .not("product_id", "is", null);
       if (bomError) throw bomError;
 
-      const productIds = [...new Set(bomProducts?.map(b => b.product_id) || [])];
+      const productIds = [...new Set((bomProducts || []).map(b => b.product_id).filter(Boolean))];
       if (productIds.length === 0) return [];
 
       const { data, error } = await supabase
@@ -121,24 +115,11 @@ export function LogProductionDialog({
     },
   });
 
-  // Raw materials (raw material output)
-  const { data: rawMaterials } = useQuery({
-    queryKey: ["raw-materials-for-production"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("raw_materials")
-        .select("id, name, sku")
-        .order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
-
   const handleSubmit = (data: FormData) => {
     if (!data.component_id || !data.quantity) return;
     onSubmit({
       component_id: data.component_id,
-      item_type: data.item_type,
+      item_type: "component",
       quantity: data.quantity,
       notes: data.notes,
     });
@@ -158,32 +139,10 @@ export function LogProductionDialog({
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             <FormField
               control={form.control}
-              name="item_type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Item Type</FormLabel>
-                  <Tabs
-                    value={field.value}
-                    onValueChange={(v) => {
-                      field.onChange(v);
-                      form.setValue("component_id", "");
-                    }}
-                  >
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="component" disabled={isEditing}>Product</TabsTrigger>
-                      <TabsTrigger value="raw_material" disabled={isEditing}>Raw Material</TabsTrigger>
-                    </TabsList>
-                  </Tabs>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
               name="component_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{itemType === "raw_material" ? "Raw Material" : "Product"}</FormLabel>
+                  <FormLabel>Product</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     value={field.value}
@@ -191,33 +150,21 @@ export function LogProductionDialog({
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={`Select a ${itemType === "raw_material" ? "raw material" : "product"}`} />
+                        <SelectValue placeholder="Select a product" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {itemType === "component" ? (
-                        products?.length === 0 ? (
-                          <div className="p-2 text-sm text-muted-foreground text-center">
-                            No products with BOM found
-                          </div>
-                        ) : (
-                          products?.map((product) => (
-                            <SelectItem
-                              key={product.id}
-                              value={product.component_id || product.id}
-                            >
-                              {product.name} ({product.sku})
-                            </SelectItem>
-                          ))
-                        )
-                      ) : rawMaterials?.length === 0 ? (
+                      {products?.length === 0 ? (
                         <div className="p-2 text-sm text-muted-foreground text-center">
-                          No raw materials found
+                          No products with BOM found
                         </div>
                       ) : (
-                        rawMaterials?.map((rm) => (
-                          <SelectItem key={rm.id} value={rm.id}>
-                            {rm.name} ({rm.sku})
+                        products?.map((product) => (
+                          <SelectItem
+                            key={product.id}
+                            value={product.component_id || product.id}
+                          >
+                            {product.name} ({product.sku})
                           </SelectItem>
                         ))
                       )}
