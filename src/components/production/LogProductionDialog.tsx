@@ -241,7 +241,7 @@ export function LogProductionDialog({
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0 z-[60] bg-popover" align="start">
                           <Command>
                             <CommandInput placeholder="Search by name or SKU..." />
                             <CommandList>
