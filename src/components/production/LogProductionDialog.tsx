@@ -208,13 +208,13 @@ export function LogProductionDialog({
                 return (
                   <FormItem className="flex flex-col">
                     <FormLabel>Product</FormLabel>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2 w-full min-w-0">
                       <Select
                         value={typeFilter}
                         onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}
                         disabled={isEditing}
                       >
-                        <SelectTrigger className="w-[160px]">
+                        <SelectTrigger className="w-full sm:w-[140px] shrink-0">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
