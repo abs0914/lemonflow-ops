@@ -30,7 +30,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 const formSchema = z.object({
-  component_id: z.string().min(1, "Please select a product"),
+  selection: z.string().min(1, "Please select an item"),
   quantity: z.coerce.number().positive("Quantity must be positive"),
   notes: z.string().optional(),
 });
@@ -58,6 +58,13 @@ interface LogProductionDialogProps {
   editingLog?: ProductionLogData | null;
 }
 
+interface BomOption {
+  value: string; // `${type}:${id}`
+  itemType: "component" | "raw_material";
+  itemId: string;
+  label: string;
+}
+
 export function LogProductionDialog({
   open,
   onOpenChange,
@@ -68,23 +75,74 @@ export function LogProductionDialog({
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      component_id: "",
+      selection: "",
       quantity: 1,
       notes: "",
+    },
+  });
+
+  // Products with BOMs + Raw materials with BOMs
+  const { data: options = [] } = useQuery({
+    queryKey: ["bom-production-options"],
+    queryFn: async (): Promise<BomOption[]> => {
+      const { data: bomRows, error } = await supabase
+        .from("bom_items")
+        .select("product_id, parent_raw_material_id");
+      if (error) throw error;
+
+      const productIds = [...new Set((bomRows || []).map((b: any) => b.product_id).filter(Boolean))];
+      const rawIds = [...new Set((bomRows || []).map((b: any) => b.parent_raw_material_id).filter(Boolean))];
+
+      const result: BomOption[] = [];
+
+      if (productIds.length > 0) {
+        const { data: products } = await supabase
+          .from("products")
+          .select("id, name, sku, component_id")
+          .in("id", productIds)
+          .order("name");
+        for (const p of products || []) {
+          result.push({
+            value: `component:${p.component_id || p.id}`,
+            itemType: "component",
+            itemId: p.component_id || p.id,
+            label: `${p.name} (${p.sku}) — Product`,
+          });
+        }
+      }
+
+      if (rawIds.length > 0) {
+        const { data: raws } = await supabase
+          .from("raw_materials")
+          .select("id, name, sku")
+          .in("id", rawIds)
+          .order("name");
+        for (const r of raws || []) {
+          result.push({
+            value: `raw_material:${r.id}`,
+            itemType: "raw_material",
+            itemId: r.id,
+            label: `${r.name} (${r.sku}) — Raw Material`,
+          });
+        }
+      }
+
+      return result.sort((a, b) => a.label.localeCompare(b.label));
     },
   });
 
   React.useEffect(() => {
     if (open) {
       if (editingLog) {
+        const t = (editingLog.item_type as "component" | "raw_material") || "component";
         form.reset({
-          component_id: editingLog.item_id,
+          selection: `${t}:${editingLog.item_id}`,
           quantity: editingLog.quantity,
           notes: editingLog.notes || "",
         });
       } else {
         form.reset({
-          component_id: "",
+          selection: "",
           quantity: 1,
           notes: "",
         });
@@ -92,34 +150,12 @@ export function LogProductionDialog({
     }
   }, [open, editingLog, form]);
 
-  // Products with BOMs only
-  const { data: products } = useQuery({
-    queryKey: ["products-with-bom"],
-    queryFn: async () => {
-      const { data: bomProducts, error: bomError } = await supabase
-        .from("bom_items")
-        .select("product_id")
-        .not("product_id", "is", null);
-      if (bomError) throw bomError;
-
-      const productIds = [...new Set((bomProducts || []).map(b => b.product_id).filter(Boolean))];
-      if (productIds.length === 0) return [];
-
-      const { data, error } = await supabase
-        .from("products")
-        .select(`id, name, sku, component_id, components(id, name, sku)`)
-        .in("id", productIds)
-        .order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
-
   const handleSubmit = (data: FormData) => {
-    if (!data.component_id || !data.quantity) return;
+    const opt = options.find((o) => o.value === data.selection);
+    if (!opt) return;
     onSubmit({
-      component_id: data.component_id,
-      item_type: "component",
+      component_id: opt.itemId,
+      item_type: opt.itemType,
       quantity: data.quantity,
       notes: data.notes,
     });
@@ -139,7 +175,7 @@ export function LogProductionDialog({
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             <FormField
               control={form.control}
-              name="component_id"
+              name="selection"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Product</FormLabel>
@@ -154,17 +190,14 @@ export function LogProductionDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {products?.length === 0 ? (
+                      {options.length === 0 ? (
                         <div className="p-2 text-sm text-muted-foreground text-center">
-                          No products with BOM found
+                          No items with BOM found
                         </div>
                       ) : (
-                        products?.map((product) => (
-                          <SelectItem
-                            key={product.id}
-                            value={product.component_id || product.id}
-                          >
-                            {product.name} ({product.sku})
+                        options.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
                           </SelectItem>
                         ))
                       )}

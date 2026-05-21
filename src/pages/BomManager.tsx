@@ -2,22 +2,13 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { ProductList } from "@/components/bom/ProductList";
-import { ParentRawMaterialList } from "@/components/bom/ParentRawMaterialList";
-import { BomEditor, BomParentType } from "@/components/bom/BomEditor";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-
-interface BomParent {
-  id: string;
-  name: string;
-  type: BomParentType;
-}
+import { ProductList, BomParentItem } from "@/components/bom/ProductList";
+import { BomEditor } from "@/components/bom/BomEditor";
 
 export default function BomManager() {
   const { profile, loading } = useAuth();
   const navigate = useNavigate();
-  const [parent, setParent] = useState<BomParent | null>(null);
-  const [tab, setTab] = useState<BomParentType>("product");
+  const [parent, setParent] = useState<BomParentItem | null>(null);
 
   useEffect(() => {
     if (!loading && !profile) {
@@ -43,34 +34,10 @@ export default function BomManager() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <Tabs
-            value={tab}
-            onValueChange={(v) => {
-              setTab(v as BomParentType);
-              setParent(null);
-            }}
-          >
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="product">Products</TabsTrigger>
-              <TabsTrigger value="raw_material">Raw Materials</TabsTrigger>
-            </TabsList>
-            <TabsContent value="product" className="mt-4">
-              <ProductList
-                onSelectProduct={(p) =>
-                  setParent({ id: p.id, name: p.name, type: "product" })
-                }
-                selectedProductId={parent?.type === "product" ? parent.id : undefined}
-              />
-            </TabsContent>
-            <TabsContent value="raw_material" className="mt-4">
-              <ParentRawMaterialList
-                onSelect={(rm) =>
-                  setParent({ id: rm.id, name: rm.name, type: "raw_material" })
-                }
-                selectedId={parent?.type === "raw_material" ? parent.id : undefined}
-              />
-            </TabsContent>
-          </Tabs>
+          <ProductList
+            onSelectProduct={(item) => setParent(item)}
+            selectedProductId={parent?.id}
+          />
           <BomEditor
             parentId={parent?.id}
             parentName={parent?.name}
