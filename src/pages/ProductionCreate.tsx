@@ -64,11 +64,14 @@ export default function ProductionCreate() {
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      item_type: "product",
       product_id: "",
       quantity: 1,
       notes: "",
     },
   });
+
+  const itemType = form.watch("item_type");
 
   useEffect(() => {
     if (!loading && !profile) {
