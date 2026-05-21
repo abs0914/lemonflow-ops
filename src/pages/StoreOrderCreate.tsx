@@ -44,7 +44,7 @@ export default function StoreOrderCreate() {
   const updateMutation = useUpdateSalesOrder();
 
   // Operational roles see all stores, Store role sees only assigned stores
-  const operationalRoles = ["Admin", "Warehouse", "Fulfillment", "Production"];
+  const operationalRoles = ["Admin", "Warehouse", "Fulfillment", "Production", "Finance", "Accounting"];
   const isOperationalRole = profile?.role && operationalRoles.includes(profile.role);
 
   const [storeId, setStoreId] = useState<string>(primaryStore?.store_id || "");
