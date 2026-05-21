@@ -312,17 +312,19 @@ export default function Production() {
     setEditingLog({
       id: log.id,
       item_id: log.item_id,
+      item_type: log.item_type,
       quantity: log.quantity,
       notes: log.notes,
     });
     setShowLogDialog(true);
   };
 
-  const handleSubmit = (data: { component_id: string; quantity: number; notes?: string }) => {
+  const handleSubmit = (data: { component_id: string; item_type: "component" | "raw_material"; quantity: number; notes?: string }) => {
     if (editingLog) {
       updateProductionMutation.mutate({
         id: editingLog.id,
         component_id: data.component_id,
+        item_type: data.item_type,
         quantity: data.quantity,
         oldQuantity: editingLog.quantity,
         notes: data.notes,
