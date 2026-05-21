@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -24,13 +24,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 const formSchema = z.object({
-  component_id: z.string().min(1, "Please select a product"),
+  item_type: z.enum(["component", "raw_material"]),
+  component_id: z.string().min(1, "Please select an item"),
   quantity: z.coerce.number().positive("Quantity must be positive"),
   notes: z.string().optional(),
 });
@@ -40,6 +42,7 @@ type FormData = z.infer<typeof formSchema>;
 export interface ProductionLogData {
   id: string;
   item_id: string;
+  item_type?: string;
   quantity: number;
   notes: string | null;
 }
@@ -49,6 +52,7 @@ interface LogProductionDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: {
     component_id: string;
+    item_type: "component" | "raw_material";
     quantity: number;
     notes?: string;
   }) => void;
@@ -66,23 +70,27 @@ export function LogProductionDialog({
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      item_type: "component",
       component_id: "",
       quantity: 1,
       notes: "",
     },
   });
 
-  // Reset form when dialog opens with editing data
+  const itemType = form.watch("item_type");
+
   React.useEffect(() => {
     if (open) {
       if (editingLog) {
         form.reset({
+          item_type: (editingLog.item_type as "component" | "raw_material") || "component",
           component_id: editingLog.item_id,
           quantity: editingLog.quantity,
           notes: editingLog.notes || "",
         });
       } else {
         form.reset({
+          item_type: "component",
           component_id: "",
           quantity: 1,
           notes: "",
@@ -91,47 +99,46 @@ export function LogProductionDialog({
     }
   }, [open, editingLog, form]);
 
-  // Fetch products that have BOMs
+  // Products with BOMs (component output)
   const { data: products } = useQuery({
     queryKey: ["products-with-bom"],
     queryFn: async () => {
-      // First get all product IDs that have BOM items
       const { data: bomProducts, error: bomError } = await supabase
         .from("bom_items")
         .select("product_id");
-
       if (bomError) throw bomError;
 
       const productIds = [...new Set(bomProducts?.map(b => b.product_id) || [])];
-
       if (productIds.length === 0) return [];
 
-      // Then fetch those products with their component details
-      const { data: productData, error: productError } = await supabase
+      const { data, error } = await supabase
         .from("products")
-        .select(`
-          id,
-          name,
-          sku,
-          component_id,
-          components(id, name, sku)
-        `)
+        .select(`id, name, sku, component_id, components(id, name, sku)`)
         .in("id", productIds)
         .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
 
-      if (productError) throw productError;
-
-      return productData;
+  // Raw materials (raw material output)
+  const { data: rawMaterials } = useQuery({
+    queryKey: ["raw-materials-for-production"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("raw_materials")
+        .select("id, name, sku")
+        .order("name");
+      if (error) throw error;
+      return data;
     },
   });
 
   const handleSubmit = (data: FormData) => {
-    // Validate required fields before submission
-    if (!data.component_id || !data.quantity) {
-      return;
-    }
+    if (!data.component_id || !data.quantity) return;
     onSubmit({
       component_id: data.component_id,
+      item_type: data.item_type,
       quantity: data.quantity,
       notes: data.notes,
     });
@@ -151,10 +158,32 @@ export function LogProductionDialog({
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             <FormField
               control={form.control}
+              name="item_type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Item Type</FormLabel>
+                  <Tabs
+                    value={field.value}
+                    onValueChange={(v) => {
+                      field.onChange(v);
+                      form.setValue("component_id", "");
+                    }}
+                  >
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="component" disabled={isEditing}>Product</TabsTrigger>
+                      <TabsTrigger value="raw_material" disabled={isEditing}>Raw Material</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
               name="component_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Product</FormLabel>
+                  <FormLabel>{itemType === "raw_material" ? "Raw Material" : "Product"}</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     value={field.value}
@@ -162,21 +191,33 @@ export function LogProductionDialog({
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a product" />
+                        <SelectValue placeholder={`Select a ${itemType === "raw_material" ? "raw material" : "product"}`} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {products?.length === 0 ? (
+                      {itemType === "component" ? (
+                        products?.length === 0 ? (
+                          <div className="p-2 text-sm text-muted-foreground text-center">
+                            No products with BOM found
+                          </div>
+                        ) : (
+                          products?.map((product) => (
+                            <SelectItem
+                              key={product.id}
+                              value={product.component_id || product.id}
+                            >
+                              {product.name} ({product.sku})
+                            </SelectItem>
+                          ))
+                        )
+                      ) : rawMaterials?.length === 0 ? (
                         <div className="p-2 text-sm text-muted-foreground text-center">
-                          No products with BOM found
+                          No raw materials found
                         </div>
                       ) : (
-                        products?.map((product) => (
-                          <SelectItem 
-                            key={product.id} 
-                            value={product.component_id || product.id}
-                          >
-                            {product.name} ({product.sku})
+                        rawMaterials?.map((rm) => (
+                          <SelectItem key={rm.id} value={rm.id}>
+                            {rm.name} ({rm.sku})
                           </SelectItem>
                         ))
                       )}
@@ -194,7 +235,7 @@ export function LogProductionDialog({
                 <FormItem>
                   <FormLabel>Quantity Produced</FormLabel>
                   <FormControl>
-                    <Input type="number" min="1" {...field} />
+                    <Input type="number" min="0" step="0.001" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

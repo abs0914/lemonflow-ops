@@ -34,6 +34,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Popover,
   PopoverContent,
@@ -46,7 +47,8 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
-  product_id: z.string().min(1, "Please select a product"),
+  item_type: z.enum(["product", "raw_material"]),
+  product_id: z.string().min(1, "Please select an item"),
   quantity: z.coerce.number().positive("Quantity must be greater than 0"),
   due_date: z.date().optional(),
   notes: z.string().optional(),
@@ -63,11 +65,14 @@ export default function ProductionCreate() {
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      item_type: "product",
       product_id: "",
       quantity: 1,
       notes: "",
     },
   });
+
+  const itemType = form.watch("item_type");
 
   useEffect(() => {
     if (!loading && !profile) {
@@ -91,19 +96,38 @@ export default function ProductionCreate() {
     },
   });
 
+  // Fetch raw materials
+  const { data: rawMaterials, isLoading: rawMaterialsLoading } = useQuery({
+    queryKey: ["raw-materials-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("raw_materials")
+        .select("id, name, sku")
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // Create order mutation
   const createOrderMutation = useMutation({
     mutationFn: async (data: FormData) => {
       if (!user) throw new Error("User not authenticated");
 
-      const { error } = await supabase.from("assembly_orders").insert({
-        product_id: data.product_id,
+      const payload: any = {
         quantity: data.quantity,
         due_date: data.due_date?.toISOString(),
         notes: data.notes,
         created_by: user.id,
         status: "pending",
-      });
+      };
+      if (data.item_type === "raw_material") {
+        payload.raw_material_id = data.product_id;
+      } else {
+        payload.product_id = data.product_id;
+      }
+
+      const { error } = await supabase.from("assembly_orders").insert(payload);
 
       if (error) throw error;
     },
@@ -168,28 +192,61 @@ export default function ProductionCreate() {
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <FormField
                   control={form.control}
+                  name="item_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Item Type</FormLabel>
+                      <Tabs
+                        value={field.value}
+                        onValueChange={(v) => {
+                          field.onChange(v);
+                          form.setValue("product_id", "");
+                        }}
+                      >
+                        <TabsList className="grid w-full grid-cols-2">
+                          <TabsTrigger value="product">Product</TabsTrigger>
+                          <TabsTrigger value="raw_material">Raw Material</TabsTrigger>
+                        </TabsList>
+                      </Tabs>
+                      <FormDescription>
+                        Produce a finished product or a raw material (e.g., puree)
+                      </FormDescription>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="product_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Product</FormLabel>
+                      <FormLabel>{itemType === "raw_material" ? "Raw Material" : "Product"}</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a product" />
+                            <SelectValue placeholder={`Select a ${itemType === "raw_material" ? "raw material" : "product"}`} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {productsLoading ? (
-                            <SelectItem value="loading" disabled>
-                              Loading products...
-                            </SelectItem>
+                          {itemType === "raw_material" ? (
+                            rawMaterialsLoading ? (
+                              <SelectItem value="loading" disabled>Loading raw materials...</SelectItem>
+                            ) : rawMaterials?.length === 0 ? (
+                              <SelectItem value="none" disabled>No raw materials available</SelectItem>
+                            ) : (
+                              rawMaterials?.map((rm) => (
+                                <SelectItem key={rm.id} value={rm.id}>
+                                  {rm.name} ({rm.sku})
+                                </SelectItem>
+                              ))
+                            )
+                          ) : productsLoading ? (
+                            <SelectItem value="loading" disabled>Loading products...</SelectItem>
                           ) : products?.length === 0 ? (
-                            <SelectItem value="none" disabled>
-                              No products available
-                            </SelectItem>
+                            <SelectItem value="none" disabled>No products available</SelectItem>
                           ) : (
                             products?.map((product) => (
                               <SelectItem key={product.id} value={product.id}>
@@ -200,7 +257,7 @@ export default function ProductionCreate() {
                         </SelectContent>
                       </Select>
                       <FormDescription>
-                        Choose the product to assemble
+                        Choose the {itemType === "raw_material" ? "raw material" : "product"} to assemble
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
