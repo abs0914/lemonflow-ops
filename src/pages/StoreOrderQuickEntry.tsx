@@ -126,6 +126,17 @@ export default function StoreOrderQuickEntry() {
   };
 
   const hasInvalidItems = parsedItems.some(item => item.isValid === false);
+  const stockIssues = parsedItems
+    .map((item) => {
+      const info = validationData?.itemDetails.get(item.itemCode);
+      const available = info?.available_quantity;
+      if (available === undefined) return null;
+      return item.quantity > available
+        ? { code: item.itemCode, name: info?.name || item.itemCode, need: item.quantity, available }
+        : null;
+    })
+    .filter(Boolean) as Array<{ code: string; name: string; need: number; available: number }>;
+  const hasStockIssue = stockIssues.length > 0;
 
   const handleSaveDraft = async () => {
     if (!storeId) {
