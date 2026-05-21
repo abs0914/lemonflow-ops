@@ -16,9 +16,12 @@ import { formatCurrency } from "@/lib/currency";
 import { ConversionHelper } from "./ConversionHelper";
 import { AddFromRawMaterialDialog } from "./AddFromRawMaterialDialog";
 
+export type BomParentType = "product" | "raw_material";
+
 interface BomEditorProps {
-  productId?: string;
-  productName?: string;
+  parentId?: string;
+  parentName?: string;
+  parentType?: BomParentType;
 }
 
 interface BomItem {
@@ -51,9 +54,8 @@ interface SelectableItem {
   source: 'raw_material' | 'component';
 }
 
-export function BomEditor({ productId, productName }: BomEditorProps) {
+export function BomEditor({ parentId, parentName, parentType = "product" }: BomEditorProps) {
   const [selectedItemId, setSelectedItemId] = useState("");
-  const [selectedItemType, setSelectedItemType] = useState<"raw_material" | "component">("raw_material");
   const [quantity, setQuantity] = useState("");
   const [notes, setNotes] = useState("");
   const [open, setOpen] = useState(false);
@@ -62,19 +64,21 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const parentColumn = parentType === "raw_material" ? "parent_raw_material_id" : "product_id";
+
   const { data: bomItems = [] } = useQuery({
-    queryKey: ["bom-items", productId],
+    queryKey: ["bom-items", parentType, parentId],
     queryFn: async () => {
-      if (!productId) return [];
+      if (!parentId) return [];
       const { data, error } = await supabase
         .from("bom_items")
-        .select("*, raw_materials(*), components(*)")
-        .eq("product_id", productId);
-      
+        .select("*, raw_materials!bom_items_raw_material_id_fkey(*), components(*)")
+        .eq(parentColumn, parentId);
+
       if (error) throw error;
-      return data as BomItem[];
+      return data as unknown as BomItem[];
     },
-    enabled: !!productId,
+    enabled: !!parentId,
   });
 
   const { data: rawMaterials = [] } = useQuery({
@@ -101,9 +105,10 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
     },
   });
 
-  // Merge both lists into a unified selectable list
   const allItems: SelectableItem[] = [
-    ...rawMaterials.map(rm => ({ ...rm, source: 'raw_material' as const })),
+    ...rawMaterials
+      .filter(rm => !(parentType === "raw_material" && rm.id === parentId)) // prevent self-reference
+      .map(rm => ({ ...rm, source: 'raw_material' as const })),
     ...components.map(c => ({ ...c, source: 'component' as const })),
   ].filter(item => itemTypeFilter === "all" || item.source === itemTypeFilter);
 
@@ -111,22 +116,22 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
 
   const addMutation = useMutation({
     mutationFn: async () => {
-      if (!productId || !selectedItemId || !quantity || !selectedItem) return;
-      
-      const insertData = {
-        product_id: productId,
+      if (!parentId || !selectedItemId || !quantity || !selectedItem) return;
+
+      const insertData: any = {
         quantity: parseFloat(quantity),
         notes: notes || null,
         item_type: selectedItem.source,
         raw_material_id: selectedItem.source === 'raw_material' ? selectedItemId : null,
         component_id: selectedItem.source === 'component' ? selectedItemId : null,
       };
+      insertData[parentColumn] = parentId;
 
       const { error } = await supabase.from("bom_items").insert([insertData]);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["bom-items", productId] });
+      queryClient.invalidateQueries({ queryKey: ["bom-items", parentType, parentId] });
       toast({ title: "Item added to BOM" });
       setSelectedItemId("");
       setQuantity("");
@@ -147,7 +152,7 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["bom-items", productId] });
+      queryClient.invalidateQueries({ queryKey: ["bom-items", parentType, parentId] });
       toast({ title: "Item removed from BOM" });
     },
     onError: (error: Error) => {
@@ -171,11 +176,11 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
     return sum + (cost * item.quantity);
   }, 0);
 
-  if (!productId) {
+  if (!parentId) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center h-64 text-muted-foreground">
-          Select a product to edit its BOM
+          Select a {parentType === "raw_material" ? "raw material" : "product"} to edit its BOM
         </CardContent>
       </Card>
     );
@@ -184,21 +189,28 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>BOM for {productName}</CardTitle>
+        <CardTitle>
+          BOM for {parentName}
+          <span className="ml-2 text-xs font-normal text-muted-foreground">
+            ({parentType === "raw_material" ? "Raw Material" : "Product"})
+          </span>
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="border rounded-md p-4 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold">Add Item</h3>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setAddFromRmOpen(true)}
-              className="gap-1"
-            >
-              <FlaskConical className="h-4 w-4" />
-              Add from Raw Materials
-            </Button>
+            {parentType === "product" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAddFromRmOpen(true)}
+                className="gap-1"
+              >
+                <FlaskConical className="h-4 w-4" />
+                Add from Raw Materials
+              </Button>
+            )}
           </div>
           <div className="grid gap-4">
             <div>
@@ -250,7 +262,7 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
                             <div className="flex flex-col">
                               <span className="font-medium">{item.sku} - {item.name}</span>
                               <span className="text-xs text-muted-foreground">
-                                Raw Material • Unit: {item.unit} {item.cost_per_unit && `• Cost: RM ${item.cost_per_unit}`}
+                                Raw Material • Unit: {item.unit} {item.cost_per_unit && `• Cost: ${item.cost_per_unit}`}
                               </span>
                             </div>
                           </CommandItem>
@@ -270,7 +282,7 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
                             <div className="flex flex-col">
                               <span className="font-medium">{item.sku} - {item.name}</span>
                               <span className="text-xs text-muted-foreground">
-                                Inventory Item • Unit: {item.unit} {item.cost_per_unit && `• Cost: RM ${item.cost_per_unit}`}
+                                Inventory Item • Unit: {item.unit} {item.cost_per_unit && `• Cost: ${item.cost_per_unit}`}
                               </span>
                             </div>
                           </CommandItem>
@@ -356,8 +368,8 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
                         <TableCell>
                           <span className={cn(
                             "text-xs px-2 py-0.5 rounded-full",
-                            item.item_type === 'component' 
-                              ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" 
+                            item.item_type === 'component'
+                              ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
                               : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                           )}>
                             {item.item_type === 'component' ? 'Inventory' : 'Raw Mat'}
@@ -368,12 +380,12 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
                         <TableCell>{item.quantity}</TableCell>
                         <TableCell>{details.unit}</TableCell>
                         <TableCell>
-                          {details.cost_per_unit 
+                          {details.cost_per_unit
                             ? formatCurrency(details.cost_per_unit)
                             : "-"}
                         </TableCell>
                         <TableCell>
-                          {details.cost_per_unit 
+                          {details.cost_per_unit
                             ? formatCurrency(itemCost)
                             : "-"}
                         </TableCell>
@@ -405,11 +417,13 @@ export function BomEditor({ productId, productName }: BomEditorProps) {
         </div>
       </CardContent>
 
-      <AddFromRawMaterialDialog
-        open={addFromRmOpen}
-        onOpenChange={setAddFromRmOpen}
-        productId={productId}
-      />
+      {parentType === "product" && (
+        <AddFromRawMaterialDialog
+          open={addFromRmOpen}
+          onOpenChange={setAddFromRmOpen}
+          productId={parentId}
+        />
+      )}
     </Card>
   );
 }
