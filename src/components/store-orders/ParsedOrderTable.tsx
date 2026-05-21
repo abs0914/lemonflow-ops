@@ -110,11 +110,19 @@ export function ParsedOrderTable({
               items.map((item, index) => {
                 const isEditing = editingRow === index;
                 const componentInfo = itemDetails?.get(item.itemCode);
+                const available = componentInfo?.available_quantity;
+                const exceeds = available !== undefined && item.quantity > available;
 
                 return (
                   <TableRow
                     key={index}
-                    className={item.isValid === false ? "bg-yellow-50/50" : ""}
+                    className={
+                      exceeds
+                        ? "bg-destructive/5"
+                        : item.isValid === false
+                        ? "bg-yellow-50/50"
+                        : ""
+                    }
                   >
                     <TableCell>
                       {isEditing ? (
