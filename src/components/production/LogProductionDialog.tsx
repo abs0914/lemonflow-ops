@@ -230,7 +230,7 @@ export function LogProductionDialog({
                               variant="outline"
                               role="combobox"
                               className={cn(
-                                "flex-1 justify-between font-normal",
+                                "flex-1 min-w-0 justify-between font-normal",
                                 !field.value && "text-muted-foreground"
                               )}
                             >
