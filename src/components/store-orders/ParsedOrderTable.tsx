@@ -102,7 +102,7 @@ export function ParsedOrderTable({
           <TableBody>
             {items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   No items parsed yet. Paste an order message and click "Parse Order".
                 </TableCell>
               </TableRow>
