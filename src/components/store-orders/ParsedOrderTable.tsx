@@ -92,6 +92,7 @@ export function ParsedOrderTable({
               <TableHead className="w-[120px]">Item Code</TableHead>
               <TableHead>Item Name</TableHead>
               <TableHead className="w-[80px]">Qty</TableHead>
+              <TableHead className="w-[90px] text-right">Available</TableHead>
               <TableHead className="w-[100px]">Unit</TableHead>
               <TableHead>Notes</TableHead>
               <TableHead className="w-[80px]">Status</TableHead>
@@ -101,7 +102,7 @@ export function ParsedOrderTable({
           <TableBody>
             {items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   No items parsed yet. Paste an order message and click "Parse Order".
                 </TableCell>
               </TableRow>
@@ -109,11 +110,19 @@ export function ParsedOrderTable({
               items.map((item, index) => {
                 const isEditing = editingRow === index;
                 const componentInfo = itemDetails?.get(item.itemCode);
+                const available = componentInfo?.available_quantity;
+                const exceeds = available !== undefined && item.quantity > available;
 
                 return (
                   <TableRow
                     key={index}
-                    className={item.isValid === false ? "bg-yellow-50/50" : ""}
+                    className={
+                      exceeds
+                        ? "bg-destructive/5"
+                        : item.isValid === false
+                        ? "bg-yellow-50/50"
+                        : ""
+                    }
                   >
                     <TableCell>
                       {isEditing ? (
@@ -146,7 +155,21 @@ export function ParsedOrderTable({
                           className="h-8 w-16"
                         />
                       ) : (
-                        <span className="font-medium">{item.quantity}</span>
+                        <span className={`font-medium ${exceeds ? "text-destructive" : ""}`}>
+                          {item.quantity}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {available === undefined ? (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      ) : exceeds ? (
+                        <Badge variant="destructive" className="gap-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          {available}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">{available}</span>
                       )}
                     </TableCell>
                     <TableCell>

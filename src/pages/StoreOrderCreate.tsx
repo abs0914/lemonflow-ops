@@ -33,6 +33,7 @@ import { SalesOrderLine } from "@/types/sales-order";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { useInventoryItems, getAvailableForCode } from "@/hooks/useInventoryItems";
 
 export default function StoreOrderCreate() {
   const navigate = useNavigate();
@@ -42,6 +43,7 @@ export default function StoreOrderCreate() {
   const primaryStore = usePrimaryStore();
   const createMutation = useCreateSalesOrder();
   const updateMutation = useUpdateSalesOrder();
+  const { data: inventoryItems } = useInventoryItems();
 
   // Operational roles see all stores, Store role sees only assigned stores
   const operationalRoles = ["Admin", "Warehouse", "Fulfillment", "Production", "Finance", "Accounting"];
@@ -377,26 +379,54 @@ export default function StoreOrderCreate() {
             </CardContent>
           </Card>
 
-          <div className="flex flex-col-reverse md:flex-row justify-end gap-2 md:gap-4">
-            <Button variant="outline" onClick={() => navigate("/store/orders")}>
-              Cancel
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleSaveDraft}
-              disabled={createMutation.isPending || lines.length === 0}
-            >
-              <Save className="mr-2 h-4 w-4" />
-              Save Draft
-            </Button>
-            <Button
-              onClick={handleSubmitOrder}
-              disabled={createMutation.isPending || updateMutation.isPending || lines.length === 0}
-            >
-              <Send className="mr-2 h-4 w-4" />
-              Submit Order
-            </Button>
-          </div>
+          {(() => {
+            const stockIssues = lines
+              .map((l) => {
+                const avail = getAvailableForCode(l.item_code, inventoryItems);
+                return avail !== null && l.quantity > avail
+                  ? { code: l.item_code, name: l.item_name, need: l.quantity, available: avail }
+                  : null;
+              })
+              .filter(Boolean) as Array<{ code: string; name: string; need: number; available: number }>;
+            const hasStockIssue = stockIssues.length > 0;
+            return (
+              <>
+                {hasStockIssue && (
+                  <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                    <p className="font-semibold mb-1">Some items exceed available stock — cannot submit:</p>
+                    <ul className="list-disc list-inside space-y-0.5">
+                      {stockIssues.map((s) => (
+                        <li key={s.code}>
+                          {s.code} {s.name}: need {s.need}, available {s.available}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <div className="flex flex-col-reverse md:flex-row justify-end gap-2 md:gap-4">
+                  <Button variant="outline" onClick={() => navigate("/store/orders")}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleSaveDraft}
+                    disabled={createMutation.isPending || lines.length === 0}
+                  >
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Draft
+                  </Button>
+                  <Button
+                    onClick={handleSubmitOrder}
+                    disabled={createMutation.isPending || updateMutation.isPending || lines.length === 0 || hasStockIssue}
+                    title={hasStockIssue ? "Reduce quantities to available stock before submitting" : undefined}
+                  >
+                    <Send className="mr-2 h-4 w-4" />
+                    Submit Order
+                  </Button>
+                </div>
+              </>
+            );
+          })()}
         </div>
       </div>
     </DashboardLayout>

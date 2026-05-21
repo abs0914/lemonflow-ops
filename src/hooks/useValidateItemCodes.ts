@@ -6,6 +6,9 @@ export interface ComponentItem {
   name: string;
   price: number | null;
   unit: string;
+  stock_quantity?: number;
+  reserved_quantity?: number;
+  available_quantity?: number;
 }
 
 export function useValidateItemCodes(itemCodes: string[]) {
@@ -18,14 +21,22 @@ export function useValidateItemCodes(itemCodes: string[]) {
 
       const { data, error } = await supabase
         .from("components")
-        .select("sku, name, price, unit")
+        .select("sku, name, price, unit, stock_quantity, reserved_quantity")
         .in("sku", itemCodes);
 
       if (error) throw error;
 
       const validCodes = new Set<string>(data?.map(item => item.sku) || []);
       const itemDetails = new Map<string, ComponentItem>(
-        data?.map(item => [item.sku, item]) || []
+        (data || []).map((item: any) => [
+          item.sku,
+          {
+            ...item,
+            stock_quantity: Number(item.stock_quantity || 0),
+            reserved_quantity: Number(item.reserved_quantity || 0),
+            available_quantity: Number(item.stock_quantity || 0) - Number(item.reserved_quantity || 0),
+          },
+        ])
       );
 
       return { validCodes, itemDetails };
