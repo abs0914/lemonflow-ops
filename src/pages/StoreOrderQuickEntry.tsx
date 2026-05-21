@@ -180,6 +180,10 @@ export default function StoreOrderQuickEntry() {
       toast.error("All item codes must exist in inventory before submitting. Please fix or remove invalid items.");
       return;
     }
+    if (hasStockIssue) {
+      toast.error("Some items exceed available stock — reduce quantities before submitting.");
+      return;
+    }
 
     const lines = convertToOrderLines();
     const description = requester ? `Quick Order - Requested by: ${requester}` : "Quick Order Entry";
