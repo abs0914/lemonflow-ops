@@ -67,6 +67,7 @@ export function AddInventoryDialog({ open, onOpenChange, isRawMaterial = false }
       stock_control: true,
       has_batch_no: false,
       sync_to_autocount: true,
+      visible_in_store_orders: false,
       unit: "unit",
       item_type: "CONSUMABLE",
       stock_quantity: 0,
