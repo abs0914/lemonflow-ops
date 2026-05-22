@@ -5,7 +5,90 @@ import { ProfileSettings } from "@/components/account/ProfileSettings";
 import { PasswordSettings } from "@/components/account/PasswordSettings";
 import { SignatureManager } from "@/components/signature/SignatureManager";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { User, Lock, PenTool } from "lucide-react";
+import { User, Lock, PenTool, Bell } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { usePushSubscription } from "@/hooks/usePushSubscription";
+import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+
+function PushSettings() {
+  const { status, loading, subscribe, unsubscribe } = usePushSubscription();
+  const { user } = useAuth();
+
+  const enabled = status === "subscribed";
+  const canToggle =
+    status === "default" ||
+    status === "granted-unsubscribed" ||
+    status === "subscribed";
+
+  const handleToggle = async (next: boolean) => {
+    try {
+      if (next) {
+        await subscribe();
+        toast({ title: "Push notifications enabled", description: "You'll receive alerts even when the app is closed." });
+      } else {
+        await unsubscribe();
+        toast({ title: "Push notifications disabled" });
+      }
+    } catch (e: any) {
+      toast({ title: "Could not enable push", description: e?.message ?? String(e), variant: "destructive" });
+    }
+  };
+
+  const sendTest = async () => {
+    if (!user?.id) return;
+    const { error } = await supabase.functions.invoke("send-push", {
+      body: {
+        user_ids: [user.id],
+        title: "Test notification",
+        body: "If you can see this, push is working.",
+        url: "/dashboard",
+      },
+    });
+    if (error) {
+      toast({ title: "Test failed", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Test sent", description: "Check your device notifications." });
+    }
+  };
+
+  const statusLabel: Record<string, string> = {
+    unsupported: "Your browser does not support push notifications.",
+    blocked: "Notifications are blocked in your browser settings.",
+    preview: "Push only works on the published app — open lemonflow-ops.lovable.app in a normal browser tab.",
+    denied: "You blocked notifications. Re-enable them in your browser site settings.",
+    default: "Not enabled.",
+    "granted-unsubscribed": "Permission granted but not subscribed.",
+    subscribed: "Enabled on this device.",
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-start justify-between gap-4 rounded-lg border border-border p-4">
+        <div className="space-y-1">
+          <Label className="text-base font-semibold">Browser push notifications</Label>
+          <p className="text-sm text-muted-foreground">{statusLabel[status]}</p>
+          <p className="text-xs text-muted-foreground">
+            Get alerts even when the tab is closed (Chrome, Edge, Firefox, Safari 16.4+ as PWA).
+          </p>
+        </div>
+        <Switch
+          checked={enabled}
+          disabled={loading || !canToggle}
+          onCheckedChange={handleToggle}
+        />
+      </div>
+
+      {status === "subscribed" && (
+        <Button variant="outline" onClick={sendTest}>
+          Send test notification
+        </Button>
+      )}
+    </div>
+  );
+}
 
 export default function MyAccount() {
   const { profile } = useAuth();
@@ -34,6 +117,10 @@ export default function MyAccount() {
             <TabsTrigger value="signature" className="flex items-center gap-2">
               <PenTool className="h-4 w-4" />
               Signature
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="flex items-center gap-2">
+              <Bell className="h-4 w-4" />
+              Notifications
             </TabsTrigger>
             <TabsTrigger value="password" className="flex items-center gap-2">
               <Lock className="h-4 w-4" />
@@ -65,6 +152,20 @@ export default function MyAccount() {
               </CardHeader>
               <CardContent>
                 <SignatureManager />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="notifications">
+            <Card>
+              <CardHeader>
+                <CardTitle>Notifications</CardTitle>
+                <CardDescription>
+                  Control how you get alerted about new orders, payments, stock and production events.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PushSettings />
               </CardContent>
             </Card>
           </TabsContent>
