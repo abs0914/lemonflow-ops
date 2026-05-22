@@ -122,6 +122,29 @@ export function InventoryTable({ components, isLoading, onRefetch, onAdjustStock
     },
   });
 
+  const toggleVisibilityMutation = useMutation({
+    mutationFn: async ({ id, visible }: { id: string; visible: boolean }) => {
+      const { data, error } = await supabase
+        .from("components")
+        .update({ visible_in_store_orders: visible })
+        .eq("id", id)
+        .select();
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error("Update blocked. You may not have permission to change this item.");
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to update visibility", description: err.message, variant: "destructive" });
+    },
+  });
+
+
+
   const handleEdit = (component: Component) => {
     setItemToEdit(component);
     setEditDialogOpen(true);
