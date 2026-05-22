@@ -370,6 +370,22 @@ export function AddInventoryDialog({ open, onOpenChange, isRawMaterial = false }
               </Label>
             </div>
 
+            {!isRawMaterial && (
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="visible_in_store_orders"
+                  checked={watch("visible_in_store_orders")}
+                  onCheckedChange={(checked) =>
+                    setValue("visible_in_store_orders", checked as boolean)
+                  }
+                />
+                <Label htmlFor="visible_in_store_orders" className="font-normal cursor-pointer">
+                  Show in Store Orders (visible to franchisees)
+                </Label>
+              </div>
+            )}
+
+
             {!isRawMaterial && profile?.role === "Admin" && (
               <div className="flex items-center space-x-2">
                 <Checkbox
