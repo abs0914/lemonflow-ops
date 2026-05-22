@@ -367,6 +367,20 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
               </Label>
             </div>
 
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="visible_in_store_orders"
+                checked={watch("visible_in_store_orders")}
+                onCheckedChange={(checked) =>
+                  setValue("visible_in_store_orders", checked as boolean)
+                }
+              />
+              <Label htmlFor="visible_in_store_orders" className="font-normal cursor-pointer">
+                Show in Store Orders (visible to franchisees)
+              </Label>
+            </div>
+
+
             {profile?.role === "Admin" && (
               <div className="flex items-center space-x-2">
                 <Checkbox
