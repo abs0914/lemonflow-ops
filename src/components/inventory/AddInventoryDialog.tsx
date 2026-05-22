@@ -45,6 +45,7 @@ interface InventoryFormData {
   stock_control: boolean;
   has_batch_no: boolean;
   sync_to_autocount: boolean;
+  visible_in_store_orders: boolean;
 }
 
 export function AddInventoryDialog({ open, onOpenChange, isRawMaterial = false }: AddInventoryDialogProps) {
