@@ -118,6 +118,7 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
           low_stock_threshold: data.low_stock_threshold,
           stock_control: data.stock_control,
           has_batch_no: data.has_batch_no,
+          visible_in_store_orders: data.visible_in_store_orders,
         })
         .eq("id", component.id);
 
