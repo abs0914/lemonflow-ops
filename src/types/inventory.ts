@@ -16,6 +16,7 @@ export interface Component {
   last_synced_at: string | null;
   low_stock_threshold: number | null;
   recommended_cost_price: number | null;
+  visible_in_store_orders?: boolean | null;
 }
 
 export interface RawMaterial {
