@@ -350,6 +350,18 @@ export function InventoryTable({ components, isLoading, onRefetch, onAdjustStock
                   </div>
                 </TableCell>
                 {!isRawMaterials && (
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Switch
+                      checked={!!component.visible_in_store_orders}
+                      disabled={toggleVisibilityMutation.isPending}
+                      onCheckedChange={(checked) =>
+                        toggleVisibilityMutation.mutate({ id: component.id, visible: checked })
+                      }
+                      aria-label="Show in Store Orders"
+                    />
+                  </TableCell>
+                )}
+                {!isRawMaterials && (
                 <TableCell>
                   <div className="space-y-1">
                     {getSyncStatusBadge(component.last_synced_at)}
