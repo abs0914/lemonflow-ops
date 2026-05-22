@@ -54,7 +54,7 @@ function PushSettings() {
     }
   };
 
-  const statusLabel: Record<typeof status, string> = {
+  const statusLabel: Record<string, string> = {
     unsupported: "Your browser does not support push notifications.",
     blocked: "Notifications are blocked in your browser settings.",
     preview: "Push only works on the published app — open lemonflow-ops.lovable.app in a normal browser tab.",
