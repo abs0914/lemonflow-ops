@@ -81,6 +81,18 @@ Deno.serve(async (req) => {
       throw new Error("AutoCount API credentials not configured");
     }
 
+    // Authenticate with AutoCount to get JWT
+    const authResponse = await fetch(`${apiUrl}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+    if (!authResponse.ok) {
+      const errTxt = await authResponse.text();
+      throw new Error(`AutoCount auth failed: ${authResponse.status} - ${errTxt}`);
+    }
+    const authData = await authResponse.json();
+
     // Construct stock adjustment payload
     const autoCountPayload = {
       ItemCode: component.autocount_item_code,
@@ -96,23 +108,25 @@ Deno.serve(async (req) => {
 
     // Call AutoCount API
     const autoCountResponse = await fetch(
-      `${apiUrl}/api/stock-adjustment`,
+      `${apiUrl}/autocount/stock-adjustments`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Basic ${btoa(`${username}:${password}`)}`,
+          Authorization: `Bearer ${authData.token}`,
         },
         body: JSON.stringify(autoCountPayload),
       }
     );
 
-    const autoCountResult = await autoCountResponse.json();
+    const respText = await autoCountResponse.text();
+    let autoCountResult: any = {};
+    try { autoCountResult = JSON.parse(respText); } catch { autoCountResult = { raw: respText }; }
     console.log("AutoCount response:", autoCountResult);
 
     if (!autoCountResponse.ok) {
       throw new Error(
-        `AutoCount API error: ${autoCountResult.message || "Unknown error"}`
+        `AutoCount API error: ${autoCountResponse.status} - ${respText || "Unknown error"}`
       );
     }
 
