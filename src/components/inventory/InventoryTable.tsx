@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { DeleteInventoryDialog } from "./DeleteInventoryDialog";
 import { EditInventoryDialog } from "./EditInventoryDialog";
 import { StockAdjustmentDialog } from "./StockAdjustmentDialog";
@@ -120,6 +121,29 @@ export function InventoryTable({ components, isLoading, onRefetch, onAdjustStock
       });
     },
   });
+
+  const toggleVisibilityMutation = useMutation({
+    mutationFn: async ({ id, visible }: { id: string; visible: boolean }) => {
+      const { data, error } = await supabase
+        .from("components")
+        .update({ visible_in_store_orders: visible })
+        .eq("id", id)
+        .select();
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error("Update blocked. You may not have permission to change this item.");
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to update visibility", description: err.message, variant: "destructive" });
+    },
+  });
+
+
 
   const handleEdit = (component: Component) => {
     setItemToEdit(component);
@@ -265,6 +289,7 @@ export function InventoryTable({ components, isLoading, onRefetch, onAdjustStock
               <TableHead className="text-right">Price</TableHead>
               <TableHead className="text-right">Cost</TableHead>
               <TableHead>Status</TableHead>
+              {!isRawMaterials && <TableHead>Store Orders</TableHead>}
               {!isRawMaterials && <TableHead>Last Synced</TableHead>}
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -324,6 +349,18 @@ export function InventoryTable({ components, isLoading, onRefetch, onAdjustStock
                     )}
                   </div>
                 </TableCell>
+                {!isRawMaterials && (
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Switch
+                      checked={!!component.visible_in_store_orders}
+                      disabled={toggleVisibilityMutation.isPending}
+                      onCheckedChange={(checked) =>
+                        toggleVisibilityMutation.mutate({ id: component.id, visible: checked })
+                      }
+                      aria-label="Show in Store Orders"
+                    />
+                  </TableCell>
+                )}
                 {!isRawMaterials && (
                 <TableCell>
                   <div className="space-y-1">

@@ -1,0 +1,1 @@
+ALTER TABLE public.components ADD COLUMN IF NOT EXISTS visible_in_store_orders boolean NOT NULL DEFAULT false;

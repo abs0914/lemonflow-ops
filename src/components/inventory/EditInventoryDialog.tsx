@@ -46,6 +46,7 @@ interface InventoryFormData {
   stock_control: boolean;
   has_batch_no: boolean;
   sync_to_autocount: boolean;
+  visible_in_store_orders: boolean;
 }
 
 export function EditInventoryDialog({ open, onOpenChange, component }: EditInventoryDialogProps) {
@@ -66,6 +67,7 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
       stock_control: true,
       has_batch_no: false,
       sync_to_autocount: true,
+      visible_in_store_orders: false,
       unit: "unit",
       item_type: "CONSUMABLE",
       cost_per_unit: 0,
@@ -92,6 +94,7 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
         stock_control: component.stock_control ?? true,
         has_batch_no: component.has_batch_no ?? false,
         sync_to_autocount: true,
+        visible_in_store_orders: component.visible_in_store_orders ?? false,
       });
     }
   }, [component, reset]);
@@ -115,6 +118,7 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
           low_stock_threshold: data.low_stock_threshold,
           stock_control: data.stock_control,
           has_batch_no: data.has_batch_no,
+          visible_in_store_orders: data.visible_in_store_orders,
         })
         .eq("id", component.id);
 
@@ -362,6 +366,20 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
                 Has batch number
               </Label>
             </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="visible_in_store_orders"
+                checked={watch("visible_in_store_orders")}
+                onCheckedChange={(checked) =>
+                  setValue("visible_in_store_orders", checked as boolean)
+                }
+              />
+              <Label htmlFor="visible_in_store_orders" className="font-normal cursor-pointer">
+                Show in Store Orders (visible to franchisees)
+              </Label>
+            </div>
+
 
             {profile?.role === "Admin" && (
               <div className="flex items-center space-x-2">

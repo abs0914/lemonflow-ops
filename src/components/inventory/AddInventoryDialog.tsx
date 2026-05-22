@@ -45,6 +45,7 @@ interface InventoryFormData {
   stock_control: boolean;
   has_batch_no: boolean;
   sync_to_autocount: boolean;
+  visible_in_store_orders: boolean;
 }
 
 export function AddInventoryDialog({ open, onOpenChange, isRawMaterial = false }: AddInventoryDialogProps) {
@@ -66,6 +67,7 @@ export function AddInventoryDialog({ open, onOpenChange, isRawMaterial = false }
       stock_control: true,
       has_batch_no: false,
       sync_to_autocount: true,
+      visible_in_store_orders: false,
       unit: "unit",
       item_type: "CONSUMABLE",
       stock_quantity: 0,
@@ -128,6 +130,7 @@ export function AddInventoryDialog({ open, onOpenChange, isRawMaterial = false }
           price: data.price,
           stock_control: data.stock_control,
           has_batch_no: data.has_batch_no,
+          ...(isRawMaterial ? {} : { visible_in_store_orders: data.visible_in_store_orders }),
         })
         .select()
         .single();
@@ -366,6 +369,22 @@ export function AddInventoryDialog({ open, onOpenChange, isRawMaterial = false }
                 Has batch number
               </Label>
             </div>
+
+            {!isRawMaterial && (
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="visible_in_store_orders"
+                  checked={watch("visible_in_store_orders")}
+                  onCheckedChange={(checked) =>
+                    setValue("visible_in_store_orders", checked as boolean)
+                  }
+                />
+                <Label htmlFor="visible_in_store_orders" className="font-normal cursor-pointer">
+                  Show in Store Orders (visible to franchisees)
+                </Label>
+              </div>
+            )}
+
 
             {!isRawMaterial && profile?.role === "Admin" && (
               <div className="flex items-center space-x-2">
