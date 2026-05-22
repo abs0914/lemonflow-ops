@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNotifications, Notification } from "@/hooks/useNotifications";
+import { useBrowserNotifications } from "@/hooks/useBrowserNotifications";
 import { useTabBlink } from "@/hooks/useTabBlink";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
