@@ -736,6 +736,39 @@ export type Database = {
           },
         ]
       }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          updated_at: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       raw_materials: {
         Row: {
           autocount_item_code: string | null
@@ -1383,6 +1416,16 @@ export type Database = {
       reserve_stock_for_sales_order: {
         Args: { p_sales_order_id: string }
         Returns: Json
+      }
+      trigger_push: {
+        Args: {
+          p_body: string
+          p_tag?: string
+          p_title: string
+          p_url?: string
+          p_user_ids: string[]
+        }
+        Returns: undefined
       }
     }
     Enums: {
