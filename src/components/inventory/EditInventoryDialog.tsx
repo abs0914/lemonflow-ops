@@ -94,6 +94,7 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
         stock_control: component.stock_control ?? true,
         has_batch_no: component.has_batch_no ?? false,
         sync_to_autocount: true,
+        visible_in_store_orders: component.visible_in_store_orders ?? false,
       });
     }
   }, [component, reset]);
