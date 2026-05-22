@@ -67,6 +67,7 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
       stock_control: true,
       has_batch_no: false,
       sync_to_autocount: true,
+      visible_in_store_orders: false,
       unit: "unit",
       item_type: "CONSUMABLE",
       cost_per_unit: 0,
