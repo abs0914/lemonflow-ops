@@ -130,6 +130,7 @@ export function AddInventoryDialog({ open, onOpenChange, isRawMaterial = false }
           price: data.price,
           stock_control: data.stock_control,
           has_batch_no: data.has_batch_no,
+          ...(isRawMaterial ? {} : { visible_in_store_orders: data.visible_in_store_orders }),
         })
         .select()
         .single();
