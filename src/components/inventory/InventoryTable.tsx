@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { DeleteInventoryDialog } from "./DeleteInventoryDialog";
 import { EditInventoryDialog } from "./EditInventoryDialog";
 import { StockAdjustmentDialog } from "./StockAdjustmentDialog";
