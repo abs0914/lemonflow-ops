@@ -49,6 +49,7 @@ export function NotificationBell() {
   const navigate = useNavigate();
 
   useTabBlink(unreadCount);
+  useBrowserNotifications();
 
   const handleClick = (n: Notification) => {
     if (!n.is_read) markAsRead(n.id);
