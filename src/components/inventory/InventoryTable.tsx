@@ -289,6 +289,7 @@ export function InventoryTable({ components, isLoading, onRefetch, onAdjustStock
               <TableHead className="text-right">Price</TableHead>
               <TableHead className="text-right">Cost</TableHead>
               <TableHead>Status</TableHead>
+              {!isRawMaterials && <TableHead>Store Orders</TableHead>}
               {!isRawMaterials && <TableHead>Last Synced</TableHead>}
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
