@@ -270,6 +270,7 @@ export type Database = {
           stock_quantity: number
           unit: string
           updated_at: string
+          visible_in_store_orders: boolean
         }
         Insert: {
           autocount_item_code?: string | null
@@ -291,6 +292,7 @@ export type Database = {
           stock_quantity?: number
           unit?: string
           updated_at?: string
+          visible_in_store_orders?: boolean
         }
         Update: {
           autocount_item_code?: string | null
@@ -312,6 +314,7 @@ export type Database = {
           stock_quantity?: number
           unit?: string
           updated_at?: string
+          visible_in_store_orders?: boolean
         }
         Relationships: []
       }
