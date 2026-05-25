@@ -22,7 +22,6 @@ export function useInventoryItems() {
         .from("components")
         .select("id, sku, name, description, unit, price, stock_quantity, reserved_quantity, autocount_item_code")
         .eq("stock_control", true)
-        .eq("visible_in_store_orders", true)
         .order("name", { ascending: true });
 
       if (error) throw error;
