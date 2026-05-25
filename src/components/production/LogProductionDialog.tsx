@@ -103,14 +103,15 @@ export function LogProductionDialog({
   const { data: options = [] } = useQuery({
     queryKey: ["bom-production-options"],
     queryFn: async (): Promise<BomOption[]> => {
-      const [{ data: bomRows, error: bomErr }, { data: rmFlagged, error: rmFlagErr }] = await Promise.all([
-        supabase.from("bom_items").select("product_id, parent_raw_material_id"),
+      const [{ data: bomRows, error: bomErr }, { data: rmFlagged, error: rmFlagErr }, { data: products, error: prodErr }] = await Promise.all([
+        supabase.from("bom_items").select("parent_raw_material_id"),
         supabase.from("raw_materials").select("id, name, sku").eq("is_bom_product", true).order("name"),
+        supabase.from("products").select("id, name, sku, component_id").order("name"),
       ]);
       if (bomErr) throw bomErr;
       if (rmFlagErr) throw rmFlagErr;
+      if (prodErr) throw prodErr;
 
-      const productIds = [...new Set((bomRows || []).map((b: any) => b.product_id).filter(Boolean))];
       const rawIdSet = new Set<string>([
         ...((bomRows || []).map((b: any) => b.parent_raw_material_id).filter(Boolean) as string[]),
         ...((rmFlagged || []).map((r: any) => r.id) as string[]),
@@ -119,20 +120,13 @@ export function LogProductionDialog({
 
       const result: BomOption[] = [];
 
-      if (productIds.length > 0) {
-        const { data: products } = await supabase
-          .from("products")
-          .select("id, name, sku, component_id")
-          .in("id", productIds)
-          .order("name");
-        for (const p of products || []) {
-          result.push({
-            value: `component:${p.component_id || p.id}`,
-            itemType: "component",
-            itemId: p.component_id || p.id,
-            label: `${p.name} (${p.sku}) — Product`,
-          });
-        }
+      for (const p of products || []) {
+        result.push({
+          value: `component:${p.component_id || p.id}`,
+          itemType: "component",
+          itemId: p.component_id || p.id,
+          label: `${p.name} (${p.sku}) — Product`,
+        });
       }
 
       if (rawIds.length > 0) {
