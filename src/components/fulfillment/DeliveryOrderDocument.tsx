@@ -112,7 +112,7 @@ export function DeliveryOrderDocument({
             <span>Delivery Order</span>
             <Button onClick={handlePrint}>
               <Printer className="mr-2 h-4 w-4" />
-              Print (2 copies)
+              Print (3 copies)
             </Button>
           </DialogTitle>
         </DialogHeader>
