@@ -387,6 +387,9 @@ export default function StoreOrderQuickEntry() {
             <CardContent>
               <ItemSelector onAddItem={handleAddManualItem} />
             </CardContent>
+          </Card>
+
+
 
           {/* Parsed Metadata */}
           {isParsed && (branch || requester) && (
