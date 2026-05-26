@@ -92,6 +92,9 @@ export function DeliveryOrderDocument({
               <div class="page-break"></div>
               <div class="copy-label">WAREHOUSE COPY</div>
               ${printContent}
+              <div class="page-break"></div>
+              <div class="copy-label">OFFICE COPY</div>
+              ${printContent}
             </body>
           </html>
         `);
