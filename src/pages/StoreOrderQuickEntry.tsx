@@ -376,6 +376,18 @@ export default function StoreOrderQuickEntry() {
             </CardContent>
           </Card>
 
+          {/* Manual Item Add */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Add Item Manually</CardTitle>
+              <CardDescription>
+                Search and add items directly, or use them alongside parsed items
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ItemSelector onAddItem={handleAddManualItem} />
+            </CardContent>
+
           {/* Parsed Metadata */}
           {isParsed && (branch || requester) && (
             <Card>
