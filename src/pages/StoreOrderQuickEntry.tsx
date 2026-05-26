@@ -106,6 +106,26 @@ export default function StoreOrderQuickEntry() {
     setParsedItems(items);
   };
 
+  const handleAddManualItem = (line: Omit<SalesOrderLine, 'id' | 'sales_order_id' | 'created_at' | 'updated_at' | 'line_number'>) => {
+    const newItem: ParsedOrderItem = {
+      itemCode: line.item_code,
+      quantity: line.quantity,
+      notes: line.line_remarks || "",
+      isValid: true,
+    };
+    setParsedItems((prev) => {
+      const existingIdx = prev.findIndex((p) => p.itemCode === newItem.itemCode);
+      if (existingIdx >= 0) {
+        const copy = [...prev];
+        copy[existingIdx] = { ...copy[existingIdx], quantity: copy[existingIdx].quantity + newItem.quantity };
+        return copy;
+      }
+      return [...prev, newItem];
+    });
+    setIsParsed(true);
+    toast.success(`Added ${line.item_name}`);
+  };
+
   // Convert parsed items to sales order lines
   const convertToOrderLines = (): Omit<SalesOrderLine, 'id' | 'sales_order_id' | 'created_at' | 'updated_at'>[] => {
     return parsedItems.map((item, index) => {
