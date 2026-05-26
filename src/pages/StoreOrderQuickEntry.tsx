@@ -471,7 +471,7 @@ export default function StoreOrderQuickEntry() {
           )}
 
           {/* Action Buttons */}
-          {isParsed && parsedItems.length > 0 && (
+          {parsedItems.length > 0 && (
             <>
               {hasStockIssue && (
                 <Alert variant="destructive">
