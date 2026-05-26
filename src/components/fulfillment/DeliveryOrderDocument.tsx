@@ -245,13 +245,18 @@ export function DeliveryOrderDocument({
             </div>
           )}
 
-          <div className="signature-section" style={{ display: "flex", justifyContent: "space-between", marginTop: "40px" }}>
-            <div className="signature-box" style={{ width: "45%" }}>
+          <div className="signature-section" style={{ display: "flex", justifyContent: "space-between", marginTop: "40px", gap: "10px" }}>
+            <div className="signature-box" style={{ width: "30%" }}>
               <div className="signature-line" style={{ borderTop: "1px solid #000", marginTop: "40px", paddingTop: "5px", textAlign: "center" }}>
                 Prepared By
               </div>
             </div>
-            <div className="signature-box" style={{ width: "45%" }}>
+            <div className="signature-box" style={{ width: "30%" }}>
+              <div className="signature-line" style={{ borderTop: "1px solid #000", marginTop: "40px", paddingTop: "5px", textAlign: "center" }}>
+                Verified By
+              </div>
+            </div>
+            <div className="signature-box" style={{ width: "30%" }}>
               <div className="signature-line" style={{ borderTop: "1px solid #000", marginTop: "40px", paddingTop: "5px", textAlign: "center" }}>
                 Received By (Store)
               </div>
