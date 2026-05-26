@@ -21,6 +21,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCreateSalesOrder, useUpdateSalesOrder } from "@/hooks/useSalesOrders";
 import { useValidateItemCodes } from "@/hooks/useValidateItemCodes";
 import { QuickOrderInput } from "@/components/store-orders/QuickOrderInput";
+import { ItemSelector } from "@/components/store-orders/ItemSelector";
 import { ParsedOrderTable } from "@/components/store-orders/ParsedOrderTable";
 import { parseOrderText, ParsedOrderItem, validateParsedItems } from "@/lib/orderParser";
 import { SalesOrderLine } from "@/types/sales-order";
