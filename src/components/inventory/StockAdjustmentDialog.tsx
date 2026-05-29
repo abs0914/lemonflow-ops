@@ -126,12 +126,27 @@ export function StockAdjustmentDialog({
         ? parseFloat(data.quantity)
         : currentStock + quantity;
 
+      // Pre-flight: ensure new stock won't drop below reserved quantity
+      const { data: existingRow } = await (supabase as any)
+        .from(targetTable)
+        .select("reserved_quantity")
+        .eq("id", itemId)
+        .maybeSingle();
+
+      const reserved = Number(existingRow?.reserved_quantity || 0);
+      if (newStockQty < reserved) {
+        throw new Error(
+          `Cannot set stock to ${newStockQty}. There are ${reserved} units currently reserved by pending orders. Stock cannot be lower than reserved quantity.`
+        );
+      }
+
       const { error: stockUpdateError } = await (supabase as any)
         .from(targetTable)
         .update({ stock_quantity: newStockQty })
         .eq("id", itemId);
 
       if (stockUpdateError) throw stockUpdateError;
+
 
       // Sync to AutoCount if requested
       if (data.sync_to_autocount) {
