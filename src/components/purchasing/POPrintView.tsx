@@ -23,14 +23,17 @@ async function resolveSignatureUrl(signatureUrl: string | null | undefined): Pro
 
 export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps) {
   const [ready, setReady] = useState(false);
+  const [preparedSigUrl, setPreparedSigUrl] = useState<string | null>(null);
   const [approvedSigUrl, setApprovedSigUrl] = useState<string | null>(null);
   const [verifiedSigUrl, setVerifiedSigUrl] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
+      resolveSignatureUrl(purchaseOrder.user_profiles?.signature_url),
       resolveSignatureUrl(purchaseOrder.approved_by_profile?.signature_url),
       resolveSignatureUrl(purchaseOrder.verified_by_profile?.signature_url),
-    ]).then(([a, v]) => {
+    ]).then(([p, a, v]) => {
+      setPreparedSigUrl(p);
       setApprovedSigUrl(a);
       setVerifiedSigUrl(v);
     });
@@ -38,7 +41,7 @@ export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps)
 
   // Wait for signature images to load, then print
   useEffect(() => {
-    const imageUrls = [approvedSigUrl, verifiedSigUrl].filter(Boolean) as string[];
+    const imageUrls = [preparedSigUrl, approvedSigUrl, verifiedSigUrl].filter(Boolean) as string[];
     
     if (imageUrls.length === 0) {
       setReady(true);
@@ -61,7 +64,7 @@ export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps)
     // Fallback timeout in case images never load
     const timeout = setTimeout(() => setReady(true), 3000);
     return () => clearTimeout(timeout);
-  }, [approvedSigUrl, verifiedSigUrl]);
+  }, [preparedSigUrl, approvedSigUrl, verifiedSigUrl]);
 
   useEffect(() => {
     if (!ready) return;
