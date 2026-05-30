@@ -241,9 +241,14 @@ export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps)
               <div>
                 <div style={{ borderTop: '1px solid #9ca3af', paddingTop: '0.5rem' }}>
                   <p style={{ fontSize: '0.875rem', textAlign: 'center' }}>Prepared By</p>
-                  <p style={{ fontSize: '0.75rem', textAlign: 'center', color: '#4b5563', marginTop: '0.25rem' }}>
-                    {purchaseOrder.user_profiles?.full_name}
-                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '0.25rem' }}>
+                    {preparedSigUrl && (
+                      <img src={preparedSigUrl} alt="Preparer signature" style={{ height: '3rem', width: 'auto', maxWidth: '6rem', objectFit: 'contain' }} />
+                    )}
+                    <p style={{ fontSize: '0.75rem', textAlign: 'center', color: '#4b5563', marginTop: '0.25rem' }}>
+                      {purchaseOrder.user_profiles?.full_name}
+                    </p>
+                  </div>
                 </div>
               </div>
               <div>
