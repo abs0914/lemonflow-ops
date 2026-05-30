@@ -23,6 +23,7 @@ async function resolveSignatureUrl(signatureUrl: string | null | undefined): Pro
 
 export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps) {
   const [ready, setReady] = useState(false);
+  const [urlsResolved, setUrlsResolved] = useState(false);
   const [preparedSigUrl, setPreparedSigUrl] = useState<string | null>(null);
   const [approvedSigUrl, setApprovedSigUrl] = useState<string | null>(null);
   const [verifiedSigUrl, setVerifiedSigUrl] = useState<string | null>(null);
@@ -36,13 +37,16 @@ export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps)
       setPreparedSigUrl(p);
       setApprovedSigUrl(a);
       setVerifiedSigUrl(v);
-    });
+      setUrlsResolved(true);
+    }).catch(() => setUrlsResolved(true));
   }, [purchaseOrder]);
 
   // Wait for signature images to load, then print
   useEffect(() => {
+    if (!urlsResolved) return;
+
     const imageUrls = [preparedSigUrl, approvedSigUrl, verifiedSigUrl].filter(Boolean) as string[];
-    
+
     if (imageUrls.length === 0) {
       setReady(true);
       return;
@@ -64,7 +68,7 @@ export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps)
     // Fallback timeout in case images never load
     const timeout = setTimeout(() => setReady(true), 3000);
     return () => clearTimeout(timeout);
-  }, [preparedSigUrl, approvedSigUrl, verifiedSigUrl]);
+  }, [urlsResolved, preparedSigUrl, approvedSigUrl, verifiedSigUrl]);
 
   useEffect(() => {
     if (!ready) return;
