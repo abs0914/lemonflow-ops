@@ -80,6 +80,3 @@ verify_jwt = true
 
 [functions.auto-sync-to-autocount]
 verify_jwt = false
-
-[functions.upload-welnie-sig]
-verify_jwt = false
