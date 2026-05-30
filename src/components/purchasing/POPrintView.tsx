@@ -23,14 +23,17 @@ async function resolveSignatureUrl(signatureUrl: string | null | undefined): Pro
 
 export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps) {
   const [ready, setReady] = useState(false);
+  const [preparedSigUrl, setPreparedSigUrl] = useState<string | null>(null);
   const [approvedSigUrl, setApprovedSigUrl] = useState<string | null>(null);
   const [verifiedSigUrl, setVerifiedSigUrl] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
+      resolveSignatureUrl(purchaseOrder.user_profiles?.signature_url),
       resolveSignatureUrl(purchaseOrder.approved_by_profile?.signature_url),
       resolveSignatureUrl(purchaseOrder.verified_by_profile?.signature_url),
-    ]).then(([a, v]) => {
+    ]).then(([p, a, v]) => {
+      setPreparedSigUrl(p);
       setApprovedSigUrl(a);
       setVerifiedSigUrl(v);
     });
@@ -38,7 +41,7 @@ export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps)
 
   // Wait for signature images to load, then print
   useEffect(() => {
-    const imageUrls = [approvedSigUrl, verifiedSigUrl].filter(Boolean) as string[];
+    const imageUrls = [preparedSigUrl, approvedSigUrl, verifiedSigUrl].filter(Boolean) as string[];
     
     if (imageUrls.length === 0) {
       setReady(true);
@@ -61,7 +64,7 @@ export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps)
     // Fallback timeout in case images never load
     const timeout = setTimeout(() => setReady(true), 3000);
     return () => clearTimeout(timeout);
-  }, [approvedSigUrl, verifiedSigUrl]);
+  }, [preparedSigUrl, approvedSigUrl, verifiedSigUrl]);
 
   useEffect(() => {
     if (!ready) return;
@@ -238,9 +241,14 @@ export function POPrintView({ purchaseOrder, lines, onClose }: POPrintViewProps)
               <div>
                 <div style={{ borderTop: '1px solid #9ca3af', paddingTop: '0.5rem' }}>
                   <p style={{ fontSize: '0.875rem', textAlign: 'center' }}>Prepared By</p>
-                  <p style={{ fontSize: '0.75rem', textAlign: 'center', color: '#4b5563', marginTop: '0.25rem' }}>
-                    {purchaseOrder.user_profiles?.full_name}
-                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '0.25rem' }}>
+                    {preparedSigUrl && (
+                      <img src={preparedSigUrl} alt="Preparer signature" style={{ height: '3rem', width: 'auto', maxWidth: '6rem', objectFit: 'contain' }} />
+                    )}
+                    <p style={{ fontSize: '0.75rem', textAlign: 'center', color: '#4b5563', marginTop: '0.25rem' }}>
+                      {purchaseOrder.user_profiles?.full_name}
+                    </p>
+                  </div>
                 </div>
               </div>
               <div>
