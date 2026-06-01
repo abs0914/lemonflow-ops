@@ -96,6 +96,7 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
   const printRef = useRef<HTMLDivElement>(null);
   const [storeFilter, setStoreFilter] = useState<string>("__all__");
   const [itemNameFilter, setItemNameFilter] = useState<string>("");
+  const [orderNumberFilter, setOrderNumberFilter] = useState<string>("");
 
   const storeOptions = useMemo(() => {
     if (!data) return [] as { id: string; name: string }[];
