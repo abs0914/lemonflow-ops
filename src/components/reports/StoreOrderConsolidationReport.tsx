@@ -96,6 +96,7 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
   const printRef = useRef<HTMLDivElement>(null);
   const [storeFilter, setStoreFilter] = useState<string>("__all__");
   const [itemNameFilter, setItemNameFilter] = useState<string>("");
+  const [orderNumberFilter, setOrderNumberFilter] = useState<string>("");
 
   const storeOptions = useMemo(() => {
     if (!data) return [] as { id: string; name: string }[];
@@ -111,11 +112,13 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
     const ordersById = new Map(data.orders.map((o: any) => [o.id, o]));
     const byDate = new Map<string, DeliveryGroup>();
     const nameNeedle = itemNameFilter.trim().toLowerCase();
+    const orderNeedle = orderNumberFilter.trim().toLowerCase();
 
     for (const line of data.lines as any[]) {
       const order: any = ordersById.get(line.sales_order_id);
       if (!order) continue;
       if (storeFilter !== "__all__" && order.store_id !== storeFilter) continue;
+      if (orderNeedle && !String(order.order_number || "").toLowerCase().includes(orderNeedle)) continue;
       if (nameNeedle && !String(line.item_name || "").toLowerCase().includes(nameNeedle)) continue;
 
       const key = order.delivery_date || "__unscheduled__";
@@ -155,7 +158,7 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
       if (!b.delivery_date) return -1;
       return a.delivery_date.localeCompare(b.delivery_date);
     });
-  }, [data, storeFilter, itemNameFilter]);
+  }, [data, storeFilter, itemNameFilter, orderNumberFilter]);
 
 
   const fmtDate = (d: string | null) =>
@@ -259,6 +262,15 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
                 className="pl-8 w-[240px]"
               />
             </div>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Order #</Label>
+            <Input
+              value={orderNumberFilter}
+              onChange={(e) => setOrderNumberFilter(e.target.value)}
+              placeholder="Filter by order number…"
+              className="w-[220px]"
+            />
           </div>
         </div>
         <div className="flex gap-2">
