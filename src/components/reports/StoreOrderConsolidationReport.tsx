@@ -202,7 +202,7 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
 
   const handleCSV = () => {
     const rows: (string | number)[][] = [
-      ["Delivery Date", "# Stores", "# Orders", "Item Code", "Item Name", "Orders", "UOM", "Released Qty", "On-hand", "Variance"],
+      ["Delivery Date", "# Stores", "# Orders", "Item Code", "Item Name", "Orders", "UOM", "Released Qty", "On-hand", "Balance"],
     ];
     for (const g of groups) {
       for (const item of Array.from(g.items.values()).sort((a, b) => a.item_code.localeCompare(b.item_code))) {
@@ -348,7 +348,7 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
                       <TableHead>UOM</TableHead>
                       <TableHead className="text-right num">Released Qty</TableHead>
                       <TableHead className="text-right num">On-hand</TableHead>
-                      <TableHead className="text-right num">Variance</TableHead>
+                      <TableHead className="text-right num">Balance</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
