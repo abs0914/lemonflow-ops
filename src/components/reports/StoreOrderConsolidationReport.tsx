@@ -131,6 +131,7 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
           store_ids: new Set(),
           store_names: new Set(),
           order_ids: new Set(),
+          order_numbers: new Set(),
           items: new Map(),
         };
         byDate.set(key, g);
@@ -138,19 +139,25 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
       if (order.store_id) g.store_ids.add(order.store_id);
       if (order.stores?.store_name) g.store_names.add(order.stores.store_name);
       g.order_ids.add(order.id);
+      if (order.order_number) g.order_numbers.add(order.order_number);
 
       const ik = line.item_code;
       const existing = g.items.get(ik);
       const qty = Number(line.quantity) || 0;
+      const ordNum = order.order_number || "—";
       if (existing) {
         existing.released_qty += qty;
+        existing.orders.set(ordNum, (existing.orders.get(ordNum) || 0) + qty);
       } else {
+        const orders = new Map<string, number>();
+        orders.set(ordNum, qty);
         g.items.set(ik, {
           item_code: ik,
           item_name: line.item_name,
           uom: line.uom || "UNIT",
           released_qty: qty,
           on_hand: data.stockMap.has(ik) ? data.stockMap.get(ik)! : null,
+          orders,
         });
       }
     }
