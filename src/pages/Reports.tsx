@@ -72,6 +72,13 @@ const reportConfigs: ReportConfig[] = [
     roles: ["Admin", "Warehouse", "Fulfillment"],
     component: StoreOrderConsolidationReport,
   },
+  {
+    id: "released-items",
+    title: "Released Items",
+    description: "Released items by item and store, filterable by delivery date and item",
+    roles: ["Admin", "Warehouse", "Fulfillment", "CEO", "Finance"],
+    component: ReleasedItemsReport,
+  },
 ];
 
 export default function Reports() {
