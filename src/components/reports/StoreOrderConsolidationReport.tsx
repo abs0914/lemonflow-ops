@@ -202,17 +202,22 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
 
   const handleCSV = () => {
     const rows: (string | number)[][] = [
-      ["Delivery Date", "# Stores", "# Orders", "Item Code", "Item Name", "UOM", "Released Qty", "On-hand", "Variance"],
+      ["Delivery Date", "# Stores", "# Orders", "Item Code", "Item Name", "Orders", "UOM", "Released Qty", "On-hand", "Variance"],
     ];
     for (const g of groups) {
       for (const item of Array.from(g.items.values()).sort((a, b) => a.item_code.localeCompare(b.item_code))) {
         const variance = item.on_hand == null ? "" : item.on_hand - item.released_qty;
+        const ordersStr = Array.from(item.orders.entries())
+          .sort((a, b) => a[0].localeCompare(b[0]))
+          .map(([num, qty]) => `${num} (${qty})`)
+          .join("; ");
         rows.push([
           g.delivery_date || "Unscheduled",
           g.store_ids.size,
           g.order_ids.size,
           item.item_code,
           item.item_name,
+          ordersStr,
           item.uom,
           item.released_qty,
           item.on_hand == null ? "N/A" : item.on_hand,
