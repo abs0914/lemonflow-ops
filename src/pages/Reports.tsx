@@ -11,6 +11,7 @@ import { SalesOrderReport } from "@/components/reports/SalesOrderReport";
 import { SalesDashboardReport } from "@/components/reports/SalesDashboardReport";
 import { StoreInventoryReport } from "@/components/reports/StoreInventoryReport";
 import { StoreOrderConsolidationReport } from "@/components/reports/StoreOrderConsolidationReport";
+import { ReleasedItemsReport } from "@/components/reports/ReleasedItemsReport";
 import { BarChart3 } from "lucide-react";
 
 interface ReportConfig {
