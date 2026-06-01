@@ -230,11 +230,37 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-muted-foreground">
-          Orders with status <strong>submitted</strong> or <strong>processing</strong>, grouped by delivery date.
-          On-hand is sourced from local inventory and may differ from AutoCount in real time.
-        </p>
+      <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end md:justify-between">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:flex md:items-end">
+          <div className="space-y-1">
+            <Label className="text-xs">Store</Label>
+            <Select value={storeFilter} onValueChange={setStoreFilter}>
+              <SelectTrigger className="w-[220px]">
+                <SelectValue placeholder="All stores" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All stores</SelectItem>
+                {storeOptions.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Item name</Label>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={itemNameFilter}
+                onChange={(e) => setItemNameFilter(e.target.value)}
+                placeholder="Filter by item name…"
+                className="pl-8 w-[240px]"
+              />
+            </div>
+          </div>
+        </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={handlePrint} disabled={groups.length === 0}>
             <Printer className="mr-2 h-4 w-4" /> Print
@@ -244,6 +270,11 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
           </Button>
         </div>
       </div>
+      <p className="text-xs text-muted-foreground">
+        Date range is set above (delivery date). Showing orders in <strong>submitted</strong> / <strong>processing</strong>.
+        On-hand is from local inventory and may differ from AutoCount in real time.
+      </p>
+
 
       {groups.length === 0 ? (
         <div className="py-12 text-center border rounded-md">
