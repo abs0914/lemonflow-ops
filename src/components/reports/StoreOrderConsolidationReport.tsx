@@ -329,11 +329,22 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
                     Stores: {Array.from(g.store_names).sort().join(", ")}
                   </div>
                 )}
+                {g.order_numbers.size > 0 && (
+                  <div className="px-3 pt-2 pb-1 text-xs text-muted-foreground flex flex-wrap items-center gap-1">
+                    <span>Orders:</span>
+                    {Array.from(g.order_numbers).sort().map((num) => (
+                      <Badge key={num} variant="outline" className="font-mono text-[10px]">
+                        {num}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Item Code</TableHead>
                       <TableHead>Item Name</TableHead>
+                      <TableHead>Orders</TableHead>
                       <TableHead>UOM</TableHead>
                       <TableHead className="text-right num">Released Qty</TableHead>
                       <TableHead className="text-right num">On-hand</TableHead>
@@ -344,10 +355,17 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
                     {items.map((item) => {
                       const variance = item.on_hand == null ? null : item.on_hand - item.released_qty;
                       const negative = variance !== null && variance < 0;
+                      const orderEntries = Array.from(item.orders.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+                      const allOrdersStr = orderEntries.map(([n, q]) => `${n} (${q})`).join(", ");
+                      const shown = orderEntries.slice(0, 3).map(([n]) => n).join(", ");
+                      const moreCount = orderEntries.length - 3;
                       return (
                         <TableRow key={item.item_code}>
                           <TableCell className="font-mono text-xs">{item.item_code}</TableCell>
                           <TableCell>{item.item_name}</TableCell>
+                          <TableCell className="font-mono text-xs text-muted-foreground" title={allOrdersStr}>
+                            {shown}{moreCount > 0 ? ` +${moreCount} more` : ""}
+                          </TableCell>
                           <TableCell>{item.uom}</TableCell>
                           <TableCell className="text-right font-semibold num">
                             {item.released_qty.toLocaleString()}
