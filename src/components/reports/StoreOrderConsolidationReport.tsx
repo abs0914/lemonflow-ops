@@ -94,15 +94,30 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
   const toStr = format(dateRange.to, "yyyy-MM-dd");
   const { data, isLoading } = useStoreOrderConsolidation(fromStr, toStr);
   const printRef = useRef<HTMLDivElement>(null);
+  const [storeFilter, setStoreFilter] = useState<string>("__all__");
+  const [itemNameFilter, setItemNameFilter] = useState<string>("");
+
+  const storeOptions = useMemo(() => {
+    if (!data) return [] as { id: string; name: string }[];
+    const m = new Map<string, string>();
+    for (const o of data.orders as any[]) {
+      if (o.store_id) m.set(o.store_id, o.stores?.store_name || o.store_id);
+    }
+    return Array.from(m, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [data]);
 
   const groups = useMemo<DeliveryGroup[]>(() => {
     if (!data) return [];
     const ordersById = new Map(data.orders.map((o: any) => [o.id, o]));
     const byDate = new Map<string, DeliveryGroup>();
+    const nameNeedle = itemNameFilter.trim().toLowerCase();
 
     for (const line of data.lines as any[]) {
       const order: any = ordersById.get(line.sales_order_id);
       if (!order) continue;
+      if (storeFilter !== "__all__" && order.store_id !== storeFilter) continue;
+      if (nameNeedle && !String(line.item_name || "").toLowerCase().includes(nameNeedle)) continue;
+
       const key = order.delivery_date || "__unscheduled__";
       let g = byDate.get(key);
       if (!g) {
@@ -140,7 +155,8 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
       if (!b.delivery_date) return -1;
       return a.delivery_date.localeCompare(b.delivery_date);
     });
-  }, [data]);
+  }, [data, storeFilter, itemNameFilter]);
+
 
   const fmtDate = (d: string | null) =>
     d ? format(new Date(d + "T00:00:00"), "EEE, MMM dd, yyyy") : "Unscheduled";
