@@ -263,6 +263,15 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
               />
             </div>
           </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Order #</Label>
+            <Input
+              value={orderNumberFilter}
+              onChange={(e) => setOrderNumberFilter(e.target.value)}
+              placeholder="Filter by order number…"
+              className="w-[220px]"
+            />
+          </div>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={handlePrint} disabled={groups.length === 0}>
