@@ -1,13 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Printer, Download, Package, Truck } from "lucide-react";
+import { Printer, Download, Package, Truck, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+
 
 interface Props {
   dateRange: { from: Date; to: Date };
@@ -90,15 +94,30 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
   const toStr = format(dateRange.to, "yyyy-MM-dd");
   const { data, isLoading } = useStoreOrderConsolidation(fromStr, toStr);
   const printRef = useRef<HTMLDivElement>(null);
+  const [storeFilter, setStoreFilter] = useState<string>("__all__");
+  const [itemNameFilter, setItemNameFilter] = useState<string>("");
+
+  const storeOptions = useMemo(() => {
+    if (!data) return [] as { id: string; name: string }[];
+    const m = new Map<string, string>();
+    for (const o of data.orders as any[]) {
+      if (o.store_id) m.set(o.store_id, o.stores?.store_name || o.store_id);
+    }
+    return Array.from(m, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [data]);
 
   const groups = useMemo<DeliveryGroup[]>(() => {
     if (!data) return [];
     const ordersById = new Map(data.orders.map((o: any) => [o.id, o]));
     const byDate = new Map<string, DeliveryGroup>();
+    const nameNeedle = itemNameFilter.trim().toLowerCase();
 
     for (const line of data.lines as any[]) {
       const order: any = ordersById.get(line.sales_order_id);
       if (!order) continue;
+      if (storeFilter !== "__all__" && order.store_id !== storeFilter) continue;
+      if (nameNeedle && !String(line.item_name || "").toLowerCase().includes(nameNeedle)) continue;
+
       const key = order.delivery_date || "__unscheduled__";
       let g = byDate.get(key);
       if (!g) {
@@ -136,7 +155,8 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
       if (!b.delivery_date) return -1;
       return a.delivery_date.localeCompare(b.delivery_date);
     });
-  }, [data]);
+  }, [data, storeFilter, itemNameFilter]);
+
 
   const fmtDate = (d: string | null) =>
     d ? format(new Date(d + "T00:00:00"), "EEE, MMM dd, yyyy") : "Unscheduled";
@@ -210,11 +230,37 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-muted-foreground">
-          Orders with status <strong>submitted</strong> or <strong>processing</strong>, grouped by delivery date.
-          On-hand is sourced from local inventory and may differ from AutoCount in real time.
-        </p>
+      <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end md:justify-between">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:flex md:items-end">
+          <div className="space-y-1">
+            <Label className="text-xs">Store</Label>
+            <Select value={storeFilter} onValueChange={setStoreFilter}>
+              <SelectTrigger className="w-[220px]">
+                <SelectValue placeholder="All stores" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All stores</SelectItem>
+                {storeOptions.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Item name</Label>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={itemNameFilter}
+                onChange={(e) => setItemNameFilter(e.target.value)}
+                placeholder="Filter by item name…"
+                className="pl-8 w-[240px]"
+              />
+            </div>
+          </div>
+        </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={handlePrint} disabled={groups.length === 0}>
             <Printer className="mr-2 h-4 w-4" /> Print
@@ -224,6 +270,11 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
           </Button>
         </div>
       </div>
+      <p className="text-xs text-muted-foreground">
+        Date range is set above (delivery date). Showing orders in <strong>submitted</strong> / <strong>processing</strong>.
+        On-hand is from local inventory and may differ from AutoCount in real time.
+      </p>
+
 
       {groups.length === 0 ? (
         <div className="py-12 text-center border rounded-md">
