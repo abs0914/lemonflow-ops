@@ -348,7 +348,7 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
                       <TableHead>UOM</TableHead>
                       <TableHead className="text-right num">Released Qty</TableHead>
                       <TableHead className="text-right num">On-hand</TableHead>
-                      <TableHead className="text-right num">Variance</TableHead>
+                      <TableHead className="text-right num">Balance</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
