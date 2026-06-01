@@ -23,6 +23,7 @@ interface AggItem {
   uom: string;
   released_qty: number;
   on_hand: number | null;
+  orders: Map<string, number>;
 }
 
 interface DeliveryGroup {
@@ -30,6 +31,7 @@ interface DeliveryGroup {
   store_ids: Set<string>;
   store_names: Set<string>;
   order_ids: Set<string>;
+  order_numbers: Set<string>;
   items: Map<string, AggItem>;
 }
 
