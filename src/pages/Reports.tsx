@@ -10,6 +10,7 @@ import { AssemblyOrderReport } from "@/components/reports/AssemblyOrderReport";
 import { SalesOrderReport } from "@/components/reports/SalesOrderReport";
 import { SalesDashboardReport } from "@/components/reports/SalesDashboardReport";
 import { StoreInventoryReport } from "@/components/reports/StoreInventoryReport";
+import { StoreOrderConsolidationReport } from "@/components/reports/StoreOrderConsolidationReport";
 import { BarChart3 } from "lucide-react";
 
 interface ReportConfig {
@@ -62,6 +63,13 @@ const reportConfigs: ReportConfig[] = [
     description: "Summary of items ordered from central inventory",
     roles: ["Store"],
     component: StoreInventoryReport,
+  },
+  {
+    id: "store-order-consolidation",
+    title: "Store Order Consolidation",
+    description: "Items released per delivery date, with store count and on-hand variance",
+    roles: ["Admin", "Warehouse", "Fulfillment"],
+    component: StoreOrderConsolidationReport,
   },
 ];
 
