@@ -23,6 +23,7 @@ interface AggItem {
   uom: string;
   released_qty: number;
   on_hand: number | null;
+  orders: Map<string, number>;
 }
 
 interface DeliveryGroup {
@@ -30,6 +31,7 @@ interface DeliveryGroup {
   store_ids: Set<string>;
   store_names: Set<string>;
   order_ids: Set<string>;
+  order_numbers: Set<string>;
   items: Map<string, AggItem>;
 }
 
@@ -129,6 +131,7 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
           store_ids: new Set(),
           store_names: new Set(),
           order_ids: new Set(),
+          order_numbers: new Set(),
           items: new Map(),
         };
         byDate.set(key, g);
@@ -136,19 +139,25 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
       if (order.store_id) g.store_ids.add(order.store_id);
       if (order.stores?.store_name) g.store_names.add(order.stores.store_name);
       g.order_ids.add(order.id);
+      if (order.order_number) g.order_numbers.add(order.order_number);
 
       const ik = line.item_code;
       const existing = g.items.get(ik);
       const qty = Number(line.quantity) || 0;
+      const ordNum = order.order_number || "—";
       if (existing) {
         existing.released_qty += qty;
+        existing.orders.set(ordNum, (existing.orders.get(ordNum) || 0) + qty);
       } else {
+        const orders = new Map<string, number>();
+        orders.set(ordNum, qty);
         g.items.set(ik, {
           item_code: ik,
           item_name: line.item_name,
           uom: line.uom || "UNIT",
           released_qty: qty,
           on_hand: data.stockMap.has(ik) ? data.stockMap.get(ik)! : null,
+          orders,
         });
       }
     }
@@ -193,17 +202,22 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
 
   const handleCSV = () => {
     const rows: (string | number)[][] = [
-      ["Delivery Date", "# Stores", "# Orders", "Item Code", "Item Name", "UOM", "Released Qty", "On-hand", "Variance"],
+      ["Delivery Date", "# Stores", "# Orders", "Item Code", "Item Name", "Orders", "UOM", "Released Qty", "On-hand", "Variance"],
     ];
     for (const g of groups) {
       for (const item of Array.from(g.items.values()).sort((a, b) => a.item_code.localeCompare(b.item_code))) {
         const variance = item.on_hand == null ? "" : item.on_hand - item.released_qty;
+        const ordersStr = Array.from(item.orders.entries())
+          .sort((a, b) => a[0].localeCompare(b[0]))
+          .map(([num, qty]) => `${num} (${qty})`)
+          .join("; ");
         rows.push([
           g.delivery_date || "Unscheduled",
           g.store_ids.size,
           g.order_ids.size,
           item.item_code,
           item.item_name,
+          ordersStr,
           item.uom,
           item.released_qty,
           item.on_hand == null ? "N/A" : item.on_hand,
@@ -315,11 +329,22 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
                     Stores: {Array.from(g.store_names).sort().join(", ")}
                   </div>
                 )}
+                {g.order_numbers.size > 0 && (
+                  <div className="px-3 pt-2 pb-1 text-xs text-muted-foreground flex flex-wrap items-center gap-1">
+                    <span>Orders:</span>
+                    {Array.from(g.order_numbers).sort().map((num) => (
+                      <Badge key={num} variant="outline" className="font-mono text-[10px]">
+                        {num}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Item Code</TableHead>
                       <TableHead>Item Name</TableHead>
+                      <TableHead>Orders</TableHead>
                       <TableHead>UOM</TableHead>
                       <TableHead className="text-right num">Released Qty</TableHead>
                       <TableHead className="text-right num">On-hand</TableHead>
@@ -330,10 +355,17 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
                     {items.map((item) => {
                       const variance = item.on_hand == null ? null : item.on_hand - item.released_qty;
                       const negative = variance !== null && variance < 0;
+                      const orderEntries = Array.from(item.orders.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+                      const allOrdersStr = orderEntries.map(([n, q]) => `${n} (${q})`).join(", ");
+                      const shown = orderEntries.slice(0, 3).map(([n]) => n).join(", ");
+                      const moreCount = orderEntries.length - 3;
                       return (
                         <TableRow key={item.item_code}>
                           <TableCell className="font-mono text-xs">{item.item_code}</TableCell>
                           <TableCell>{item.item_name}</TableCell>
+                          <TableCell className="font-mono text-xs text-muted-foreground" title={allOrdersStr}>
+                            {shown}{moreCount > 0 ? ` +${moreCount} more` : ""}
+                          </TableCell>
                           <TableCell>{item.uom}</TableCell>
                           <TableCell className="text-right font-semibold num">
                             {item.released_qty.toLocaleString()}
