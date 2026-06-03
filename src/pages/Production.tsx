@@ -444,7 +444,7 @@ export default function Production() {
     setShowLogDialog(true);
   };
 
-  const handleSubmit = (data: { component_id: string; item_type: "component" | "raw_material"; quantity: number; notes?: string }) => {
+  const handleSubmit = (data: { component_id: string; item_type: "component" | "raw_material"; quantity: number; notes?: string; product_id?: string; parent_raw_material_id?: string }) => {
     if (editingLog) {
       updateProductionMutation.mutate({
         id: editingLog.id,
