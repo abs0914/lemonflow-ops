@@ -17,10 +17,12 @@ interface ReportFiltersProps {
 
 export function ReportFilters({ dateRange, onDateRangeChange }: ReportFiltersProps) {
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+      <div className="flex flex-col gap-1.5">
+        <Label>Start date</Label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
             variant="outline"
             className={cn(
               "justify-start text-left font-normal w-full sm:w-[160px]",
