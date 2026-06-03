@@ -53,6 +53,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAllUserStores } from "@/hooks/useUserStore";
 import { NotificationBell } from "./NotificationBell";
 
 interface MenuItem {
@@ -65,8 +66,13 @@ interface MenuItem {
 
 export function AppSidebar() {
   const { profile, loading, signOut } = useAuth();
+  const { data: userStores } = useAllUserStores();
   const location = useLocation();
   const { state, isMobile, setOpenMobile } = useSidebar();
+  const isFranchiseeOnly =
+    profile?.role === "Store" &&
+    !!userStores?.length &&
+    userStores.every((s) => s.stores?.store_type === "franchisee");
 
   const menuItems: MenuItem[] = [
     {
@@ -131,7 +137,9 @@ export function AppSidebar() {
       subItems: [
         { title: "All Orders", url: "/store/orders", icon: List },
         { title: "New Order", url: "/store/orders/create", icon: Plus },
-        { title: "Quick Entry", url: "/store/orders/quick-entry", icon: ClipboardPaste },
+        ...(isFranchiseeOnly
+          ? []
+          : [{ title: "Quick Entry", url: "/store/orders/quick-entry", icon: ClipboardPaste }]),
       ],
     },
     {
