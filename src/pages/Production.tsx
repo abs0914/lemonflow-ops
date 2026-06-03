@@ -334,6 +334,8 @@ export default function Production() {
       quantity: number;
       oldQuantity: number;
       notes?: string;
+      product_id?: string;
+      parent_raw_material_id?: string;
     }) => {
       if (!user) throw new Error("User not authenticated");
 
@@ -374,6 +376,38 @@ export default function Production() {
             .eq("id", data.component_id);
           if (updateError) throw updateError;
         }
+
+        // Adjust BOM ingredient consumption by the delta
+        let bomProductId = data.product_id;
+        let bomParentRawId = data.parent_raw_material_id;
+        if (!bomProductId && !bomParentRawId) {
+          if (data.item_type === "raw_material") {
+            bomParentRawId = data.component_id;
+          } else {
+            const { data: prodMatch } = await supabase
+              .from("products")
+              .select("id")
+              .eq("component_id", data.component_id)
+              .maybeSingle();
+            bomProductId = prodMatch?.id;
+          }
+        }
+
+        if (bomProductId || bomParentRawId) {
+          const { shortages } = await consumeBom({
+            productId: bomProductId,
+            parentRawMaterialId: bomParentRawId,
+            producedQty: quantityDiff,
+            producedMovementId: data.id,
+          });
+          if (shortages.length > 0) {
+            toast({
+              title: "Production updated — but stock went negative",
+              description: `Insufficient stock for: ${shortages.join(", ")}. Quantities clamped to 0.`,
+              variant: "destructive",
+            });
+          }
+        }
       }
 
       return { id: data.id };
@@ -383,6 +417,7 @@ export default function Production() {
       queryClient.invalidateQueries({ queryKey: ["components"] });
       queryClient.invalidateQueries({ queryKey: ["raw-materials"] });
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
       setShowLogDialog(false);
       setEditingLog(null);
       toast({
