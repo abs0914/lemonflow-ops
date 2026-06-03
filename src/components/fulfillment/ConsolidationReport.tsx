@@ -87,7 +87,7 @@ export function ConsolidationReport() {
         td:nth-child(4), td:nth-child(5), th:nth-child(4), th:nth-child(5) { text-align: right; }
       </style></head><body>
       <h1>Daily Consolidation Report</h1>
-      <p>Order Date: ${dateLabel()} · ${consolidated.length} items · ${data?.orders?.length || 0} orders</p>
+      <p>Delivery Date: ${dateLabel()} · ${consolidated.length} items · ${data?.orders?.length || 0} orders</p>
       ${content.querySelector("table")?.outerHTML || ""}
       </body></html>
     `);
