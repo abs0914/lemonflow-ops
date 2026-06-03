@@ -55,20 +55,7 @@ export function useFulfillmentConsolidation(fromDate: string, toDate: string) {
 
       if (rangeError) throw rangeError;
 
-      // Also get ALL processing orders to ensure none are missed
-      const { data: processingOrders, error: procError } = await supabase
-        .from("sales_orders")
-        .select("id, order_number, stores(store_name)")
-        .eq("status", "processing");
-
-      if (procError) throw procError;
-
-      // Merge and deduplicate
-      const orderMap = new Map<string, any>();
-      for (const o of [...(rangeOrders || []), ...(processingOrders || [])]) {
-        orderMap.set(o.id, o);
-      }
-      const orders = Array.from(orderMap.values());
+      const orders = rangeOrders || [];
 
       if (orders.length === 0) return { orders: [], lines: [] };
 
