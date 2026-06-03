@@ -21,14 +21,26 @@ interface ConsolidatedItem {
 }
 
 export function ConsolidationReport() {
+  const [mode, setMode] = useState<"day" | "range">("day");
+  const [singleDate, setSingleDate] = useState<Date>(new Date());
   const [dateRange, setDateRange] = useState<DateRange>({
     from: new Date(),
     to: new Date(),
   });
   const printRef = useRef<HTMLDivElement>(null);
 
-  const fromStr = dateRange.from ? format(dateRange.from, "yyyy-MM-dd") : "";
-  const toStr = dateRange.to ? format(dateRange.to, "yyyy-MM-dd") : fromStr;
+  const fromStr =
+    mode === "day"
+      ? format(singleDate, "yyyy-MM-dd")
+      : dateRange.from
+        ? format(dateRange.from, "yyyy-MM-dd")
+        : "";
+  const toStr =
+    mode === "day"
+      ? format(singleDate, "yyyy-MM-dd")
+      : dateRange.to
+        ? format(dateRange.to, "yyyy-MM-dd")
+        : fromStr;
   const { data, isLoading } = useFulfillmentConsolidation(fromStr, toStr);
 
   const consolidated = useMemo(() => {
