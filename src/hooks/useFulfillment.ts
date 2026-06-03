@@ -45,12 +45,12 @@ export function useFulfillmentConsolidation(fromDate: string, toDate: string) {
   return useQuery({
     queryKey: ["fulfillment-consolidation", fromDate, toDate],
     queryFn: async () => {
-      // Get orders in date range by order date (doc_date)
+      // Get orders in date range by delivery date
       const { data: rangeOrders, error: rangeError } = await supabase
         .from("sales_orders")
         .select("id, order_number, stores(store_name)")
-        .gte("doc_date", fromDate)
-        .lte("doc_date", toDate)
+        .gte("delivery_date", fromDate)
+        .lte("delivery_date", toDate)
         .in("status", ["submitted", "processing"]);
 
       if (rangeError) throw rangeError;
