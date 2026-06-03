@@ -169,6 +169,20 @@ export default function Production() {
         if (!updated || updated.length === 0) {
           throw new Error("Stock update blocked (insufficient permissions). Movement recorded but inventory not increased.");
         }
+
+        // Consume BOM ingredients for the raw material output
+        const { shortages } = await consumeBom({
+          parentRawMaterialId: data.parent_raw_material_id || rm.id,
+          producedQty: data.quantity,
+          producedMovementId: movement.id,
+        });
+        if (shortages.length > 0) {
+          toast({
+            title: "Production logged — but stock went negative",
+            description: `Insufficient stock for: ${shortages.join(", ")}. Quantities clamped to 0.`,
+            variant: "destructive",
+          });
+        }
         return movement;
       }
 
