@@ -74,6 +74,7 @@ export function ConsolidationReport() {
   }, [data?.lines]);
 
   const dateLabel = () => {
+    if (mode === "day") return format(singleDate, "MMM dd, yyyy");
     if (!dateRange.from) return "Pick dates";
     const from = format(dateRange.from, "MMM dd");
     if (!dateRange.to || dateRange.from.getTime() === dateRange.to.getTime()) {
