@@ -129,6 +129,7 @@ export function LogProductionDialog({
           value: `component:${p.component_id || p.id}`,
           itemType: "component",
           itemId: p.component_id || p.id,
+          productId: p.id,
           label: `${p.name} (${p.sku}) — Product`,
         });
       }
@@ -144,6 +145,7 @@ export function LogProductionDialog({
             value: `raw_material:${r.id}`,
             itemType: "raw_material",
             itemId: r.id,
+            parentRawMaterialId: r.id,
             label: `${r.name} (${r.sku}) — Raw Material`,
           });
         }
