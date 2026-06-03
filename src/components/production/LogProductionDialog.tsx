@@ -182,6 +182,8 @@ export function LogProductionDialog({
       item_type: opt.itemType,
       quantity: data.quantity,
       notes: data.notes,
+      product_id: opt.productId,
+      parent_raw_material_id: opt.parentRawMaterialId,
     });
     form.reset();
   };
