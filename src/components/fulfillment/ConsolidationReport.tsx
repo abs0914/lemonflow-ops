@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CalendarIcon, Printer, Download, Package } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFulfillmentConsolidation } from "@/hooks/useFulfillment";
 import { cn } from "@/lib/utils";
 import type { DateRange } from "react-day-picker";
@@ -20,14 +21,26 @@ interface ConsolidatedItem {
 }
 
 export function ConsolidationReport() {
+  const [mode, setMode] = useState<"day" | "range">("day");
+  const [singleDate, setSingleDate] = useState<Date>(new Date());
   const [dateRange, setDateRange] = useState<DateRange>({
     from: new Date(),
     to: new Date(),
   });
   const printRef = useRef<HTMLDivElement>(null);
 
-  const fromStr = dateRange.from ? format(dateRange.from, "yyyy-MM-dd") : "";
-  const toStr = dateRange.to ? format(dateRange.to, "yyyy-MM-dd") : fromStr;
+  const fromStr =
+    mode === "day"
+      ? format(singleDate, "yyyy-MM-dd")
+      : dateRange.from
+        ? format(dateRange.from, "yyyy-MM-dd")
+        : "";
+  const toStr =
+    mode === "day"
+      ? format(singleDate, "yyyy-MM-dd")
+      : dateRange.to
+        ? format(dateRange.to, "yyyy-MM-dd")
+        : fromStr;
   const { data, isLoading } = useFulfillmentConsolidation(fromStr, toStr);
 
   const consolidated = useMemo(() => {
@@ -61,6 +74,7 @@ export function ConsolidationReport() {
   }, [data?.lines]);
 
   const dateLabel = () => {
+    if (mode === "day") return format(singleDate, "MMM dd, yyyy");
     if (!dateRange.from) return "Pick dates";
     const from = format(dateRange.from, "MMM dd");
     if (!dateRange.to || dateRange.from.getTime() === dateRange.to.getTime()) {
@@ -113,7 +127,13 @@ export function ConsolidationReport() {
       <CardHeader>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <CardTitle className="text-lg">Daily Consolidation Report</CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Tabs value={mode} onValueChange={(v) => setMode(v as "day" | "range")}>
+              <TabsList>
+                <TabsTrigger value="day">Day</TabsTrigger>
+                <TabsTrigger value="range">Date Range</TabsTrigger>
+              </TabsList>
+            </Tabs>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className={cn("w-[260px] justify-start text-left font-normal")}>
@@ -122,14 +142,24 @@ export function ConsolidationReport() {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="range"
-                  selected={dateRange}
-                  onSelect={(range) => range && setDateRange(range)}
-                  numberOfMonths={2}
-                  initialFocus
-                  className={cn("p-3 pointer-events-auto")}
-                />
+                {mode === "day" ? (
+                  <Calendar
+                    mode="single"
+                    selected={singleDate}
+                    onSelect={(d) => d && setSingleDate(d)}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                ) : (
+                  <Calendar
+                    mode="range"
+                    selected={dateRange}
+                    onSelect={(range) => range && setDateRange(range)}
+                    numberOfMonths={2}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                )}
               </PopoverContent>
             </Popover>
             <Button variant="outline" size="sm" onClick={handlePrint} disabled={consolidated.length === 0}>
