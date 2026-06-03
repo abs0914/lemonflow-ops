@@ -68,6 +68,8 @@ interface LogProductionDialogProps {
     item_type: "component" | "raw_material";
     quantity: number;
     notes?: string;
+    product_id?: string;
+    parent_raw_material_id?: string;
   }) => void;
   isLoading?: boolean;
   editingLog?: ProductionLogData | null;
@@ -77,6 +79,8 @@ interface BomOption {
   value: string; // `${type}:${id}`
   itemType: "component" | "raw_material";
   itemId: string;
+  productId?: string;
+  parentRawMaterialId?: string;
   label: string;
 }
 
@@ -125,6 +129,7 @@ export function LogProductionDialog({
           value: `component:${p.component_id || p.id}`,
           itemType: "component",
           itemId: p.component_id || p.id,
+          productId: p.id,
           label: `${p.name} (${p.sku}) — Product`,
         });
       }
@@ -140,6 +145,7 @@ export function LogProductionDialog({
             value: `raw_material:${r.id}`,
             itemType: "raw_material",
             itemId: r.id,
+            parentRawMaterialId: r.id,
             label: `${r.name} (${r.sku}) — Raw Material`,
           });
         }
@@ -176,6 +182,8 @@ export function LogProductionDialog({
       item_type: opt.itemType,
       quantity: data.quantity,
       notes: data.notes,
+      product_id: opt.productId,
+      parent_raw_material_id: opt.parentRawMaterialId,
     });
     form.reset();
   };

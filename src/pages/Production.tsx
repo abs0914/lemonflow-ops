@@ -42,12 +42,96 @@ export default function Production() {
     return null;
   }
 
+  const consumeBom = async (params: {
+    productId?: string;
+    parentRawMaterialId?: string;
+    producedQty: number;
+    producedMovementId: string;
+  }) => {
+    if (!user) return { shortages: [] as string[] };
+    let query = supabase
+      .from("bom_items")
+      .select("id, item_type, raw_material_id, component_id, quantity");
+    if (params.productId) {
+      query = query.eq("product_id", params.productId);
+    } else if (params.parentRawMaterialId) {
+      query = query.eq("parent_raw_material_id", params.parentRawMaterialId);
+    } else {
+      return { shortages: [] };
+    }
+    const { data: bomItems, error } = await query;
+    if (error) throw error;
+
+    const shortages: string[] = [];
+    for (const bi of bomItems || []) {
+      const deduct = Number(bi.quantity) * params.producedQty;
+      if (!deduct) continue;
+
+      if (bi.item_type === "raw_material" && bi.raw_material_id) {
+        const { data: rm } = await supabase
+          .from("raw_materials")
+          .select("name, sku, stock_quantity")
+          .eq("id", bi.raw_material_id)
+          .maybeSingle();
+        if (!rm) continue;
+
+        await supabase.from("stock_movements").insert({
+          item_id: bi.raw_material_id,
+          item_type: "raw_material",
+          movement_type: "assembly_consume",
+          quantity: -deduct,
+          performed_by: user.id,
+          notes: `Consumed for production (movement ${params.producedMovementId})`,
+          reference_type: "stock_movement",
+          reference_id: params.producedMovementId,
+          autocount_synced: true,
+        });
+
+        const newQty = (Number(rm.stock_quantity) || 0) - deduct;
+        if (newQty < 0) shortages.push(`${rm.name} (${rm.sku})`);
+        await supabase
+          .from("raw_materials")
+          .update({ stock_quantity: Math.max(0, newQty) })
+          .eq("id", bi.raw_material_id);
+      } else if (bi.component_id) {
+        const { data: c } = await supabase
+          .from("components")
+          .select("name, sku, stock_quantity")
+          .eq("id", bi.component_id)
+          .maybeSingle();
+        if (!c) continue;
+
+        await supabase.from("stock_movements").insert({
+          item_id: bi.component_id,
+          item_type: "component",
+          movement_type: "assembly_consume",
+          quantity: -deduct,
+          performed_by: user.id,
+          notes: `Consumed for production (movement ${params.producedMovementId})`,
+          reference_type: "stock_movement",
+          reference_id: params.producedMovementId,
+          autocount_synced: false,
+        });
+
+        const newQty = (Number(c.stock_quantity) || 0) - deduct;
+        if (newQty < 0) shortages.push(`${c.name} (${c.sku})`);
+        await supabase
+          .from("components")
+          .update({ stock_quantity: Math.max(0, newQty) })
+          .eq("id", bi.component_id);
+      }
+    }
+    return { shortages };
+  };
+
   const logProductionMutation = useMutation({
     mutationFn: async (data: {
       component_id: string;
       item_type: "component" | "raw_material";
       quantity: number;
       notes?: string;
+      product_id?: string;
+      parent_raw_material_id?: string;
     }) => {
       if (!user) throw new Error("User not authenticated");
 
@@ -84,6 +168,20 @@ export default function Production() {
         if (updateError) throw updateError;
         if (!updated || updated.length === 0) {
           throw new Error("Stock update blocked (insufficient permissions). Movement recorded but inventory not increased.");
+        }
+
+        // Consume BOM ingredients for the raw material output
+        const { shortages } = await consumeBom({
+          parentRawMaterialId: data.parent_raw_material_id || rm.id,
+          producedQty: data.quantity,
+          producedMovementId: movement.id,
+        });
+        if (shortages.length > 0) {
+          toast({
+            title: "Production logged — but stock went negative",
+            description: `Insufficient stock for: ${shortages.join(", ")}. Quantities clamped to 0.`,
+            variant: "destructive",
+          });
         }
         return movement;
       }
@@ -151,6 +249,33 @@ export default function Production() {
       if (updateError) throw updateError;
       if (!updated || updated.length === 0) {
         throw new Error("Stock update blocked (insufficient permissions). Movement recorded but inventory not increased.");
+      }
+
+      // Resolve product_id for BOM lookup if not provided
+      let bomProductId = data.product_id;
+      if (!bomProductId) {
+        const { data: prodMatch } = await supabase
+          .from("products")
+          .select("id")
+          .eq("component_id", componentId)
+          .maybeSingle();
+        bomProductId = prodMatch?.id;
+      }
+
+      // Consume BOM ingredients
+      if (bomProductId) {
+        const { shortages } = await consumeBom({
+          productId: bomProductId,
+          producedQty: data.quantity,
+          producedMovementId: movement.id,
+        });
+        if (shortages.length > 0) {
+          toast({
+            title: "Production logged — but stock went negative",
+            description: `Insufficient stock for: ${shortages.join(", ")}. Quantities clamped to 0.`,
+            variant: "destructive",
+          });
+        }
       }
 
       // Sync to AutoCount
@@ -319,7 +444,7 @@ export default function Production() {
     setShowLogDialog(true);
   };
 
-  const handleSubmit = (data: { component_id: string; item_type: "component" | "raw_material"; quantity: number; notes?: string }) => {
+  const handleSubmit = (data: { component_id: string; item_type: "component" | "raw_material"; quantity: number; notes?: string; product_id?: string; parent_raw_material_id?: string }) => {
     if (editingLog) {
       updateProductionMutation.mutate({
         id: editingLog.id,
