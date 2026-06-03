@@ -66,8 +66,13 @@ interface MenuItem {
 
 export function AppSidebar() {
   const { profile, loading, signOut } = useAuth();
+  const { data: userStores } = useAllUserStores();
   const location = useLocation();
   const { state, isMobile, setOpenMobile } = useSidebar();
+  const isFranchiseeOnly =
+    profile?.role === "Store" &&
+    !!userStores?.length &&
+    userStores.every((s) => s.stores?.store_type === "franchisee");
 
   const menuItems: MenuItem[] = [
     {
