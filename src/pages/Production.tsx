@@ -488,6 +488,8 @@ export default function Production() {
         quantity: data.quantity,
         oldQuantity: editingLog.quantity,
         notes: data.notes,
+        product_id: data.product_id,
+        parent_raw_material_id: data.parent_raw_material_id,
       });
     } else {
       logProductionMutation.mutate(data);
