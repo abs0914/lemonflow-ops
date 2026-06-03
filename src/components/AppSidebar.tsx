@@ -137,7 +137,9 @@ export function AppSidebar() {
       subItems: [
         { title: "All Orders", url: "/store/orders", icon: List },
         { title: "New Order", url: "/store/orders/create", icon: Plus },
-        { title: "Quick Entry", url: "/store/orders/quick-entry", icon: ClipboardPaste },
+        ...(isFranchiseeOnly
+          ? []
+          : [{ title: "Quick Entry", url: "/store/orders/quick-entry", icon: ClipboardPaste }]),
       ],
     },
     {
