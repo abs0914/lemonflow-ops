@@ -251,6 +251,33 @@ export default function Production() {
         throw new Error("Stock update blocked (insufficient permissions). Movement recorded but inventory not increased.");
       }
 
+      // Resolve product_id for BOM lookup if not provided
+      let bomProductId = data.product_id;
+      if (!bomProductId) {
+        const { data: prodMatch } = await supabase
+          .from("products")
+          .select("id")
+          .eq("component_id", componentId)
+          .maybeSingle();
+        bomProductId = prodMatch?.id;
+      }
+
+      // Consume BOM ingredients
+      if (bomProductId) {
+        const { shortages } = await consumeBom({
+          productId: bomProductId,
+          producedQty: data.quantity,
+          producedMovementId: movement.id,
+        });
+        if (shortages.length > 0) {
+          toast({
+            title: "Production logged — but stock went negative",
+            description: `Insufficient stock for: ${shortages.join(", ")}. Quantities clamped to 0.`,
+            variant: "destructive",
+          });
+        }
+      }
+
       // Sync to AutoCount
       try {
         const { error: syncError } = await supabase.functions.invoke(
