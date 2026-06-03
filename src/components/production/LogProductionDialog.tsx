@@ -68,6 +68,8 @@ interface LogProductionDialogProps {
     item_type: "component" | "raw_material";
     quantity: number;
     notes?: string;
+    product_id?: string;
+    parent_raw_material_id?: string;
   }) => void;
   isLoading?: boolean;
   editingLog?: ProductionLogData | null;
@@ -77,6 +79,8 @@ interface BomOption {
   value: string; // `${type}:${id}`
   itemType: "component" | "raw_material";
   itemId: string;
+  productId?: string;
+  parentRawMaterialId?: string;
   label: string;
 }
 
