@@ -1,6 +1,5 @@
-import { useState } from "react";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, Download } from "lucide-react";
+import { Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -16,49 +15,74 @@ interface ReportFiltersProps {
 }
 
 export function ReportFilters({ dateRange, onDateRangeChange }: ReportFiltersProps) {
-  const [isOpen, setIsOpen] = useState(false);
-
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <Popover>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
             className={cn(
-              "justify-start text-left font-normal w-full sm:w-[280px]",
-              !dateRange && "text-muted-foreground"
+              "justify-start text-left font-normal w-full sm:w-[160px]",
+              !dateRange.from && "text-muted-foreground"
             )}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
-            {dateRange?.from ? (
-              dateRange.to ? (
-                <>
-                  {format(dateRange.from, "LLL dd, y")} -{" "}
-                  {format(dateRange.to, "LLL dd, y")}
-                </>
-              ) : (
-                format(dateRange.from, "LLL dd, y")
-              )
+            {dateRange.from ? (
+              format(dateRange.from, "LLL dd, y")
             ) : (
-              <span>Pick a date range</span>
+              <span>Start date</span>
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={dateRange.from}
+            onSelect={(date) => {
+              if (date) {
+                onDateRangeChange({
+                  from: date,
+                  to: date > dateRange.to ? date : dateRange.to,
+                });
+              }
+            }}
+            initialFocus
+          />
+        </PopoverContent>
+      </Popover>
+
+      <span className="hidden sm:inline text-muted-foreground">—</span>
+
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className={cn(
+              "justify-start text-left font-normal w-full sm:w-[160px]",
+              !dateRange.to && "text-muted-foreground"
+            )}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {dateRange.to ? (
+              format(dateRange.to, "LLL dd, y")
+            ) : (
+              <span>End date</span>
             )}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="end">
           <Calendar
-            initialFocus
-            mode="range"
-            defaultMonth={dateRange?.from}
-            selected={{ from: dateRange.from, to: dateRange.to }}
-            onSelect={(range) => {
-              if (range?.from && range?.to) {
-                onDateRangeChange({ from: range.from, to: range.to });
-                setIsOpen(false);
-              } else if (range?.from) {
-                onDateRangeChange({ from: range.from, to: range.from });
+            mode="single"
+            selected={dateRange.to}
+            onSelect={(date) => {
+              if (date) {
+                onDateRangeChange({
+                  from: date < dateRange.from ? date : dateRange.from,
+                  to: date,
+                });
               }
             }}
-            numberOfMonths={2}
+            initialFocus
           />
         </PopoverContent>
       </Popover>
