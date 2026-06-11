@@ -42,6 +42,91 @@ export default function Production() {
     return null;
   }
 
+  // Pre-flight: ensure every BOM ingredient has enough available stock
+  // (stock_quantity - reserved_quantity) for the requested production qty.
+  // Throws with a per-item shortage list if any line is insufficient.
+  const checkBomAvailability = async (params: {
+    productId?: string;
+    parentRawMaterialId?: string;
+    producedQty: number;
+  }) => {
+    let query = supabase
+      .from("bom_items")
+      .select("id, item_type, raw_material_id, component_id, quantity");
+    if (params.productId) {
+      query = query.eq("product_id", params.productId);
+    } else if (params.parentRawMaterialId) {
+      query = query.eq("parent_raw_material_id", params.parentRawMaterialId);
+    } else {
+      return;
+    }
+    const { data: bomItems, error } = await query;
+    if (error) throw error;
+    if (!bomItems || bomItems.length === 0) return;
+
+    const rmNeed = new Map<string, number>();
+    const compNeed = new Map<string, number>();
+    for (const bi of bomItems) {
+      const need = Number(bi.quantity) * params.producedQty;
+      if (!need) continue;
+      if (bi.item_type === "raw_material" && bi.raw_material_id) {
+        rmNeed.set(bi.raw_material_id, (rmNeed.get(bi.raw_material_id) || 0) + need);
+      } else if (bi.component_id) {
+        compNeed.set(bi.component_id, (compNeed.get(bi.component_id) || 0) + need);
+      }
+    }
+
+    const shortages: string[] = [];
+
+    if (rmNeed.size > 0) {
+      const { data: rms, error: rmErr } = await supabase
+        .from("raw_materials")
+        .select("id, name, sku, unit, stock_quantity, reserved_quantity")
+        .in("id", Array.from(rmNeed.keys()));
+      if (rmErr) throw rmErr;
+      for (const [id, need] of rmNeed) {
+        const r = rms?.find((x) => x.id === id);
+        if (!r) {
+          shortages.push(`Unknown raw material (${id}) — need ${need}`);
+          continue;
+        }
+        const available = (Number(r.stock_quantity) || 0) - (Number(r.reserved_quantity) || 0);
+        if (available < need) {
+          shortages.push(
+            `${r.name} (${r.sku}): need ${need} ${r.unit || ""}, available ${available}, short by ${(need - available).toFixed(3)}`
+          );
+        }
+      }
+    }
+
+    if (compNeed.size > 0) {
+      const { data: cs, error: cErr } = await supabase
+        .from("components")
+        .select("id, name, sku, unit, stock_quantity, reserved_quantity")
+        .in("id", Array.from(compNeed.keys()));
+      if (cErr) throw cErr;
+      for (const [id, need] of compNeed) {
+        const c = cs?.find((x) => x.id === id);
+        if (!c) {
+          shortages.push(`Unknown component (${id}) — need ${need}`);
+          continue;
+        }
+        const available = (Number(c.stock_quantity) || 0) - (Number(c.reserved_quantity) || 0);
+        if (available < need) {
+          shortages.push(
+            `${c.name} (${c.sku}): need ${need} ${c.unit || ""}, available ${available}, short by ${(need - available).toFixed(3)}`
+          );
+        }
+      }
+    }
+
+    if (shortages.length > 0) {
+      throw new Error(
+        `Insufficient stock to produce this quantity:\n• ${shortages.join("\n• ")}`
+      );
+    }
+  };
+
   const consumeBom = async (params: {
     productId?: string;
     parentRawMaterialId?: string;
