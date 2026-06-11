@@ -1,51 +1,36 @@
-## Released Items by Item Report
+## Goal
+Prevent any production log from being created when its BOM would push a required ingredient (raw material or component) below its available stock. No partial writes, no clamping.
 
-A new report tab in `/reports` showing released items grouped by item + store, filterable by delivery date range and specific item(s), with print and CSV export.
+## Behavior
+Before inserting **any** rows in `logProductionMutation` (`src/pages/Production.tsx`):
 
-### Definition
-"Released" = sales order lines belonging to orders in `submitted` or `processing` status (stock has been reserved/committed) whose `delivery_date` falls in the selected range.
+1. Resolve the BOM rows that will be consumed:
+   - Raw material output → `bom_items` where `parent_raw_material_id = <rm.id>`.
+   - Component/product output → `bom_items` where `product_id = <resolved product_id>`.
+2. For each BOM row, compute `required = bi.quantity * data.quantity`.
+3. Batch-fetch current `stock_quantity` and `reserved_quantity` for every distinct `raw_material_id` / `component_id` in the BOM.
+4. For each required line, compute `available = stock_quantity - reserved_quantity` and compare against `required`.
+5. If **any** line has `available < required`:
+   - Abort. Do **not** insert the `assembly_produce` movement, do **not** update output stock, do **not** insert `assembly_consume` movements.
+   - Throw an error with a per-item shortage list (name, SKU, required, available, short by). The mutation's `onError` already toasts; we'll format the message so each shortage appears on its own line.
+6. If all lines pass, run the existing produce + consume flow. Remove the `Math.max(0, newQty)` clamps in `consumeBom` so any future drift (e.g. concurrent race) surfaces as a real negative instead of being silently floored — the pre-flight check makes this safe in the normal path.
 
-### UI
+## Edge cases
+- **No BOM rows** for the selected output → still allow the log (matches current behavior; produces output with no consumption).
+- **Zero-quantity BOM line** → skipped, same as today.
+- **Empty product_id resolution** for component output → fall through to the existing SKU-based product lookup before running the pre-flight.
+- **Concurrent race** (two users producing the same item) → first commits, second's pre-flight may pass but `consume` could still go slightly negative. Removing the clamp surfaces this honestly; the consume movement is the source of truth, so a tiny negative is recoverable via stock adjustment. (A DB-level transaction/RPC would be the only way to fully eliminate this; out of scope unless you want it.)
+- **Reserved stock**: included in the availability calc so production cannot eat into stock already reserved by store orders, per `Stock Reservation Logic` memory.
 
-- New tab **"Released Items"** in `src/pages/Reports.tsx`
-- Roles: Admin, Warehouse, Fulfillment, CEO, Finance
-- File: `src/components/reports/ReleasedItemsReport.tsx`
+## Files touched
+- `src/pages/Production.tsx` — add `checkBomAvailability()` helper, call it at the top of both branches in `logProductionMutation.mutationFn`, drop the two `Math.max(0, …)` clamps in `consumeBom`.
 
-### Filters
+## Out of scope
+- No DB schema changes, no new RPC, no migration.
+- No change to stock adjustment, store orders, or BOM editor.
+- No override / admin bypass (hard block only, per your decision).
 
-- Delivery date range (uses the global `ReportFilters` date range already on the page)
-- **Item filter** (searchable multi-select of item code / item name, populated from distinct items appearing in the result set)
-- Optional store filter
-- Search box for free-text on item name / code
-
-### Layout
-
-Grouped by **Item**, then a sub-row per **Store**:
-
-```text
-Item: TLC00123 — Lemon Syrup 1L (UOM: BOT)        Total Released: 240
-  ├─ Store A (FRC-TLC-001)           120   [3 orders: SO-001, SO-002, SO-003]
-  ├─ Store B (STR-TLC-002)            80   [2 orders]
-  └─ Store C (FRC-TLC-004)            40   [1 order]
-```
-
-Table columns:
-- Item Code, Item Name, UOM, Store Code, Store Name, Released Qty, # Orders, Order Numbers
-
-Plus a KPI strip: Total Items, Total Stores, Total Released Qty, Total Orders.
-
-### Actions
-- **Print** — opens print window with clean table styling (same pattern as `StoreOrderConsolidationReport`).
-- **CSV** — exports the flat item × store rows.
-
-### Technical
-
-- Query `sales_orders` (status in submitted/processing, delivery_date between from/to) joined with `stores(store_name, store_code)` and `sales_order_lines`.
-- Aggregate client-side into `Map<item_code, Map<store_id, { qty, orderNumbers: Set }>>`.
-- Item filter dropdown built from distinct `(item_code, item_name)` pairs in the fetched lines.
-- Reuse `format` from date-fns and existing shadcn `Table`, `Select`, `Input`, `Badge`, `Button` components.
-- No DB schema changes, no new RLS — existing read policies cover Admin/Warehouse/Fulfillment/CEO/Finance.
-
-### Files
-- **New**: `src/components/reports/ReleasedItemsReport.tsx`
-- **Edit**: `src/pages/Reports.tsx` (register new report config + import)
+## Verification
+- Pick a product whose BOM ingredient has known low stock; attempt to log production for a quantity that exceeds availability → expect toast listing each short ingredient and no rows written to `stock_movements`.
+- Log a normal in-stock quantity → expect produce + consume movements written and stock updated exactly as before.
+- Check `stock_movements` after a blocked attempt to confirm zero new rows for that timestamp.
