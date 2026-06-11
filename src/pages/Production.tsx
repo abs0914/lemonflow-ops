@@ -306,6 +306,25 @@ export default function Production() {
         componentId = bySku.id;
       }
 
+      // Resolve product_id for BOM lookup (needed for pre-flight too)
+      let bomProductId = data.product_id;
+      if (!bomProductId) {
+        const { data: prodMatch } = await supabase
+          .from("products")
+          .select("id")
+          .eq("component_id", componentId)
+          .maybeSingle();
+        bomProductId = prodMatch?.id;
+      }
+
+      // Pre-flight stock check — hard block if any BOM ingredient is short
+      if (bomProductId) {
+        await checkBomAvailability({
+          productId: bomProductId,
+          producedQty: data.quantity,
+        });
+      }
+
       const { data: movement, error: movementError } = await supabase
         .from("stock_movements")
         .insert({
@@ -335,32 +354,15 @@ export default function Production() {
         throw new Error("Stock update blocked (insufficient permissions). Movement recorded but inventory not increased.");
       }
 
-      // Resolve product_id for BOM lookup if not provided
-      let bomProductId = data.product_id;
-      if (!bomProductId) {
-        const { data: prodMatch } = await supabase
-          .from("products")
-          .select("id")
-          .eq("component_id", componentId)
-          .maybeSingle();
-        bomProductId = prodMatch?.id;
-      }
-
       // Consume BOM ingredients
       if (bomProductId) {
-        const { shortages } = await consumeBom({
+        await consumeBom({
           productId: bomProductId,
           producedQty: data.quantity,
           producedMovementId: movement.id,
         });
-        if (shortages.length > 0) {
-          toast({
-            title: "Production logged — but stock went negative",
-            description: `Insufficient stock for: ${shortages.join(", ")}. Quantities clamped to 0.`,
-            variant: "destructive",
-          });
-        }
       }
+
 
       // Sync to AutoCount
       try {
