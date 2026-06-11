@@ -42,171 +42,29 @@ export default function Production() {
     return null;
   }
 
-  // Pre-flight: ensure every BOM ingredient has enough available stock
-  // (stock_quantity - reserved_quantity) for the requested production qty.
-  // Throws with a per-item shortage list if any line is insufficient.
-  const checkBomAvailability = async (params: {
-    productId?: string;
-    parentRawMaterialId?: string;
-    producedQty: number;
-  }) => {
-    let query = supabase
-      .from("bom_items")
-      .select("id, item_type, raw_material_id, component_id, quantity");
-    if (params.productId) {
-      query = query.eq("product_id", params.productId);
-    } else if (params.parentRawMaterialId) {
-      query = query.eq("parent_raw_material_id", params.parentRawMaterialId);
-    } else {
-      return;
-    }
-    const { data: bomItems, error } = await query;
-    if (error) throw error;
-    if (!bomItems || bomItems.length === 0) return;
-
-    const rmNeed = new Map<string, number>();
-    const compNeed = new Map<string, number>();
-    for (const bi of bomItems) {
-      const need = Number(bi.quantity) * params.producedQty;
-      if (!need) continue;
-      if (bi.item_type === "raw_material" && bi.raw_material_id) {
-        rmNeed.set(bi.raw_material_id, (rmNeed.get(bi.raw_material_id) || 0) + need);
-      } else if (bi.component_id) {
-        compNeed.set(bi.component_id, (compNeed.get(bi.component_id) || 0) + need);
-      }
-    }
-
-    const shortages: string[] = [];
-
-    if (rmNeed.size > 0) {
-      const { data: rms, error: rmErr } = await supabase
-        .from("raw_materials")
-        .select("id, name, sku, unit, stock_quantity, reserved_quantity")
-        .in("id", Array.from(rmNeed.keys()));
-      if (rmErr) throw rmErr;
-      for (const [id, need] of rmNeed) {
-        const r = rms?.find((x) => x.id === id);
-        if (!r) {
-          shortages.push(`Unknown raw material (${id}) — need ${need}`);
-          continue;
-        }
-        const available = (Number(r.stock_quantity) || 0) - (Number(r.reserved_quantity) || 0);
-        if (available < need) {
-          shortages.push(
-            `${r.name} (${r.sku}): need ${need} ${r.unit || ""}, available ${available}, short by ${(need - available).toFixed(3)}`
-          );
-        }
-      }
-    }
-
-    if (compNeed.size > 0) {
-      const { data: cs, error: cErr } = await supabase
-        .from("components")
-        .select("id, name, sku, unit, stock_quantity, reserved_quantity")
-        .in("id", Array.from(compNeed.keys()));
-      if (cErr) throw cErr;
-      for (const [id, need] of compNeed) {
-        const c = cs?.find((x) => x.id === id);
-        if (!c) {
-          shortages.push(`Unknown component (${id}) — need ${need}`);
-          continue;
-        }
-        const available = (Number(c.stock_quantity) || 0) - (Number(c.reserved_quantity) || 0);
-        if (available < need) {
-          shortages.push(
-            `${c.name} (${c.sku}): need ${need} ${c.unit || ""}, available ${available}, short by ${(need - available).toFixed(3)}`
-          );
-        }
-      }
-    }
-
-    if (shortages.length > 0) {
-      throw new Error(
-        `Insufficient stock to produce this quantity:\n• ${shortages.join("\n• ")}`
+  const formatShortageError = (err: unknown): string => {
+    const raw = err instanceof Error ? err.message : String(err);
+    const marker = "BOM_SHORTAGE:";
+    const idx = raw.indexOf(marker);
+    if (idx === -1) return raw;
+    const jsonStr = raw.slice(idx + marker.length).trim();
+    try {
+      const items = JSON.parse(jsonStr) as Array<{
+        name: string;
+        sku: string;
+        unit?: string;
+        required: number;
+        available: number;
+        short_by: number;
+      }>;
+      const lines = items.map(
+        (i) =>
+          `${i.name} (${i.sku}): need ${i.required} ${i.unit || ""}, available ${i.available}, short by ${Number(i.short_by).toFixed(3)}`
       );
+      return `Insufficient stock to produce this quantity:\n• ${lines.join("\n• ")}`;
+    } catch {
+      return raw;
     }
-  };
-
-  const consumeBom = async (params: {
-    productId?: string;
-    parentRawMaterialId?: string;
-    producedQty: number;
-    producedMovementId: string;
-  }) => {
-    if (!user) return { shortages: [] as string[] };
-    let query = supabase
-      .from("bom_items")
-      .select("id, item_type, raw_material_id, component_id, quantity");
-    if (params.productId) {
-      query = query.eq("product_id", params.productId);
-    } else if (params.parentRawMaterialId) {
-      query = query.eq("parent_raw_material_id", params.parentRawMaterialId);
-    } else {
-      return { shortages: [] };
-    }
-    const { data: bomItems, error } = await query;
-    if (error) throw error;
-
-    const shortages: string[] = [];
-    for (const bi of bomItems || []) {
-      const deduct = Number(bi.quantity) * params.producedQty;
-      if (!deduct) continue;
-
-      if (bi.item_type === "raw_material" && bi.raw_material_id) {
-        const { data: rm } = await supabase
-          .from("raw_materials")
-          .select("name, sku, stock_quantity")
-          .eq("id", bi.raw_material_id)
-          .maybeSingle();
-        if (!rm) continue;
-
-        await supabase.from("stock_movements").insert({
-          item_id: bi.raw_material_id,
-          item_type: "raw_material",
-          movement_type: "assembly_consume",
-          quantity: -deduct,
-          performed_by: user.id,
-          notes: `Consumed for production (movement ${params.producedMovementId})`,
-          reference_type: "stock_movement",
-          reference_id: params.producedMovementId,
-          autocount_synced: true,
-        });
-
-        const newQty = (Number(rm.stock_quantity) || 0) - deduct;
-        if (newQty < 0) shortages.push(`${rm.name} (${rm.sku})`);
-        await supabase
-          .from("raw_materials")
-          .update({ stock_quantity: newQty })
-          .eq("id", bi.raw_material_id);
-      } else if (bi.component_id) {
-        const { data: c } = await supabase
-          .from("components")
-          .select("name, sku, stock_quantity")
-          .eq("id", bi.component_id)
-          .maybeSingle();
-        if (!c) continue;
-
-        await supabase.from("stock_movements").insert({
-          item_id: bi.component_id,
-          item_type: "component",
-          movement_type: "assembly_consume",
-          quantity: -deduct,
-          performed_by: user.id,
-          notes: `Consumed for production (movement ${params.producedMovementId})`,
-          reference_type: "stock_movement",
-          reference_id: params.producedMovementId,
-          autocount_synced: false,
-        });
-
-        const newQty = (Number(c.stock_quantity) || 0) - deduct;
-        if (newQty < 0) shortages.push(`${c.name} (${c.sku})`);
-        await supabase
-          .from("components")
-          .update({ stock_quantity: newQty })
-          .eq("id", bi.component_id);
-      }
-    }
-    return { shortages };
   };
 
   const logProductionMutation = useMutation({
@@ -220,176 +78,53 @@ export default function Production() {
     }) => {
       if (!user) throw new Error("User not authenticated");
 
-      // ---------- Raw material output ----------
-      if (data.item_type === "raw_material") {
-        const { data: rm, error: rmFetchErr } = await supabase
-          .from("raw_materials")
-          .select("id, stock_quantity")
-          .eq("id", data.component_id)
-          .maybeSingle();
-        if (rmFetchErr) throw rmFetchErr;
-        if (!rm) throw new Error("Raw material not found");
-
-        // Pre-flight stock check — hard block if any BOM ingredient is short
-        await checkBomAvailability({
-          parentRawMaterialId: data.parent_raw_material_id || rm.id,
-          producedQty: data.quantity,
-        });
-
-        const { data: movement, error: movementError } = await supabase
-          .from("stock_movements")
-          .insert({
-            item_id: rm.id,
-            item_type: "raw_material",
-            movement_type: "assembly_produce",
-            quantity: data.quantity,
-            performed_by: user.id,
-            notes: data.notes || null,
-            autocount_synced: true,
-          })
-          .select()
-          .single();
-        if (movementError) throw movementError;
-
-        const { data: updated, error: updateError } = await supabase
-          .from("raw_materials")
-          .update({ stock_quantity: (rm.stock_quantity || 0) + data.quantity })
-          .eq("id", rm.id)
-          .select("id");
-        if (updateError) throw updateError;
-        if (!updated || updated.length === 0) {
-          throw new Error("Stock update blocked (insufficient permissions). Movement recorded but inventory not increased.");
+      const { data: rpcResult, error: rpcError } = await supabase.rpc(
+        "log_production",
+        {
+          p_item_type: data.item_type,
+          p_item_id: data.component_id,
+          p_quantity: data.quantity,
+          p_notes: data.notes || null,
+          p_product_id: data.product_id || null,
+          p_parent_raw_material_id: data.parent_raw_material_id || null,
         }
+      );
+      if (rpcError) throw new Error(rpcError.message);
 
-        // Consume BOM ingredients for the raw material output
-        await consumeBom({
-          parentRawMaterialId: data.parent_raw_material_id || rm.id,
-          producedQty: data.quantity,
-          producedMovementId: movement.id,
-        });
-        return movement;
-      }
+      const result = rpcResult as unknown as {
+        movement_id: string;
+        component_id: string | null;
+        raw_material_id: string | null;
+      };
 
-      // ---------- Component (product) output ----------
-      let componentId = data.component_id;
-      let component: { id: string; stock_quantity: number } | null = null;
-
-      const { data: byId } = await supabase
-        .from("components")
-        .select("id, stock_quantity")
-        .eq("id", componentId)
-        .maybeSingle();
-
-      if (byId) {
-        component = byId;
-      } else {
-        const { data: product, error: productErr } = await supabase
-          .from("products")
-          .select("sku")
-          .eq("id", componentId)
-          .maybeSingle();
-        if (productErr) throw productErr;
-        if (!product) throw new Error("Product/component not found for production log");
-
-        const { data: bySku, error: skuErr } = await supabase
-          .from("components")
-          .select("id, stock_quantity")
-          .eq("sku", product.sku)
-          .maybeSingle();
-        if (skuErr) throw skuErr;
-        if (!bySku) {
-          throw new Error(
-            `No matching component found for SKU ${product.sku}. Link the product to a component before logging production.`
+      // AutoCount sync for component output only
+      if (data.item_type === "component" && result.component_id) {
+        try {
+          const { error: syncError } = await supabase.functions.invoke(
+            "sync-production-complete",
+            {
+              body: {
+                movement_id: result.movement_id,
+                component_id: result.component_id,
+                quantity: data.quantity,
+              },
+            }
           );
-        }
-        component = bySku;
-        componentId = bySku.id;
-      }
-
-      // Resolve product_id for BOM lookup (needed for pre-flight too)
-      let bomProductId = data.product_id;
-      if (!bomProductId) {
-        const { data: prodMatch } = await supabase
-          .from("products")
-          .select("id")
-          .eq("component_id", componentId)
-          .maybeSingle();
-        bomProductId = prodMatch?.id;
-      }
-
-      // Pre-flight stock check — hard block if any BOM ingredient is short
-      if (bomProductId) {
-        await checkBomAvailability({
-          productId: bomProductId,
-          producedQty: data.quantity,
-        });
-      }
-
-      const { data: movement, error: movementError } = await supabase
-        .from("stock_movements")
-        .insert({
-          item_id: componentId,
-          item_type: "component",
-          movement_type: "assembly_produce",
-          quantity: data.quantity,
-          performed_by: user.id,
-          notes: data.notes || null,
-          autocount_synced: false,
-        })
-        .select()
-        .single();
-
-      if (movementError) throw movementError;
-
-      const { data: updated, error: updateError } = await supabase
-        .from("components")
-        .update({
-          stock_quantity: (component.stock_quantity || 0) + data.quantity,
-        })
-        .eq("id", componentId)
-        .select("id");
-
-      if (updateError) throw updateError;
-      if (!updated || updated.length === 0) {
-        throw new Error("Stock update blocked (insufficient permissions). Movement recorded but inventory not increased.");
-      }
-
-      // Consume BOM ingredients
-      if (bomProductId) {
-        await consumeBom({
-          productId: bomProductId,
-          producedQty: data.quantity,
-          producedMovementId: movement.id,
-        });
-      }
-
-
-      // Sync to AutoCount
-      try {
-        const { error: syncError } = await supabase.functions.invoke(
-          "sync-production-complete",
-          {
-            body: {
-              movement_id: movement.id,
-              component_id: componentId,
-              quantity: data.quantity,
-            },
+          if (syncError) {
+            console.error("AutoCount sync failed:", syncError);
+            toast({
+              title: "Production logged but sync failed",
+              description:
+                "Production was recorded locally but failed to sync to AutoCount.",
+              variant: "destructive",
+            });
           }
-        );
-
-        if (syncError) {
-          console.error("AutoCount sync failed:", syncError);
-          toast({
-            title: "Production logged but sync failed",
-            description: "Production was recorded locally but failed to sync to AutoCount.",
-            variant: "destructive",
-          });
+        } catch (syncError) {
+          console.error("AutoCount sync error:", syncError);
         }
-      } catch (syncError) {
-        console.error("AutoCount sync error:", syncError);
       }
 
-      return movement;
+      return { id: result.movement_id };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["production-logs"] });
@@ -406,11 +141,12 @@ export default function Production() {
     onError: (error: Error) => {
       toast({
         title: "Failed to log production",
-        description: error.message,
+        description: formatShortageError(error),
         variant: "destructive",
       });
     },
   });
+
 
   const updateProductionMutation = useMutation({
     mutationFn: async (data: {
