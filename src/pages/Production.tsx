@@ -176,7 +176,7 @@ export default function Production() {
         if (newQty < 0) shortages.push(`${rm.name} (${rm.sku})`);
         await supabase
           .from("raw_materials")
-          .update({ stock_quantity: Math.max(0, newQty) })
+          .update({ stock_quantity: newQty })
           .eq("id", bi.raw_material_id);
       } else if (bi.component_id) {
         const { data: c } = await supabase
