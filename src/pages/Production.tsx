@@ -230,6 +230,12 @@ export default function Production() {
         if (rmFetchErr) throw rmFetchErr;
         if (!rm) throw new Error("Raw material not found");
 
+        // Pre-flight stock check — hard block if any BOM ingredient is short
+        await checkBomAvailability({
+          parentRawMaterialId: data.parent_raw_material_id || rm.id,
+          producedQty: data.quantity,
+        });
+
         const { data: movement, error: movementError } = await supabase
           .from("stock_movements")
           .insert({
@@ -256,18 +262,11 @@ export default function Production() {
         }
 
         // Consume BOM ingredients for the raw material output
-        const { shortages } = await consumeBom({
+        await consumeBom({
           parentRawMaterialId: data.parent_raw_material_id || rm.id,
           producedQty: data.quantity,
           producedMovementId: movement.id,
         });
-        if (shortages.length > 0) {
-          toast({
-            title: "Production logged — but stock went negative",
-            description: `Insufficient stock for: ${shortages.join(", ")}. Quantities clamped to 0.`,
-            variant: "destructive",
-          });
-        }
         return movement;
       }
 
