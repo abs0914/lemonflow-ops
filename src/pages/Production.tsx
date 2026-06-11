@@ -216,18 +216,66 @@ export default function Production() {
         }
 
         if (bomProductId || bomParentRawId) {
-          const { shortages } = await consumeBom({
-            productId: bomProductId,
-            parentRawMaterialId: bomParentRawId,
-            producedQty: quantityDiff,
-            producedMovementId: data.id,
-          });
-          if (shortages.length > 0) {
-            toast({
-              title: "Production updated — but stock went negative",
-              description: `Insufficient stock for: ${shortages.join(", ")}. Quantities clamped to 0.`,
-              variant: "destructive",
-            });
+          let bomQuery = supabase
+            .from("bom_items")
+            .select("item_type, raw_material_id, component_id, quantity");
+          if (bomProductId) {
+            bomQuery = bomQuery.eq("product_id", bomProductId);
+          } else if (bomParentRawId) {
+            bomQuery = bomQuery.eq("parent_raw_material_id", bomParentRawId);
+          }
+          const { data: bomItems } = await bomQuery;
+          for (const bi of bomItems || []) {
+            const deduct = Number(bi.quantity) * quantityDiff;
+            if (!deduct) continue;
+
+            if (bi.item_type === "raw_material" && bi.raw_material_id) {
+              await supabase.from("stock_movements").insert({
+                item_id: bi.raw_material_id,
+                item_type: "raw_material",
+                movement_type: "assembly_consume",
+                quantity: -deduct,
+                performed_by: user.id,
+                notes: `Adjustment for production edit (movement ${data.id})`,
+                reference_type: "stock_movement",
+                reference_id: data.id,
+                autocount_synced: true,
+              });
+              const { data: rm } = await supabase
+                .from("raw_materials")
+                .select("stock_quantity")
+                .eq("id", bi.raw_material_id)
+                .maybeSingle();
+              if (rm) {
+                await supabase
+                  .from("raw_materials")
+                  .update({ stock_quantity: (Number(rm.stock_quantity) || 0) - deduct })
+                  .eq("id", bi.raw_material_id);
+              }
+            } else if (bi.component_id) {
+              await supabase.from("stock_movements").insert({
+                item_id: bi.component_id,
+                item_type: "component",
+                movement_type: "assembly_consume",
+                quantity: -deduct,
+                performed_by: user.id,
+                notes: `Adjustment for production edit (movement ${data.id})`,
+                reference_type: "stock_movement",
+                reference_id: data.id,
+                autocount_synced: false,
+              });
+              const { data: c } = await supabase
+                .from("components")
+                .select("stock_quantity")
+                .eq("id", bi.component_id)
+                .maybeSingle();
+              if (c) {
+                await supabase
+                  .from("components")
+                  .update({ stock_quantity: (Number(c.stock_quantity) || 0) - deduct })
+                  .eq("id", bi.component_id);
+              }
+            }
           }
         }
       }
