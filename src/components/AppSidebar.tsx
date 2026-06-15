@@ -65,7 +65,7 @@ interface MenuItem {
 }
 
 export function AppSidebar() {
-  const { profile, loading, signOut } = useAuth();
+  const { profile, loading, signOut, hasRole } = useAuth();
   const { data: userStores } = useAllUserStores();
   const location = useLocation();
   const { state, isMobile, setOpenMobile } = useSidebar();
