@@ -32,6 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [extraRoles, setExtraRoles] = useState<RoleName[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const lastFetchedUserId = useRef<string | null>(null);
@@ -39,21 +40,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchUserProfile = async (userId: string) => {
     try {
       console.log("Fetching profile for user:", userId);
-      const { data, error } = await supabase
-        .from("user_profiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
+      const [{ data, error }, { data: rolesData, error: rolesError }] = await Promise.all([
+        supabase.from("user_profiles").select("*").eq("id", userId).single(),
+        supabase.from("user_roles").select("role").eq("user_id", userId),
+      ]);
 
       if (error) {
         console.error("Error fetching profile:", error);
         throw error;
       }
-      console.log("Profile fetched:", data);
+      if (rolesError) {
+        console.error("Error fetching extra roles:", rolesError);
+      }
+      console.log("Profile fetched:", data, "extra roles:", rolesData);
       setProfile(data as UserProfile);
+      setExtraRoles(((rolesData ?? []) as { role: RoleName }[]).map((r) => r.role));
     } catch (error) {
       console.error("Error fetching profile:", error);
       setProfile(null);
+      setExtraRoles([]);
     } finally {
       setLoading(false);
     }
