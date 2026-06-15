@@ -186,9 +186,8 @@ export function AppSidebar() {
     },
   ];
 
-  const normalizedRole = profile?.role?.trim();
   const filteredItems = menuItems.filter((item) =>
-    item.roles.includes(normalizedRole || "")
+    hasRole(item.roles as any)
   );
 
   const isActive = (path: string) => location.pathname === path;
