@@ -32,9 +32,9 @@ export default function PurchaseOrderDetail() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isUploadingProof, setIsUploadingProof] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { profile } = useAuth();
+  const { profile, hasRole } = useAuth();
 
-  const isAccountingUser = profile?.role === "Accounting";
+  const isAccountingUser = hasRole("Accounting");
   const canUploadProof = ["Admin", "Warehouse", "Production"].includes(profile?.role || "");
   const canApprove = ["Admin", "CEO"].includes(profile?.role || "");
 

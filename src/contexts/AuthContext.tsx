@@ -12,10 +12,14 @@ interface UserProfile {
   signature_updated_at: string | null;
 }
 
+type RoleName = UserProfile["role"];
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: UserProfile | null;
+  extraRoles: RoleName[];
+  hasRole: (role: RoleName | RoleName[]) => boolean;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -28,6 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [extraRoles, setExtraRoles] = useState<RoleName[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const lastFetchedUserId = useRef<string | null>(null);
@@ -35,21 +40,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchUserProfile = async (userId: string) => {
     try {
       console.log("Fetching profile for user:", userId);
-      const { data, error } = await supabase
-        .from("user_profiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
+      const [{ data, error }, { data: rolesData, error: rolesError }] = await Promise.all([
+        supabase.from("user_profiles").select("*").eq("id", userId).single(),
+        supabase.from("user_roles").select("role").eq("user_id", userId),
+      ]);
 
       if (error) {
         console.error("Error fetching profile:", error);
         throw error;
       }
-      console.log("Profile fetched:", data);
+      if (rolesError) {
+        console.error("Error fetching extra roles:", rolesError);
+      }
+      console.log("Profile fetched:", data, "extra roles:", rolesData);
       setProfile(data as UserProfile);
+      setExtraRoles(((rolesData ?? []) as { role: RoleName }[]).map((r) => r.role));
     } catch (error) {
       console.error("Error fetching profile:", error);
       setProfile(null);
+      setExtraRoles([]);
     } finally {
       setLoading(false);
     }
@@ -125,12 +134,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const hasRole = (role: RoleName | RoleName[]) => {
+    const roles = Array.isArray(role) ? role : [role];
+    if (profile?.role && roles.includes(profile.role)) return true;
+    return extraRoles.some((r) => roles.includes(r));
+  };
+
   return (
     <AuthContext.Provider
       value={{
         user,
         session,
         profile,
+        extraRoles,
+        hasRole,
         loading,
         signIn,
         signOut,
