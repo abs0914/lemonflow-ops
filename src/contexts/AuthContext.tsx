@@ -12,10 +12,14 @@ interface UserProfile {
   signature_updated_at: string | null;
 }
 
+type RoleName = UserProfile["role"];
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: UserProfile | null;
+  extraRoles: RoleName[];
+  hasRole: (role: RoleName | RoleName[]) => boolean;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
