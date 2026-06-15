@@ -134,12 +134,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const hasRole = (role: RoleName | RoleName[]) => {
+    const roles = Array.isArray(role) ? role : [role];
+    if (profile?.role && roles.includes(profile.role)) return true;
+    return extraRoles.some((r) => roles.includes(r));
+  };
+
   return (
     <AuthContext.Provider
       value={{
         user,
         session,
         profile,
+        extraRoles,
+        hasRole,
         loading,
         signIn,
         signOut,
