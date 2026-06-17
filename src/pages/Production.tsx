@@ -99,6 +99,7 @@ export default function Production() {
         movement_id: string;
         component_id: string | null;
         raw_material_id: string | null;
+        consumed_movement_ids?: string[];
       };
 
       // AutoCount sync for component output only
@@ -128,19 +129,31 @@ export default function Production() {
         }
       }
 
-      return { id: result.movement_id };
+      return {
+        id: result.movement_id,
+        consumedCount: result.consumed_movement_ids?.length ?? 0,
+      };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["production-logs"] });
       queryClient.invalidateQueries({ queryKey: ["components"] });
       queryClient.invalidateQueries({ queryKey: ["raw-materials"] });
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
       queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
       setShowLogDialog(false);
-      toast({
-        title: "Production logged successfully",
-        description: "Production has been recorded.",
-      });
+      if (result.consumedCount > 0) {
+        toast({
+          title: "Production logged",
+          description: `Output added to stock and ${result.consumedCount} BOM ingredient${result.consumedCount === 1 ? "" : "s"} deducted from inventory.`,
+        });
+      } else {
+        toast({
+          title: "Production logged (no BOM deduction)",
+          description:
+            "Output was added to stock, but no BOM is defined for this item — no raw materials were deducted. Add a BOM to enable automatic deduction.",
+          variant: "destructive",
+        });
+      }
     },
     onError: (error: Error) => {
       toast({
