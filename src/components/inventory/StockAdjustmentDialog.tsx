@@ -210,9 +210,11 @@ export function StockAdjustmentDialog({
         title: "Stock updated successfully",
         description: syncToAutocount ? "Changes synced to AutoCount" : undefined
       });
+      submittingRef.current = false;
       onOpenChange(false);
     },
     onError: (error: Error) => {
+      submittingRef.current = false;
       toast({
         title: "Error updating stock",
         description: error.message,
@@ -222,6 +224,8 @@ export function StockAdjustmentDialog({
   });
 
   const onSubmit = (data: StockAdjustmentFormData) => {
+    if (submittingRef.current || mutation.isPending || isSyncing) return;
+    submittingRef.current = true;
     mutation.mutate(data);
   };
 
