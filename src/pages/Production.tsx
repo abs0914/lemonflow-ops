@@ -550,6 +550,16 @@ export default function Production() {
           isLoading={logProductionMutation.isPending || updateProductionMutation.isPending}
           editingLog={editingLog}
         />
+
+        <AdjustConsumptionDialog
+          open={!!adjustingLog}
+          onOpenChange={(open) => { if (!open) setAdjustingLog(null); }}
+          produceMovementId={adjustingLog?.id || null}
+          producedItemName={adjustingLog?.components?.name}
+          producedQuantity={adjustingLog?.quantity}
+          itemType={adjustingLog?.item_type as "component" | "raw_material" | undefined}
+          itemId={adjustingLog?.item_id}
+        />
       </div>
     </DashboardLayout>
   );
