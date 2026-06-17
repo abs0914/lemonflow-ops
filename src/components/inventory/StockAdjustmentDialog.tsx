@@ -71,6 +71,7 @@ export function StockAdjustmentDialog({
   useEffect(() => {
     if (open) {
       setMovementType("receipt");
+      submittingRef.current = false;
       reset({
         quantity: "",
         notes: "",
