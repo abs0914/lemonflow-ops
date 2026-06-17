@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ActionSheet } from "@/components/ui/action-sheet";
@@ -53,6 +53,7 @@ export function StockAdjustmentDialog({
   const isMobile = useIsMobile();
   const [isSyncing, setIsSyncing] = useState(false);
   const [movementType, setMovementType] = useState<string>("receipt");
+  const submittingRef = useRef(false);
   
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<StockAdjustmentFormData>({
     defaultValues: {
@@ -70,6 +71,7 @@ export function StockAdjustmentDialog({
   useEffect(() => {
     if (open) {
       setMovementType("receipt");
+      submittingRef.current = false;
       reset({
         quantity: "",
         notes: "",
@@ -208,9 +210,11 @@ export function StockAdjustmentDialog({
         title: "Stock updated successfully",
         description: syncToAutocount ? "Changes synced to AutoCount" : undefined
       });
+      submittingRef.current = false;
       onOpenChange(false);
     },
     onError: (error: Error) => {
+      submittingRef.current = false;
       toast({
         title: "Error updating stock",
         description: error.message,
@@ -220,6 +224,8 @@ export function StockAdjustmentDialog({
   });
 
   const onSubmit = (data: StockAdjustmentFormData) => {
+    if (submittingRef.current || mutation.isPending || isSyncing) return;
+    submittingRef.current = true;
     mutation.mutate(data);
   };
 
