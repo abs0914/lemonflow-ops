@@ -12,6 +12,7 @@ import { SalesDashboardReport } from "@/components/reports/SalesDashboardReport"
 import { StoreInventoryReport } from "@/components/reports/StoreInventoryReport";
 import { StoreOrderConsolidationReport } from "@/components/reports/StoreOrderConsolidationReport";
 import { ReleasedItemsReport } from "@/components/reports/ReleasedItemsReport";
+import { ProductionReport } from "@/components/reports/ProductionReport";
 import { BarChart3 } from "lucide-react";
 
 interface ReportConfig {
@@ -43,6 +44,13 @@ const reportConfigs: ReportConfig[] = [
     description: "Production assembly orders and completion metrics",
     roles: ["Admin", "CEO", "Finance", "Production"],
     component: AssemblyOrderReport,
+  },
+  {
+    id: "production",
+    title: "Production",
+    description: "Daily production output with materials used vs BOM expected",
+    roles: ["Admin", "CEO", "Production", "Warehouse"],
+    component: ProductionReport,
   },
   {
     id: "sales-orders",

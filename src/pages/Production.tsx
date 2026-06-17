@@ -4,9 +4,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, RefreshCw, Pencil } from "lucide-react";
+import { Plus, RefreshCw, Pencil, Sliders } from "lucide-react";
 import { useProductionLogs, ProductionLog } from "@/hooks/useProductionLogs";
 import { LogProductionDialog, ProductionLogData } from "@/components/production/LogProductionDialog";
+import { AdjustConsumptionDialog } from "@/components/production/AdjustConsumptionDialog";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -33,6 +34,7 @@ export default function Production() {
   const [showLogDialog, setShowLogDialog] = useState(false);
   const [editingLog, setEditingLog] = useState<ProductionLogData | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [adjustingLog, setAdjustingLog] = useState<ProductionLog | null>(null);
 
   const { data: productionLogs, isLoading } = useProductionLogs();
 
@@ -75,6 +77,7 @@ export default function Production() {
       notes?: string;
       product_id?: string;
       parent_raw_material_id?: string;
+      actual_consumption?: { item_id: string; item_type: "component" | "raw_material"; quantity: number }[];
     }) => {
       if (!user) throw new Error("User not authenticated");
 
@@ -87,6 +90,7 @@ export default function Production() {
           p_notes: data.notes || null,
           p_product_id: data.product_id || null,
           p_parent_raw_material_id: data.parent_raw_material_id || null,
+          p_actual_consumption: (data.actual_consumption as any) || null,
         }
       );
       if (rpcError) throw new Error(rpcError.message);
@@ -349,7 +353,7 @@ export default function Production() {
     setShowLogDialog(true);
   };
 
-  const handleSubmit = (data: { component_id: string; item_type: "component" | "raw_material"; quantity: number; notes?: string; product_id?: string; parent_raw_material_id?: string }) => {
+  const handleSubmit = (data: { component_id: string; item_type: "component" | "raw_material"; quantity: number; notes?: string; product_id?: string; parent_raw_material_id?: string; actual_consumption?: { item_id: string; item_type: "component" | "raw_material"; quantity: number }[] }) => {
     if (editingLog) {
       updateProductionMutation.mutate({
         id: editingLog.id,
@@ -442,14 +446,25 @@ export default function Production() {
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">{log.user_profiles?.full_name || "Unknown"}</span>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7"
-                          onClick={() => handleEdit(log)}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7"
+                            onClick={() => setAdjustingLog(log)}
+                            title="Adjust materials used"
+                          >
+                            <Sliders className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7"
+                            onClick={() => handleEdit(log)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
                       {log.notes && (
                         <p className="text-xs text-muted-foreground">{log.notes}</p>
@@ -515,19 +530,34 @@ export default function Production() {
                             {log.notes || "-"}
                           </TableCell>
                           <TableCell>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-8 w-8"
-                                  onClick={() => handleEdit(log)}
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Edit</TooltipContent>
-                            </Tooltip>
+                            <div className="flex items-center gap-1">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-8 w-8"
+                                    onClick={() => setAdjustingLog(log)}
+                                  >
+                                    <Sliders className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Adjust materials used</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-8 w-8"
+                                    onClick={() => handleEdit(log)}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Edit</TooltipContent>
+                              </Tooltip>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -545,6 +575,16 @@ export default function Production() {
           onSubmit={handleSubmit}
           isLoading={logProductionMutation.isPending || updateProductionMutation.isPending}
           editingLog={editingLog}
+        />
+
+        <AdjustConsumptionDialog
+          open={!!adjustingLog}
+          onOpenChange={(open) => { if (!open) setAdjustingLog(null); }}
+          produceMovementId={adjustingLog?.id || null}
+          producedItemName={adjustingLog?.components?.name}
+          producedQuantity={adjustingLog?.quantity}
+          itemType={adjustingLog?.item_type as "component" | "raw_material" | undefined}
+          itemId={adjustingLog?.item_id}
         />
       </div>
     </DashboardLayout>

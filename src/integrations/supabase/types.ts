@@ -1366,6 +1366,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      adjust_production_consumption: {
+        Args: {
+          p_adjustments: Json
+          p_notes?: string
+          p_produce_movement_id: string
+        }
+        Returns: Json
+      }
       complete_sales_order_stock: {
         Args: { p_sales_order_id: string }
         Returns: undefined
@@ -1383,17 +1391,30 @@ export type Database = {
       is_ceo: { Args: { user_id: string }; Returns: boolean }
       is_finance: { Args: { user_id: string }; Returns: boolean }
       is_fulfillment: { Args: { user_id: string }; Returns: boolean }
-      log_production: {
-        Args: {
-          p_item_id: string
-          p_item_type: string
-          p_notes?: string
-          p_parent_raw_material_id?: string
-          p_product_id?: string
-          p_quantity: number
-        }
-        Returns: Json
-      }
+      log_production:
+        | {
+            Args: {
+              p_item_id: string
+              p_item_type: string
+              p_notes?: string
+              p_parent_raw_material_id?: string
+              p_product_id?: string
+              p_quantity: number
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_actual_consumption?: Json
+              p_item_id: string
+              p_item_type: string
+              p_notes?: string
+              p_parent_raw_material_id?: string
+              p_product_id?: string
+              p_quantity: number
+            }
+            Returns: Json
+          }
       next_batch_number: { Args: never; Returns: string }
       notify_roles: {
         Args: {
