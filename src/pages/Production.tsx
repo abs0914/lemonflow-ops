@@ -34,6 +34,7 @@ export default function Production() {
   const [showLogDialog, setShowLogDialog] = useState(false);
   const [editingLog, setEditingLog] = useState<ProductionLogData | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [adjustingLog, setAdjustingLog] = useState<ProductionLog | null>(null);
 
   const { data: productionLogs, isLoading } = useProductionLogs();
 
