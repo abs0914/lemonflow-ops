@@ -475,6 +475,7 @@ export function LogProductionDialog({
                     </TableBody>
                   </Table>
                 </div>
+                )}
               </div>
             )}
 
