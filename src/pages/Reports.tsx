@@ -46,6 +46,13 @@ const reportConfigs: ReportConfig[] = [
     component: AssemblyOrderReport,
   },
   {
+    id: "production",
+    title: "Production",
+    description: "Daily production output with materials used vs BOM expected",
+    roles: ["Admin", "CEO", "Production", "Warehouse"],
+    component: ProductionReport,
+  },
+  {
     id: "sales-orders",
     title: "Sales Orders",
     description: "Store orders summary and sales metrics",
