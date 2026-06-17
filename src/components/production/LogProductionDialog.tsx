@@ -2,7 +2,7 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Info } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +40,14 @@ import {
 } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -60,6 +68,12 @@ export interface ProductionLogData {
   notes: string | null;
 }
 
+export interface ActualConsumptionEntry {
+  item_id: string;
+  item_type: "component" | "raw_material";
+  quantity: number;
+}
+
 interface LogProductionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -70,6 +84,7 @@ interface LogProductionDialogProps {
     notes?: string;
     product_id?: string;
     parent_raw_material_id?: string;
+    actual_consumption?: ActualConsumptionEntry[];
   }) => void;
   isLoading?: boolean;
   editingLog?: ProductionLogData | null;
@@ -84,6 +99,15 @@ interface BomOption {
   label: string;
 }
 
+interface BomIngredient {
+  item_id: string;
+  item_type: "component" | "raw_material";
+  name: string;
+  sku: string;
+  unit: string;
+  bom_quantity: number;
+}
+
 export function LogProductionDialog({
   open,
   onOpenChange,
@@ -93,6 +117,8 @@ export function LogProductionDialog({
 }: LogProductionDialogProps) {
   const [typeFilter, setTypeFilter] = React.useState<"all" | "component" | "raw_material">("all");
   const [comboOpen, setComboOpen] = React.useState(false);
+  // keyed by `${item_type}:${item_id}` → user-edited actual qty (as string for input control)
+  const [actualOverrides, setActualOverrides] = React.useState<Record<string, string>>({});
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -103,7 +129,9 @@ export function LogProductionDialog({
     },
   });
 
-  // Products with BOMs + Raw materials with BOMs
+  const selection = form.watch("selection");
+  const quantity = form.watch("quantity");
+
   const { data: options = [] } = useQuery({
     queryKey: ["bom-production-options"],
     queryFn: async (): Promise<BomOption[]> => {
@@ -155,6 +183,65 @@ export function LogProductionDialog({
     },
   });
 
+  const selectedOption = options.find((o) => o.value === selection);
+
+  // Fetch BOM ingredients for the selected production target
+  const { data: bomIngredients = [] } = useQuery({
+    queryKey: [
+      "bom-ingredients",
+      selectedOption?.productId || null,
+      selectedOption?.parentRawMaterialId || null,
+    ],
+    enabled: !!selectedOption && !editingLog,
+    queryFn: async (): Promise<BomIngredient[]> => {
+      let query = supabase
+        .from("bom_items")
+        .select("item_type, raw_material_id, component_id, quantity");
+      if (selectedOption?.productId) {
+        query = query.eq("product_id", selectedOption.productId);
+      } else if (selectedOption?.parentRawMaterialId) {
+        query = query.eq("parent_raw_material_id", selectedOption.parentRawMaterialId);
+      } else {
+        return [];
+      }
+      const { data: bom, error } = await query;
+      if (error) throw error;
+      if (!bom || bom.length === 0) return [];
+
+      const rawIds = bom.filter((b: any) => b.item_type === "raw_material").map((b: any) => b.raw_material_id).filter(Boolean);
+      const compIds = bom.filter((b: any) => b.item_type === "component").map((b: any) => b.component_id).filter(Boolean);
+
+      const [rmRes, cRes] = await Promise.all([
+        rawIds.length > 0
+          ? supabase.from("raw_materials").select("id, name, sku, unit").in("id", rawIds)
+          : Promise.resolve({ data: [] as any[] }),
+        compIds.length > 0
+          ? supabase.from("components").select("id, name, sku, unit").in("id", compIds)
+          : Promise.resolve({ data: [] as any[] }),
+      ]);
+      const rmMap = new Map<string, any>((rmRes.data || []).map((r: any) => [r.id, r]));
+      const cMap = new Map<string, any>((cRes.data || []).map((c: any) => [c.id, c]));
+
+      return bom.map((b: any) => {
+        const isRaw = b.item_type === "raw_material";
+        const info = isRaw ? rmMap.get(b.raw_material_id) : cMap.get(b.component_id);
+        return {
+          item_id: isRaw ? b.raw_material_id : b.component_id,
+          item_type: isRaw ? "raw_material" : "component",
+          name: info?.name || "(Unknown)",
+          sku: info?.sku || "-",
+          unit: info?.unit || "",
+          bom_quantity: Number(b.quantity) || 0,
+        } as BomIngredient;
+      });
+    },
+  });
+
+  // Reset overrides when selection changes
+  React.useEffect(() => {
+    setActualOverrides({});
+  }, [selection]);
+
   React.useEffect(() => {
     if (open) {
       if (editingLog) {
@@ -170,6 +257,7 @@ export function LogProductionDialog({
           quantity: 1,
           notes: "",
         });
+        setActualOverrides({});
       }
     }
   }, [open, editingLog, form]);
@@ -177,6 +265,24 @@ export function LogProductionDialog({
   const handleSubmit = (data: FormData) => {
     const opt = options.find((o) => o.value === data.selection);
     if (!opt) return;
+
+    // Build actual_consumption from overrides (only for non-edit mode)
+    let actual_consumption: ActualConsumptionEntry[] | undefined;
+    if (!editingLog && bomIngredients.length > 0) {
+      actual_consumption = bomIngredients.map((b) => {
+        const key = `${b.item_type}:${b.item_id}`;
+        const expected = b.bom_quantity * data.quantity;
+        const overrideRaw = actualOverrides[key];
+        const overrideNum = overrideRaw !== undefined && overrideRaw !== "" ? Number(overrideRaw) : NaN;
+        const actual = Number.isFinite(overrideNum) && overrideNum >= 0 ? overrideNum : expected;
+        return {
+          item_id: b.item_id,
+          item_type: b.item_type,
+          quantity: actual,
+        };
+      });
+    }
+
     onSubmit({
       component_id: opt.itemId,
       item_type: opt.itemType,
@@ -184,15 +290,17 @@ export function LogProductionDialog({
       notes: data.notes,
       product_id: opt.productId,
       parent_raw_material_id: opt.parentRawMaterialId,
+      actual_consumption,
     });
     form.reset();
+    setActualOverrides({});
   };
 
   const isEditing = !!editingLog;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[720px]">
+      <DialogContent className="sm:max-w-[820px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEditing ? "Edit Production Log" : "Log Completed Production"}</DialogTitle>
         </DialogHeader>
@@ -279,7 +387,6 @@ export function LogProductionDialog({
               }}
             />
 
-
             <FormField
               control={form.control}
               name="quantity"
@@ -293,6 +400,74 @@ export function LogProductionDialog({
                 </FormItem>
               )}
             />
+
+            {!isEditing && selectedOption && bomIngredients.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <FormLabel className="m-0">Materials Used</FormLabel>
+                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <Info className="h-3 w-3" /> Override the actual quantity used if it differs from BOM expected.
+                  </span>
+                </div>
+                <div className="rounded-md border overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Ingredient</TableHead>
+                        <TableHead>SKU</TableHead>
+                        <TableHead className="text-right">Expected</TableHead>
+                        <TableHead className="w-[140px]">Actual Used</TableHead>
+                        <TableHead className="text-right">Variance</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {bomIngredients.map((b) => {
+                        const key = `${b.item_type}:${b.item_id}`;
+                        const qty = Number(quantity) || 0;
+                        const expected = b.bom_quantity * qty;
+                        const overrideRaw = actualOverrides[key];
+                        const actualNum = overrideRaw !== undefined && overrideRaw !== ""
+                          ? Number(overrideRaw)
+                          : expected;
+                        const variance = Number.isFinite(actualNum) ? actualNum - expected : 0;
+                        return (
+                          <TableRow key={key}>
+                            <TableCell className="font-medium">{b.name}</TableCell>
+                            <TableCell className="text-muted-foreground text-xs">{b.sku}</TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {expected.toLocaleString(undefined, { maximumFractionDigits: 3 })} {b.unit}
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.001"
+                                value={overrideRaw ?? expected.toString()}
+                                onChange={(e) =>
+                                  setActualOverrides((prev) => ({ ...prev, [key]: e.target.value }))
+                                }
+                                className="h-8"
+                              />
+                            </TableCell>
+                            <TableCell
+                              className={cn(
+                                "text-right tabular-nums text-xs",
+                                variance > 0 && "text-destructive",
+                                variance < 0 && "text-emerald-600"
+                              )}
+                            >
+                              {variance === 0
+                                ? "—"
+                                : `${variance > 0 ? "+" : ""}${variance.toLocaleString(undefined, { maximumFractionDigits: 3 })} ${b.unit}`}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
 
             <FormField
               control={form.control}
