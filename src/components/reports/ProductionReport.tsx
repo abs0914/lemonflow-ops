@@ -83,25 +83,21 @@ export function ProductionReport({ dateRange }: ProductionReportProps) {
       const productIds = [...new Set(Array.from(compToProduct.values()))];
       const parentRmIds = rawIds;
 
-      const bomQueries: Promise<any>[] = [];
+      const bomItems: any[] = [];
       if (productIds.length > 0) {
-        bomQueries.push(
-          supabase
-            .from("bom_items")
-            .select("product_id, parent_raw_material_id, item_type, raw_material_id, component_id, quantity")
-            .in("product_id", productIds)
-        );
+        const { data: r1 } = await supabase
+          .from("bom_items")
+          .select("product_id, parent_raw_material_id, item_type, raw_material_id, component_id, quantity")
+          .in("product_id", productIds);
+        bomItems.push(...(r1 || []));
       }
       if (parentRmIds.length > 0) {
-        bomQueries.push(
-          supabase
-            .from("bom_items")
-            .select("product_id, parent_raw_material_id, item_type, raw_material_id, component_id, quantity")
-            .in("parent_raw_material_id", parentRmIds)
-        );
+        const { data: r2 } = await supabase
+          .from("bom_items")
+          .select("product_id, parent_raw_material_id, item_type, raw_material_id, component_id, quantity")
+          .in("parent_raw_material_id", parentRmIds);
+        bomItems.push(...(r2 || []));
       }
-      const bomResults = await Promise.all(bomQueries);
-      const bomItems = bomResults.flatMap((r) => r.data || []);
 
       // Index BOM by produced "root" id
       const bomByRoot = new Map<string, any[]>();
