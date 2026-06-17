@@ -446,14 +446,25 @@ export default function Production() {
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">{log.user_profiles?.full_name || "Unknown"}</span>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7"
-                          onClick={() => handleEdit(log)}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7"
+                            onClick={() => setAdjustingLog(log)}
+                            title="Adjust materials used"
+                          >
+                            <Sliders className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7"
+                            onClick={() => handleEdit(log)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
                       {log.notes && (
                         <p className="text-xs text-muted-foreground">{log.notes}</p>
