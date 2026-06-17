@@ -401,14 +401,23 @@ export function LogProductionDialog({
               )}
             />
 
-            {!isEditing && selectedOption && bomIngredients.length > 0 && (
+            {!isEditing && (
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <FormLabel className="m-0">Materials Used</FormLabel>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <FormLabel className="m-0">Materials Used (BOM)</FormLabel>
                   <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                     <Info className="h-3 w-3" /> Override the actual quantity used if it differs from BOM expected.
                   </span>
                 </div>
+                {!selectedOption ? (
+                  <div className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
+                    Select a product above to see and adjust BOM materials.
+                  </div>
+                ) : bomIngredients.length === 0 ? (
+                  <div className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
+                    No BOM ingredients defined for this item.
+                  </div>
+                ) : (
                 <div className="rounded-md border overflow-x-auto">
                   <Table>
                     <TableHeader>
