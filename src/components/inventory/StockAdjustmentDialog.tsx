@@ -53,6 +53,7 @@ export function StockAdjustmentDialog({
   const isMobile = useIsMobile();
   const [isSyncing, setIsSyncing] = useState(false);
   const [movementType, setMovementType] = useState<string>("receipt");
+  const submittingRef = useRef(false);
   
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<StockAdjustmentFormData>({
     defaultValues: {
