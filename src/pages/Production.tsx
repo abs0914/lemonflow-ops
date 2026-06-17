@@ -77,6 +77,7 @@ export default function Production() {
       notes?: string;
       product_id?: string;
       parent_raw_material_id?: string;
+      actual_consumption?: { item_id: string; item_type: "component" | "raw_material"; quantity: number }[];
     }) => {
       if (!user) throw new Error("User not authenticated");
 
@@ -89,6 +90,7 @@ export default function Production() {
           p_notes: data.notes || null,
           p_product_id: data.product_id || null,
           p_parent_raw_material_id: data.parent_raw_material_id || null,
+          p_actual_consumption: (data.actual_consumption as any) || null,
         }
       );
       if (rpcError) throw new Error(rpcError.message);
