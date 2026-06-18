@@ -120,9 +120,12 @@ export default function FulfillmentOrderDetail() {
 
     try {
       // Complete stock (deduct actual stock, release reservation)
-      await supabase.rpc("complete_sales_order_stock", {
+      const { error: stockError } = await supabase.rpc("complete_sales_order_stock", {
         p_sales_order_id: order.id,
       });
+      if (stockError) {
+        throw new Error(`Stock deduction failed: ${stockError.message}`);
+      }
 
       await updateMutation.mutateAsync({
         id: order.id,
