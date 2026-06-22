@@ -17,6 +17,7 @@ import { DeliveryOrderDocument } from "@/components/fulfillment/DeliveryOrderDoc
 import { OrderLineForm } from "@/components/store-orders/OrderLineForm";
 import { EditOrderLinesPanel } from "@/components/fulfillment/EditOrderLinesPanel";
 import { OrderChangeHistory } from "@/components/fulfillment/OrderChangeHistory";
+import { PaymentBreakdown } from "@/components/orders/PaymentBreakdown";
 
 const statusColors: Record<string, string> = {
   draft: "bg-gray-100 text-gray-800",
@@ -245,6 +246,8 @@ export default function FulfillmentOrderDetail() {
                     </div>
                   </div>
                 </div>
+
+                <PaymentBreakdown order={order as any} />
 
                 {order.description && (
                   <div>
