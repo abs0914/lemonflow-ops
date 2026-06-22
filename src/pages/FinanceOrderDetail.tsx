@@ -334,6 +334,8 @@ export default function FinanceOrderDetail() {
                 </div>
               )}
 
+              <PaymentBreakdown order={order as any} />
+
               {order.description && (
                 <div className="pt-2 border-t">
                   <Label className="text-muted-foreground">Franchisee Note</Label>
