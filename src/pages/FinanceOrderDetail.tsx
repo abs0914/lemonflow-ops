@@ -36,6 +36,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { PaymentBreakdown } from "@/components/orders/PaymentBreakdown";
 
 function ProofImage({ url }: { url: string }) {
   const [imgUrl, setImgUrl] = useState<string | null>(null);
