@@ -120,12 +120,38 @@ export default function FulfillmentOrderDetail() {
     if (!order || !user) return;
 
     try {
-      // Complete stock (deduct actual stock, release reservation)
       const { error: stockError } = await supabase.rpc("complete_sales_order_stock", {
         p_sales_order_id: order.id,
       });
       if (stockError) {
-        throw new Error(`Stock deduction failed: ${stockError.message}`);
+        const raw = stockError.message || "";
+        const insufficientMatch = raw.match(/INSUFFICIENT_STOCK:\s*(\[.*\])/s);
+        const unmatchedMatch = raw.match(/UNMATCHED_INVENTORY_ITEMS:\s*(\[.*\])/s);
+        if (insufficientMatch) {
+          try {
+            const items = JSON.parse(insufficientMatch[1]) as Array<{
+              item_code: string; item_name: string; required: number; available: number; shortage: number;
+            }>;
+            const summary = items
+              .map((i) => `• ${i.item_name || i.item_code}: need ${i.required}, available ${i.available} (short ${i.shortage})`)
+              .join("\n");
+            throw new Error(`Insufficient stock to complete order:\n${summary}`);
+          } catch (e: any) {
+            if (e?.message?.startsWith("Insufficient")) throw e;
+            throw new Error(raw);
+          }
+        }
+        if (unmatchedMatch) {
+          try {
+            const items = JSON.parse(unmatchedMatch[1]) as Array<{ item_code: string; item_name: string }>;
+            const summary = items.map((i) => i.item_name || i.item_code).join(", ");
+            throw new Error(`These items are not linked to inventory: ${summary}`);
+          } catch (e: any) {
+            if (e?.message?.startsWith("These items")) throw e;
+            throw new Error(raw);
+          }
+        }
+        throw new Error(`Stock deduction failed: ${raw}`);
       }
 
       await updateMutation.mutateAsync({
@@ -141,7 +167,7 @@ export default function FulfillmentOrderDetail() {
       toast.success("Order marked as completed");
       refetch();
     } catch (error: any) {
-      toast.error(`Failed to complete: ${error.message}`);
+      toast.error(error.message || "Failed to complete order", { duration: 10000 });
     }
   };
 
