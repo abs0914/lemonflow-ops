@@ -246,6 +246,8 @@ export default function FulfillmentOrderDetail() {
                   </div>
                 </div>
 
+                <PaymentBreakdown order={order as any} />
+
                 {order.description && (
                   <div>
                     <div className="text-sm text-muted-foreground mb-1">Franchisee Note</div>
