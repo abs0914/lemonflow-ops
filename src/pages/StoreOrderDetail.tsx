@@ -15,6 +15,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { PaymentBreakdown } from "@/components/orders/PaymentBreakdown";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
