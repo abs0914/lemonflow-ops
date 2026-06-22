@@ -435,55 +435,7 @@ export default function FinanceOrderDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Fee Summary */}
-              <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Order Total</span>
-                  <span>₱{(order.total_amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
-                </div>
-                {(order.delivery_fee || 0) > 0 && <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Delivery Fee</span>
-                  <span>+ ₱{(order.delivery_fee || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
-                </div>}
-                {(order.shipping_fee || 0) > 0 && <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Shipping Fee</span>
-                  <span>+ ₱{(order.shipping_fee || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
-                </div>}
-                {(order.expedite_fee || 0) > 0 && <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Expedite Fee</span>
-                  <span>+ ₱{(order.expedite_fee || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
-                </div>}
-                {((order as any).vat_amount || 0) > 0 && <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">12% VAT</span>
-                  <span>+ ₱{((order as any).vat_amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
-                </div>}
-                {((order as any).ewt_amount || 0) > 0 && <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">EWT</span>
-                  <span className="text-destructive">- ₱{((order as any).ewt_amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
-                </div>}
-                {((order as any).discount_amount || 0) > 0 && <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Discount</span>
-                  <span className="text-destructive">- ₱{((order as any).discount_amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
-                </div>}
-                {((order as any).underpayment || 0) > 0 && <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Underpayment</span>
-                  <span>+ ₱{((order as any).underpayment || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
-                </div>}
-                {((order as any).overpayment || 0) > 0 && <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Overpayment</span>
-                  <span className="text-destructive">- ₱{((order as any).overpayment || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
-                </div>}
-                <div className="flex justify-between font-bold border-t pt-2">
-                  <span>Amount Due</span>
-                  <span className="text-lg">₱{(order.payment_amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
-                </div>
-                {order.payment_reference && (
-                  <div className="flex justify-between text-sm pt-1">
-                    <span className="text-muted-foreground">Payment Reference</span>
-                    <span>{order.payment_reference}</span>
-                  </div>
-                )}
-              </div>
+              <PaymentBreakdown order={order as any} />
 
               {/* Proof Image */}
               {order.proof_of_payment_url ? (
