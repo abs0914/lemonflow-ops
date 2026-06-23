@@ -85,14 +85,17 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError || !userData?.user) {
+    // Use getClaims (verifies JWT signature/expiry) instead of getUser
+    // (which 403s when the session record is gone, e.g. user logged out in another tab).
+    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims?.sub) {
+      console.error('[sync-sales-order] Auth failed:', claimsError?.message);
       return new Response(
-        JSON.stringify({ success: false, error: 'Unauthorized: invalid session' }),
+        JSON.stringify({ success: false, error: 'Unauthorized: invalid or expired token. Please sign out and sign back in.' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    console.log('[sync-sales-order] Request user:', userData.user.id);
+    console.log('[sync-sales-order] Request user:', claimsData.claims.sub);
 
     // Parse request
     const requestBody: SyncSalesOrderRequest = await req.json();
