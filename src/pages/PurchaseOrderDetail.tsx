@@ -818,6 +818,9 @@ export default function PurchaseOrderDetail() {
                         <TableCell className="font-medium">{line.line_number}</TableCell>
                         <TableCell>{item?.name}</TableCell>
                         <TableCell className="font-mono text-sm">{item?.sku}</TableCell>
+                        <TableCell className="text-right">
+                          {Number((item as any)?.stock_quantity ?? 0)} {item?.unit || ""}
+                        </TableCell>
                         <TableCell className="text-right">{line.quantity}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
