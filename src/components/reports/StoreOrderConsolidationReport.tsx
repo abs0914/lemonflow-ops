@@ -9,12 +9,19 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Printer, Download, Package, Truck, Search } from "lucide-react";
+import { Printer, Download, Package, Truck, Search, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/currency";
 
 
 interface Props {
   dateRange: { from: Date; to: Date };
+}
+
+interface OrderContribution {
+  order_number: string;
+  store_name: string;
+  qty: number;
 }
 
 interface AggItem {
@@ -23,7 +30,8 @@ interface AggItem {
   uom: string;
   released_qty: number;
   on_hand: number | null;
-  orders: Map<string, number>;
+  unit_cost: number | null;
+  orders: Map<string, OrderContribution>;
 }
 
 interface DeliveryGroup {
@@ -39,7 +47,6 @@ function useStoreOrderConsolidation(fromDate: string, toDate: string) {
   return useQuery({
     queryKey: ["store-order-consolidation-by-delivery", fromDate, toDate],
     queryFn: async () => {
-      // Orders being prepared, by delivery_date in range OR with no delivery_date
       const { data: dated, error: e1 } = await supabase
         .from("sales_orders")
         .select("id, order_number, store_id, delivery_date, status, stores(store_name)")
@@ -56,7 +63,14 @@ function useStoreOrderConsolidation(fromDate: string, toDate: string) {
       if (e2) throw e2;
 
       const orders = [...(dated || []), ...(undated || [])];
-      if (orders.length === 0) return { orders: [], lines: [], stockMap: new Map<string, number>() };
+      if (orders.length === 0) {
+        return {
+          orders: [],
+          lines: [],
+          stockMap: new Map<string, number>(),
+          costMap: new Map<string, number>(),
+        };
+      }
 
       const orderIds = orders.map((o) => o.id);
       const { data: lines, error: e3 } = await supabase
@@ -65,27 +79,35 @@ function useStoreOrderConsolidation(fromDate: string, toDate: string) {
         .in("sales_order_id", orderIds);
       if (e3) throw e3;
 
-      // Build on-hand map from components + raw_materials
       const [comps, raws] = await Promise.all([
-        supabase.from("components").select("sku, autocount_item_code, stock_quantity"),
-        supabase.from("raw_materials").select("sku, autocount_item_code, stock_quantity"),
+        supabase.from("components").select("sku, autocount_item_code, stock_quantity, cost_per_unit"),
+        supabase.from("raw_materials").select("sku, autocount_item_code, stock_quantity, cost_per_unit"),
       ]);
 
       const stockMap = new Map<string, number>();
-      const add = (code: string | null | undefined, qty: number | null) => {
+      const costMap = new Map<string, number>();
+      const addStock = (code: string | null | undefined, qty: number | null) => {
         if (!code || qty == null) return;
         if (!stockMap.has(code)) stockMap.set(code, Number(qty) || 0);
       };
+      const addCost = (code: string | null | undefined, cost: number | null) => {
+        if (!code || cost == null) return;
+        if (!costMap.has(code)) costMap.set(code, Number(cost) || 0);
+      };
       for (const c of comps.data || []) {
-        add(c.autocount_item_code, c.stock_quantity);
-        add(c.sku, c.stock_quantity);
+        addStock(c.autocount_item_code, c.stock_quantity);
+        addStock(c.sku, c.stock_quantity);
+        addCost(c.autocount_item_code, c.cost_per_unit);
+        addCost(c.sku, c.cost_per_unit);
       }
       for (const r of raws.data || []) {
-        add(r.autocount_item_code, r.stock_quantity);
-        add(r.sku, r.stock_quantity);
+        addStock(r.autocount_item_code, r.stock_quantity);
+        addStock(r.sku, r.stock_quantity);
+        addCost(r.autocount_item_code, r.cost_per_unit);
+        addCost(r.sku, r.cost_per_unit);
       }
 
-      return { orders, lines: lines || [], stockMap };
+      return { orders, lines: lines || [], stockMap, costMap };
     },
     enabled: !!fromDate && !!toDate,
   });
@@ -99,6 +121,16 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
   const [storeFilter, setStoreFilter] = useState<string>("__all__");
   const [itemNameFilter, setItemNameFilter] = useState<string>("");
   const [orderNumberFilter, setOrderNumberFilter] = useState<string>("");
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
+
+  const toggleExpand = (key: string) => {
+    setExpandedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   const storeOptions = useMemo(() => {
     if (!data) return [] as { id: string; name: string }[];
@@ -145,18 +177,25 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
       const existing = g.items.get(ik);
       const qty = Number(line.quantity) || 0;
       const ordNum = order.order_number || "—";
+      const storeName = order.stores?.store_name || "—";
       if (existing) {
         existing.released_qty += qty;
-        existing.orders.set(ordNum, (existing.orders.get(ordNum) || 0) + qty);
+        const prior = existing.orders.get(ordNum);
+        existing.orders.set(ordNum, {
+          order_number: ordNum,
+          store_name: storeName,
+          qty: (prior?.qty || 0) + qty,
+        });
       } else {
-        const orders = new Map<string, number>();
-        orders.set(ordNum, qty);
+        const orders = new Map<string, OrderContribution>();
+        orders.set(ordNum, { order_number: ordNum, store_name: storeName, qty });
         g.items.set(ik, {
           item_code: ik,
           item_name: line.item_name,
           uom: line.uom || "UNIT",
           released_qty: qty,
           on_hand: data.stockMap.has(ik) ? data.stockMap.get(ik)! : null,
+          unit_cost: data.costMap.has(ik) ? data.costMap.get(ik)! : null,
           orders,
         });
       }
@@ -190,6 +229,9 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
         th{background:#f3f3f3;}
         td.num,th.num{text-align:right;}
         .neg{color:#b00020;font-weight:600;}
+        [data-print-only]{display:table-row !important;}
+        [data-screen-only]{display:none !important;}
+        .toggle-cell{display:none !important;}
       </style></head><body>
       <h1>Store Order Consolidation</h1>
       <div class="meta">Delivery Date range: ${format(dateRange.from, "MMM dd, yyyy")} – ${format(dateRange.to, "MMM dd, yyyy")}</div>
@@ -202,15 +244,16 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
 
   const handleCSV = () => {
     const rows: (string | number)[][] = [
-      ["Delivery Date", "# Stores", "# Orders", "Item Code", "Item Name", "Orders", "UOM", "Released Qty", "On-hand", "Balance"],
+      ["Delivery Date", "# Stores", "# Orders", "Item Code", "Item Name", "Orders", "UOM", "Unit Cost", "Released Qty", "On-hand", "Balance", "Subtotal"],
     ];
     for (const g of groups) {
       for (const item of Array.from(g.items.values()).sort((a, b) => a.item_code.localeCompare(b.item_code))) {
         const variance = item.on_hand == null ? "" : item.on_hand - item.released_qty;
-        const ordersStr = Array.from(item.orders.entries())
-          .sort((a, b) => a[0].localeCompare(b[0]))
-          .map(([num, qty]) => `${num} (${qty})`)
+        const ordersStr = Array.from(item.orders.values())
+          .sort((a, b) => a.order_number.localeCompare(b.order_number))
+          .map((o) => `${o.order_number} (${o.qty})`)
           .join("; ");
+        const subtotal = item.unit_cost == null ? "" : item.unit_cost * item.released_qty;
         rows.push([
           g.delivery_date || "Unscheduled",
           g.store_ids.size,
@@ -219,9 +262,11 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
           item.item_name,
           ordersStr,
           item.uom,
+          item.unit_cost == null ? "N/A" : item.unit_cost,
           item.released_qty,
           item.on_hand == null ? "N/A" : item.on_hand,
           variance,
+          subtotal,
         ]);
       }
     }
@@ -244,6 +289,8 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
       </div>
     );
   }
+
+  const TOTAL_COLS = 10;
 
   return (
     <div className="space-y-4">
@@ -298,7 +345,7 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
       </div>
       <p className="text-xs text-muted-foreground">
         Date range is set above (delivery date). Showing orders in <strong>submitted</strong> / <strong>processing</strong>.
-        On-hand is from local inventory and may differ from AutoCount in real time.
+        On-hand is from local inventory and may differ from AutoCount in real time. Unit cost is the value set on the inventory master.
       </p>
 
 
@@ -311,8 +358,9 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
         <div ref={printRef} className="space-y-6">
           {groups.map((g) => {
             const items = Array.from(g.items.values()).sort((a, b) => a.item_code.localeCompare(b.item_code));
+            const groupKey = g.delivery_date || "unscheduled";
             return (
-              <div key={g.delivery_date || "unscheduled"} className="border rounded-md">
+              <div key={groupKey} className="border rounded-md">
                 <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-muted/40 border-b">
                   <div className="flex items-center gap-2 font-semibold">
                     <Truck className="h-4 w-4 text-primary" />
@@ -342,41 +390,121 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-8 toggle-cell"></TableHead>
                       <TableHead>Item Code</TableHead>
                       <TableHead>Item Name</TableHead>
                       <TableHead>Orders</TableHead>
                       <TableHead>UOM</TableHead>
+                      <TableHead className="text-right num">Unit Cost</TableHead>
                       <TableHead className="text-right num">Released Qty</TableHead>
                       <TableHead className="text-right num">On-hand</TableHead>
                       <TableHead className="text-right num">Balance</TableHead>
+                      <TableHead className="text-right num">Subtotal</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {items.map((item) => {
                       const variance = item.on_hand == null ? null : item.on_hand - item.released_qty;
                       const negative = variance !== null && variance < 0;
-                      const orderEntries = Array.from(item.orders.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-                      const allOrdersStr = orderEntries.map(([n, q]) => `${n} (${q})`).join(", ");
-                      const shown = orderEntries.slice(0, 3).map(([n]) => n).join(", ");
+                      const orderEntries = Array.from(item.orders.values()).sort((a, b) =>
+                        a.order_number.localeCompare(b.order_number),
+                      );
+                      const allOrdersStr = orderEntries.map((o) => `${o.order_number} (${o.qty})`).join(", ");
+                      const shown = orderEntries.slice(0, 3).map((o) => o.order_number).join(", ");
                       const moreCount = orderEntries.length - 3;
+                      const subtotal = item.unit_cost == null ? null : item.unit_cost * item.released_qty;
+                      const expandKey = `${groupKey}|${item.item_code}`;
+                      const isExpanded = expandedKeys.has(expandKey);
+
+                      const expandedDetails = (
+                        <td colSpan={TOTAL_COLS} className="p-0 bg-muted/30">
+                          <div className="p-3">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead className="text-xs">Order #</TableHead>
+                                  <TableHead className="text-xs">Store</TableHead>
+                                  <TableHead className="text-right text-xs num">Qty</TableHead>
+                                  <TableHead className="text-right text-xs num">Unit Cost</TableHead>
+                                  <TableHead className="text-right text-xs num">Subtotal</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {orderEntries.map((o) => {
+                                  const lineSub = item.unit_cost == null ? null : item.unit_cost * o.qty;
+                                  return (
+                                    <TableRow key={o.order_number}>
+                                      <TableCell className="font-mono text-xs">{o.order_number}</TableCell>
+                                      <TableCell className="text-xs">{o.store_name}</TableCell>
+                                      <TableCell className="text-right text-xs num">{o.qty.toLocaleString()}</TableCell>
+                                      <TableCell className="text-right text-xs num">
+                                        {item.unit_cost == null ? "—" : formatCurrency(item.unit_cost)}
+                                      </TableCell>
+                                      <TableCell className="text-right text-xs num">
+                                        {lineSub == null ? "—" : formatCurrency(lineSub)}
+                                      </TableCell>
+                                    </TableRow>
+                                  );
+                                })}
+                                <TableRow className="font-semibold bg-muted/40">
+                                  <TableCell colSpan={2} className="text-xs">Total</TableCell>
+                                  <TableCell className="text-right text-xs num">{item.released_qty.toLocaleString()}</TableCell>
+                                  <TableCell />
+                                  <TableCell className="text-right text-xs num">
+                                    {subtotal == null ? "—" : formatCurrency(subtotal)}
+                                  </TableCell>
+                                </TableRow>
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </td>
+                      );
+
                       return (
-                        <TableRow key={item.item_code}>
-                          <TableCell className="font-mono text-xs">{item.item_code}</TableCell>
-                          <TableCell>{item.item_name}</TableCell>
-                          <TableCell className="font-mono text-xs text-muted-foreground" title={allOrdersStr}>
-                            {shown}{moreCount > 0 ? ` +${moreCount} more` : ""}
-                          </TableCell>
-                          <TableCell>{item.uom}</TableCell>
-                          <TableCell className="text-right font-semibold num">
-                            {item.released_qty.toLocaleString()}
-                          </TableCell>
-                          <TableCell className="text-right num">
-                            {item.on_hand == null ? <span className="text-muted-foreground">N/A</span> : item.on_hand.toLocaleString()}
-                          </TableCell>
-                          <TableCell className={cn("text-right num", negative && "neg text-destructive font-semibold")}>
-                            {variance === null ? "—" : variance.toLocaleString()}
-                          </TableCell>
-                        </TableRow>
+                        <>
+                          <TableRow
+                            key={item.item_code}
+                            className="cursor-pointer hover:bg-accent/50"
+                            onClick={() => toggleExpand(expandKey)}
+                          >
+                            <TableCell className="toggle-cell">
+                              {isExpanded ? (
+                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">{item.item_code}</TableCell>
+                            <TableCell>{item.item_name}</TableCell>
+                            <TableCell className="font-mono text-xs text-muted-foreground" title={allOrdersStr}>
+                              {shown}{moreCount > 0 ? ` +${moreCount} more` : ""}
+                            </TableCell>
+                            <TableCell>{item.uom}</TableCell>
+                            <TableCell className="text-right num">
+                              {item.unit_cost == null ? <span className="text-muted-foreground">—</span> : formatCurrency(item.unit_cost)}
+                            </TableCell>
+                            <TableCell className="text-right font-semibold num">
+                              {item.released_qty.toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-right num">
+                              {item.on_hand == null ? <span className="text-muted-foreground">N/A</span> : item.on_hand.toLocaleString()}
+                            </TableCell>
+                            <TableCell className={cn("text-right num", negative && "neg text-destructive font-semibold")}>
+                              {variance === null ? "—" : variance.toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-right num font-medium">
+                              {subtotal == null ? "—" : formatCurrency(subtotal)}
+                            </TableCell>
+                          </TableRow>
+                          {isExpanded && (
+                            <tr data-screen-only key={`${item.item_code}-exp`}>
+                              {expandedDetails}
+                            </tr>
+                          )}
+                          <tr data-print-only style={{ display: "none" }} key={`${item.item_code}-print`}>
+                            {expandedDetails}
+                          </tr>
+                        </>
                       );
                     })}
                   </TableBody>
