@@ -462,6 +462,85 @@ namespace Backend.Infrastructure.AutoCount
             return Convert.ToBoolean(value);
         }
 
+        /// <summary>
+        /// Some AutoCount installations have header columns (e.g. SubmitInvoiceNow)
+        /// declared NOT NULL with no default value. AddNew() then throws
+        /// "Column 'SubmitInvoiceNow' does not allow nulls." before we ever get
+        /// the document handle back. We pre-seed the command's default-value
+        /// table so AddNew() succeeds.
+        /// </summary>
+        private static void SetNonNullHeaderDefaults(object cmd)
+        {
+            if (cmd == null) return;
+            TrySetDefaultOnCommand(cmd, "SubmitInvoiceNow", false);
+        }
+
+        /// <summary>
+        /// Belt-and-suspenders: after AddNew() returns the document, also set
+        /// the flag on the document's underlying row in case the SDK skipped
+        /// the command-level default.
+        /// </summary>
+        private static void ApplyNonNullHeaderDefaults(AutoCountPurchaseOrderDocument doc)
+        {
+            if (doc == null) return;
+            TrySetColumnOnDocument(doc, "SubmitInvoiceNow", false);
+        }
+
+        private static void TrySetDefaultOnCommand(object cmd, string columnName, object value)
+        {
+            try
+            {
+                var type = cmd.GetType();
+                // Try public property first (e.g. cmd.DefaultValues[column] = value)
+                var prop = type.GetProperty("DefaultValues");
+                if (prop != null)
+                {
+                    var dict = prop.GetValue(cmd, null) as System.Collections.IDictionary;
+                    if (dict != null)
+                    {
+                        dict[columnName] = value;
+                        return;
+                    }
+                }
+            }
+            catch
+            {
+                // Best-effort; fall back to document-level set.
+            }
+        }
+
+        private static void TrySetColumnOnDocument(AutoCountPurchaseOrderDocument doc, string columnName, object value)
+        {
+            try
+            {
+                // First try a strongly-typed property of the same name.
+                var prop = doc.GetType().GetProperty(columnName);
+                if (prop != null && prop.CanWrite)
+                {
+                    prop.SetValue(doc, value, null);
+                    return;
+                }
+
+                // Fall back to the underlying DataRow exposed by AutoCount documents.
+                var rowProp = doc.GetType().GetProperty("MainRecord")
+                              ?? doc.GetType().GetProperty("DocRow")
+                              ?? doc.GetType().GetProperty("Row");
+                if (rowProp != null)
+                {
+                    var row = rowProp.GetValue(doc, null) as System.Data.DataRow;
+                    if (row != null && row.Table.Columns.Contains(columnName))
+                    {
+                        row[columnName] = value;
+                    }
+                }
+            }
+            catch
+            {
+                // Swallow — header may not actually require this column on every build.
+            }
+        }
+
         #endregion
     }
 }
+
