@@ -43,26 +43,39 @@ interface DeliveryGroup {
   items: Map<string, AggItem>;
 }
 
-function useStoreOrderConsolidation(fromDate: string, toDate: string) {
+type DateField = "delivery_date" | "submitted_at" | "created_at";
+
+function useStoreOrderConsolidation(fromDate: string, toDate: string, dateField: DateField) {
   return useQuery({
-    queryKey: ["store-order-consolidation-by-delivery", fromDate, toDate],
+    queryKey: ["store-order-consolidation", dateField, fromDate, toDate],
     queryFn: async () => {
+      const selectCols =
+        "id, order_number, store_id, delivery_date, submitted_at, created_at, status, stores(store_name)";
+
+      const isTimestamp = dateField !== "delivery_date";
+      const fromBound = isTimestamp ? `${fromDate}T00:00:00` : fromDate;
+      const toBound = isTimestamp ? `${toDate}T23:59:59.999` : toDate;
+
       const { data: dated, error: e1 } = await supabase
         .from("sales_orders")
-        .select("id, order_number, store_id, delivery_date, status, stores(store_name)")
-        .gte("delivery_date", fromDate)
-        .lte("delivery_date", toDate)
+        .select(selectCols)
+        .gte(dateField, fromBound)
+        .lte(dateField, toBound)
         .in("status", ["submitted", "processing"]);
       if (e1) throw e1;
 
-      const { data: undated, error: e2 } = await supabase
-        .from("sales_orders")
-        .select("id, order_number, store_id, delivery_date, status, stores(store_name)")
-        .is("delivery_date", null)
-        .in("status", ["submitted", "processing"]);
-      if (e2) throw e2;
+      let undated: any[] = [];
+      if (dateField === "delivery_date") {
+        const { data, error: e2 } = await supabase
+          .from("sales_orders")
+          .select(selectCols)
+          .is("delivery_date", null)
+          .in("status", ["submitted", "processing"]);
+        if (e2) throw e2;
+        undated = data || [];
+      }
 
-      const orders = [...(dated || []), ...(undated || [])];
+      const orders = [...(dated || []), ...undated];
       if (orders.length === 0) {
         return {
           orders: [],
@@ -116,7 +129,8 @@ function useStoreOrderConsolidation(fromDate: string, toDate: string) {
 export function StoreOrderConsolidationReport({ dateRange }: Props) {
   const fromStr = format(dateRange.from, "yyyy-MM-dd");
   const toStr = format(dateRange.to, "yyyy-MM-dd");
-  const { data, isLoading } = useStoreOrderConsolidation(fromStr, toStr);
+  const [dateField, setDateField] = useState<DateField>("delivery_date");
+  const { data, isLoading } = useStoreOrderConsolidation(fromStr, toStr, dateField);
   const printRef = useRef<HTMLDivElement>(null);
   const [storeFilter, setStoreFilter] = useState<string>("__all__");
   const [itemNameFilter, setItemNameFilter] = useState<string>("");
@@ -155,11 +169,13 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
       if (orderNeedle && !String(order.order_number || "").toLowerCase().includes(orderNeedle)) continue;
       if (nameNeedle && !String(line.item_name || "").toLowerCase().includes(nameNeedle)) continue;
 
-      const key = order.delivery_date || "__unscheduled__";
+      const rawVal: string | null = order[dateField] ?? null;
+      const groupDate = rawVal ? String(rawVal).slice(0, 10) : null;
+      const key = groupDate || "__unscheduled__";
       let g = byDate.get(key);
       if (!g) {
         g = {
-          delivery_date: order.delivery_date,
+          delivery_date: groupDate,
           store_ids: new Set(),
           store_names: new Set(),
           order_ids: new Set(),
@@ -206,7 +222,7 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
       if (!b.delivery_date) return -1;
       return a.delivery_date.localeCompare(b.delivery_date);
     });
-  }, [data, storeFilter, itemNameFilter, orderNumberFilter]);
+  }, [data, storeFilter, itemNameFilter, orderNumberFilter, dateField]);
 
 
   const fmtDate = (d: string | null) =>
@@ -338,6 +354,19 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
       <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end md:justify-between">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:flex md:items-end">
           <div className="space-y-1">
+            <Label className="text-xs">Date basis</Label>
+            <Select value={dateField} onValueChange={(v) => setDateField(v as DateField)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="delivery_date">Delivery date</SelectItem>
+                <SelectItem value="submitted_at">Submitted at</SelectItem>
+                <SelectItem value="created_at">Created at</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
             <Label className="text-xs">Store</Label>
             <Select value={storeFilter} onValueChange={setStoreFilter}>
               <SelectTrigger className="w-[220px]">
@@ -385,7 +414,7 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
         </div>
       </div>
       <p className="text-xs text-muted-foreground">
-        Date range is set above (delivery date). Showing orders in <strong>submitted</strong> / <strong>processing</strong>.
+        Filtering by <strong>{dateField === "delivery_date" ? "delivery date" : dateField === "submitted_at" ? "submitted date" : "created date"}</strong> using the range above. Showing orders in <strong>submitted</strong> / <strong>processing</strong>.
         On-hand is from local inventory and may differ from AutoCount in real time. Unit cost is the value set on the inventory master.
       </p>
 
