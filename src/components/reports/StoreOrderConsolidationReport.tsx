@@ -354,6 +354,19 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
       <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end md:justify-between">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:flex md:items-end">
           <div className="space-y-1">
+            <Label className="text-xs">Date basis</Label>
+            <Select value={dateField} onValueChange={(v) => setDateField(v as DateField)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="delivery_date">Delivery date</SelectItem>
+                <SelectItem value="submitted_at">Submitted at</SelectItem>
+                <SelectItem value="created_at">Created at</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
             <Label className="text-xs">Store</Label>
             <Select value={storeFilter} onValueChange={setStoreFilter}>
               <SelectTrigger className="w-[220px]">
