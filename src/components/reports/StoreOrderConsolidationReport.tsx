@@ -169,11 +169,13 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
       if (orderNeedle && !String(order.order_number || "").toLowerCase().includes(orderNeedle)) continue;
       if (nameNeedle && !String(line.item_name || "").toLowerCase().includes(nameNeedle)) continue;
 
-      const key = order.delivery_date || "__unscheduled__";
+      const rawVal: string | null = order[dateField] ?? null;
+      const groupDate = rawVal ? String(rawVal).slice(0, 10) : null;
+      const key = groupDate || "__unscheduled__";
       let g = byDate.get(key);
       if (!g) {
         g = {
-          delivery_date: order.delivery_date,
+          delivery_date: groupDate,
           store_ids: new Set(),
           store_names: new Set(),
           order_ids: new Set(),
