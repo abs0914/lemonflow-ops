@@ -51,7 +51,7 @@ export function MobilePOCard({ order, onClick }: MobilePOCardProps) {
           </div>
         </div>
         <MobileDataRow label="PO Number" value={order.po_number} />
-        <MobileDataRow label="Date" value={dateFormatters.short(order.doc_date)} />
+        <MobileDataRow label="Date" value={dateFormatters.usShort(order.doc_date)} />
         <MobileDataRow label="Amount" value={formatCurrency(order.total_amount)} />
       </div>
     </MobileDataCard>
