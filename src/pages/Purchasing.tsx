@@ -446,8 +446,8 @@ export default function Purchasing() {
                     <TableRow key={order.id}>
                       <TableCell className="font-mono">{order.po_number}</TableCell>
                       <TableCell className="font-medium">{order.suppliers?.company_name}</TableCell>
-                      <TableCell>{dateFormatters.short(order.doc_date)}</TableCell>
-                      <TableCell>{order.delivery_date ? dateFormatters.short(order.delivery_date) : "-"}</TableCell>
+                      <TableCell>{dateFormatters.usShort(order.doc_date)}</TableCell>
+                      <TableCell>{order.delivery_date ? dateFormatters.usShort(order.delivery_date) : "-"}</TableCell>
                       <TableCell>{formatCurrency(order.total_amount)}</TableCell>
                       {isFinanceUser ? (
                         <TableCell>
