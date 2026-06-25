@@ -785,6 +785,7 @@ export default function PurchaseOrderDetail() {
                   <TableHead className="w-12">#</TableHead>
                   <TableHead>Item</TableHead>
                   <TableHead>SKU</TableHead>
+                  <TableHead className="text-right">Stock On Hand</TableHead>
                   <TableHead className="text-right">Ordered</TableHead>
                   <TableHead className="text-right">Received</TableHead>
                   <TableHead className="text-right">Unit Price</TableHead>
