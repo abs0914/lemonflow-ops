@@ -222,7 +222,7 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
       if (!b.delivery_date) return -1;
       return a.delivery_date.localeCompare(b.delivery_date);
     });
-  }, [data, storeFilter, itemNameFilter, orderNumberFilter]);
+  }, [data, storeFilter, itemNameFilter, orderNumberFilter, dateField]);
 
 
   const fmtDate = (d: string | null) =>
