@@ -852,7 +852,7 @@ export default function PurchaseOrderDetail() {
                           <TableCell className="text-sm text-muted-foreground">
                             {dateFormatters.short(receipt.created_at)}
                           </TableCell>
-                          <TableCell colSpan={3} className="text-sm text-muted-foreground">
+                          <TableCell colSpan={4} className="text-sm text-muted-foreground">
                             by {receipt.performer_name}
                           </TableCell>
                         </TableRow>
