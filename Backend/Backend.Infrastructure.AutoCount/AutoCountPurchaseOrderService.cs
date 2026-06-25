@@ -246,6 +246,7 @@ namespace Backend.Infrastructure.AutoCount
                     {
                         try
                         {
+                            SetNonNullHeaderDefaults(cmd);
                             doc = cmd.AddNew();
                         }
                         catch (Exception ex)
@@ -254,6 +255,7 @@ namespace Backend.Infrastructure.AutoCount
                         }
                         if (doc == null)
                             throw new InvalidOperationException("Failed to create new purchase order document - returned null.");
+                        ApplyNonNullHeaderDefaults(doc);
                     }
 
                     // Header fields
