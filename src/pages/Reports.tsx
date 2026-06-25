@@ -77,7 +77,7 @@ const reportConfigs: ReportConfig[] = [
     id: "store-order-consolidation",
     title: "Store Order Consolidation",
     description: "Items released per delivery date, with store count and on-hand variance",
-    roles: ["Admin", "Warehouse", "Fulfillment"],
+    roles: ["Admin", "Warehouse", "Fulfillment", "Accounting"],
     component: StoreOrderConsolidationReport,
   },
   {
