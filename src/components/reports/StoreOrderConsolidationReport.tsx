@@ -129,7 +129,8 @@ function useStoreOrderConsolidation(fromDate: string, toDate: string, dateField:
 export function StoreOrderConsolidationReport({ dateRange }: Props) {
   const fromStr = format(dateRange.from, "yyyy-MM-dd");
   const toStr = format(dateRange.to, "yyyy-MM-dd");
-  const { data, isLoading } = useStoreOrderConsolidation(fromStr, toStr);
+  const [dateField, setDateField] = useState<DateField>("delivery_date");
+  const { data, isLoading } = useStoreOrderConsolidation(fromStr, toStr, dateField);
   const printRef = useRef<HTMLDivElement>(null);
   const [storeFilter, setStoreFilter] = useState<string>("__all__");
   const [itemNameFilter, setItemNameFilter] = useState<string>("");
