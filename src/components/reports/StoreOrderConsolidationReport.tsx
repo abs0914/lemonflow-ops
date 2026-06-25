@@ -43,26 +43,39 @@ interface DeliveryGroup {
   items: Map<string, AggItem>;
 }
 
-function useStoreOrderConsolidation(fromDate: string, toDate: string) {
+type DateField = "delivery_date" | "submitted_at" | "created_at";
+
+function useStoreOrderConsolidation(fromDate: string, toDate: string, dateField: DateField) {
   return useQuery({
-    queryKey: ["store-order-consolidation-by-delivery", fromDate, toDate],
+    queryKey: ["store-order-consolidation", dateField, fromDate, toDate],
     queryFn: async () => {
+      const selectCols =
+        "id, order_number, store_id, delivery_date, submitted_at, created_at, status, stores(store_name)";
+
+      const isTimestamp = dateField !== "delivery_date";
+      const fromBound = isTimestamp ? `${fromDate}T00:00:00` : fromDate;
+      const toBound = isTimestamp ? `${toDate}T23:59:59.999` : toDate;
+
       const { data: dated, error: e1 } = await supabase
         .from("sales_orders")
-        .select("id, order_number, store_id, delivery_date, status, stores(store_name)")
-        .gte("delivery_date", fromDate)
-        .lte("delivery_date", toDate)
+        .select(selectCols)
+        .gte(dateField, fromBound)
+        .lte(dateField, toBound)
         .in("status", ["submitted", "processing"]);
       if (e1) throw e1;
 
-      const { data: undated, error: e2 } = await supabase
-        .from("sales_orders")
-        .select("id, order_number, store_id, delivery_date, status, stores(store_name)")
-        .is("delivery_date", null)
-        .in("status", ["submitted", "processing"]);
-      if (e2) throw e2;
+      let undated: any[] = [];
+      if (dateField === "delivery_date") {
+        const { data, error: e2 } = await supabase
+          .from("sales_orders")
+          .select(selectCols)
+          .is("delivery_date", null)
+          .in("status", ["submitted", "processing"]);
+        if (e2) throw e2;
+        undated = data || [];
+      }
 
-      const orders = [...(dated || []), ...(undated || [])];
+      const orders = [...(dated || []), ...undated];
       if (orders.length === 0) {
         return {
           orders: [],
