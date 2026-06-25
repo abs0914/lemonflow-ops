@@ -785,6 +785,7 @@ export default function PurchaseOrderDetail() {
                   <TableHead className="w-12">#</TableHead>
                   <TableHead>Item</TableHead>
                   <TableHead>SKU</TableHead>
+                  <TableHead className="text-right">Stock On Hand</TableHead>
                   <TableHead className="text-right">Ordered</TableHead>
                   <TableHead className="text-right">Received</TableHead>
                   <TableHead className="text-right">Unit Price</TableHead>
@@ -817,6 +818,9 @@ export default function PurchaseOrderDetail() {
                         <TableCell className="font-medium">{line.line_number}</TableCell>
                         <TableCell>{item?.name}</TableCell>
                         <TableCell className="font-mono text-sm">{item?.sku}</TableCell>
+                        <TableCell className="text-right">
+                          {Number((item as any)?.stock_quantity ?? 0)} {item?.unit || ""}
+                        </TableCell>
                         <TableCell className="text-right">{line.quantity}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
@@ -848,7 +852,7 @@ export default function PurchaseOrderDetail() {
                           <TableCell className="text-sm text-muted-foreground">
                             {dateFormatters.short(receipt.created_at)}
                           </TableCell>
-                          <TableCell colSpan={3} className="text-sm text-muted-foreground">
+                          <TableCell colSpan={4} className="text-sm text-muted-foreground">
                             by {receipt.performer_name}
                           </TableCell>
                         </TableRow>

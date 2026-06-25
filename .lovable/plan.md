@@ -1,55 +1,18 @@
+## Goal
+Add a new column to the Purchase Order Detail "Line Items" table showing the current inventory quantity (stock on hand) for each line's item.
 
-# Production Tracking & Report
+## Changes
 
-Add per-ingredient actual-used tracking to production logs, allow later adjustments, and surface a Daily Production Report grouped by produced item.
+**1. `src/hooks/usePurchaseOrders.ts` — `usePurchaseOrderLines`**
+Extend the joined selects to include `stock_quantity`:
+- `components(id, sku, name, unit, autocount_item_code, stock_quantity)`
+- `raw_materials(id, sku, name, unit, autocount_item_code, stock_quantity)`
 
-## 1. Production Log — Capture Actual Used at Log Time
+**2. `src/pages/PurchaseOrderDetail.tsx` — Line Items table**
+- Add a new `<TableHead className="text-right">Stock On Hand</TableHead>` column after **SKU** (before **Ordered**).
+- In each row, render `{item?.stock_quantity ?? 0}` with the item's UOM, e.g. `120 pcs`.
+- Update the expanded-receipts `colSpan` values so the sub-rows still align (the row currently spans 9 columns; new total becomes 10).
 
-Update the "Log Production" / "Complete Assembly" form so that after picking the produced item and quantity, the BOM expands into an editable table:
-
-| Ingredient | SKU | Expected (BOM × qty) | Actual Used | Variance |
-
-- Expected is auto-calculated from `bom_items.quantity × produced_qty`.
-- Actual defaults to Expected; user can override per row.
-- On submit, the backend consumes the **actual** quantity (not expected) from inventory.
-
-## 2. Post-Log Adjustment
-
-From the Production page, each log gets an "Adjust" action that opens the same ingredient table pre-filled with whatever was consumed last time. Saving creates a delta stock movement per changed line, restoring or deducting stock to match the new actual.
-
-Allowed roles: Production, Warehouse, Admin (matches `log_production` permissions).
-
-## 3. Daily Production Report
-
-New page **Reports → Production** showing one row per produced item per day:
-
-| Date | Item | SKU | Qty Produced | Material | Expected | Actual Used | Variance | Variance % |
-
-- Default range: last 7 days, with date-range picker.
-- Filters: produced item, material, role-aware (Admin/Production/Warehouse/CEO see all; others hidden from menu).
-- Export to CSV.
-- Click a row to drill into the underlying production logs.
-
-## Technical Details
-
-### Database (migration)
-- Extend `log_production(p_item_type, p_item_id, p_quantity, p_notes, p_product_id, p_parent_raw_material_id, **p_actual_consumption jsonb DEFAULT NULL**)`.
-  - `p_actual_consumption` shape: `[{ "item_type": "raw_material"|"component", "item_id": "uuid", "quantity": number }, ...]`.
-  - When provided, override the BOM-computed `v_required` for matching rows; missing rows fall back to BOM expected.
-  - Pre-flight availability check uses the actual qty.
-  - Each `assembly_consume` stock_movement already links to the produce movement via `reference_id` — keep that linkage; add `expected_quantity` to `notes` (JSON) so we can compare without a new column, OR add nullable column `stock_movements.expected_quantity numeric` (cleaner — preferred).
-- New RPC `adjust_production_consumption(p_produce_movement_id uuid, p_adjustments jsonb)`:
-  - Verifies caller role (Admin/Warehouse/Production).
-  - For each adjustment, finds the existing `assembly_consume` movement for that produce + item, computes delta = new_actual − current_actual, inserts a new `movement_type='assembly_adjust'` row with the delta (negative consumes more, positive returns stock), and updates the inventory table accordingly.
-  - Add `'assembly_adjust'` to allowed `movement_type` values (it already accepts free-form text — confirm no CHECK constraint blocks it; if so, extend it).
-- All new SQL ships in one migration; no new tables required.
-
-### Frontend
-- `src/components/production/LogProductionDialog.tsx` (or current form): add the BOM ingredients editable table; on submit pass `p_actual_consumption` array.
-- New `src/components/production/AdjustConsumptionDialog.tsx`: opened from each row in the production logs list; calls `adjust_production_consumption` RPC.
-- New page `src/pages/reports/ProductionReport.tsx` + route entry, with filters, table, CSV export. Add a "Production" tab/card to the existing Reports hub and gate visibility by role.
-- Data source for the report: join `stock_movements` (produce + linked consume rows) with `components`/`raw_materials`/`products`/`user_profiles`, group by date and produced item.
-
-### Out of scope
-- No changes to AutoCount sync rules (produce remains synced to AutoCount, raw-material consumption stays local — same as today).
-- No new pricing/costing recompute; report shows quantities only.
+## Notes
+- Uses the local `stock_quantity` field already on `components` / `raw_materials` (same source used by other inventory views in the app). Per project memory, AutoCount remains the source of truth and is reconciled by the 5-min background sync, so this column reflects the latest synced balance without any new network calls.
+- Display-only; no business logic, mutations, or schema changes.
