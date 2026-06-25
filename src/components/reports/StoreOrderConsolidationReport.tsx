@@ -244,30 +244,71 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
 
   const handleCSV = () => {
     const rows: (string | number)[][] = [
-      ["Delivery Date", "# Stores", "# Orders", "Item Code", "Item Name", "Orders", "UOM", "Unit Cost", "Released Qty", "On-hand", "Balance", "Subtotal"],
+      [
+        "Delivery Date",
+        "Row Type",
+        "Item Code",
+        "Item Name",
+        "UOM",
+        "Order #",
+        "Store",
+        "Unit Cost",
+        "Qty",
+        "Subtotal",
+        "On-hand",
+        "Balance",
+        "# Stores (Item)",
+        "# Orders (Item)",
+      ],
     ];
     for (const g of groups) {
-      for (const item of Array.from(g.items.values()).sort((a, b) => a.item_code.localeCompare(b.item_code))) {
+      const items = Array.from(g.items.values()).sort((a, b) => a.item_code.localeCompare(b.item_code));
+      for (const item of items) {
+        const orderEntries = Array.from(item.orders.values()).sort((a, b) =>
+          a.order_number.localeCompare(b.order_number),
+        );
+        const itemSubtotal = item.unit_cost == null ? "" : item.unit_cost * item.released_qty;
         const variance = item.on_hand == null ? "" : item.on_hand - item.released_qty;
-        const ordersStr = Array.from(item.orders.values())
-          .sort((a, b) => a.order_number.localeCompare(b.order_number))
-          .map((o) => `${o.order_number} (${o.qty})`)
-          .join("; ");
-        const subtotal = item.unit_cost == null ? "" : item.unit_cost * item.released_qty;
+        const itemStoreCount = new Set(orderEntries.map((o) => o.store_name)).size;
+
+        // Aggregated item-level row
         rows.push([
           g.delivery_date || "Unscheduled",
-          g.store_ids.size,
-          g.order_ids.size,
+          "ITEM TOTAL",
           item.item_code,
           item.item_name,
-          ordersStr,
           item.uom,
+          "",
+          "",
           item.unit_cost == null ? "N/A" : item.unit_cost,
           item.released_qty,
+          itemSubtotal,
           item.on_hand == null ? "N/A" : item.on_hand,
           variance,
-          subtotal,
+          itemStoreCount,
+          orderEntries.length,
         ]);
+
+        // Per-order breakdown rows
+        for (const o of orderEntries) {
+          const lineSubtotal = item.unit_cost == null ? "" : item.unit_cost * o.qty;
+          rows.push([
+            g.delivery_date || "Unscheduled",
+            "Order Line",
+            item.item_code,
+            item.item_name,
+            item.uom,
+            o.order_number,
+            o.store_name,
+            item.unit_cost == null ? "N/A" : item.unit_cost,
+            o.qty,
+            lineSubtotal,
+            "",
+            "",
+            "",
+            "",
+          ]);
+        }
       }
     }
     const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
