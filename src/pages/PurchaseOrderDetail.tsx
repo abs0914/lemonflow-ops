@@ -625,13 +625,13 @@ export default function PurchaseOrderDetail() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">PO Date</p>
-                  <p className="font-medium">{dateFormatters.short(purchaseOrder.doc_date)}</p>
+                  <p className="font-medium">{dateFormatters.usShort(purchaseOrder.doc_date)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Delivery Date</p>
                   <p className="font-medium">
                     {purchaseOrder.delivery_date
-                      ? dateFormatters.short(purchaseOrder.delivery_date)
+                      ? dateFormatters.usShort(purchaseOrder.delivery_date)
                       : "—"}
                   </p>
                 </div>
