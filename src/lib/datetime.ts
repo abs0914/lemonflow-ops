@@ -43,6 +43,9 @@ export function formatDateTime(
 export const dateFormatters = {
   /** Short date: 26/01/2025 */
   short: (date: Date | string | number) => formatDate(date, 'dd/MM/yyyy'),
+
+  /** US short date: 01/26/2025 */
+  usShort: (date: Date | string | number) => formatDate(date, 'MM/dd/yyyy'),
   
   /** Medium date: Jan 26, 2025 */
   medium: (date: Date | string | number) => formatDate(date, 'MMM dd, yyyy'),
