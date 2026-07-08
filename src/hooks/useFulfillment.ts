@@ -51,7 +51,7 @@ export function useFulfillmentConsolidation(fromDate: string, toDate: string) {
         .select("id, order_number, stores(store_name)")
         .gte("delivery_date", fromDate)
         .lte("delivery_date", toDate)
-        .in("status", ["submitted", "processing"]);
+        .in("status", ["submitted", "processing", "completed", "issues"]);
 
       if (rangeError) throw rangeError;
 
