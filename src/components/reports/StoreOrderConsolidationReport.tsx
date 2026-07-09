@@ -56,12 +56,13 @@ function useStoreOrderConsolidation(fromDate: string, toDate: string, dateField:
       const fromBound = isTimestamp ? `${fromDate}T00:00:00` : fromDate;
       const toBound = isTimestamp ? `${toDate}T23:59:59.999` : toDate;
 
+      const STATUSES = ["submitted", "processing", "completed", "issues"];
       const { data: dated, error: e1 } = await supabase
         .from("sales_orders")
         .select(selectCols)
         .gte(dateField, fromBound)
         .lte(dateField, toBound)
-        .in("status", ["submitted", "processing"]);
+        .in("status", STATUSES);
       if (e1) throw e1;
 
       let undated: any[] = [];
@@ -70,7 +71,7 @@ function useStoreOrderConsolidation(fromDate: string, toDate: string, dateField:
           .from("sales_orders")
           .select(selectCols)
           .is("delivery_date", null)
-          .in("status", ["submitted", "processing"]);
+          .in("status", STATUSES);
         if (e2) throw e2;
         undated = data || [];
       }
