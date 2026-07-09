@@ -56,12 +56,13 @@ function useStoreOrderConsolidation(fromDate: string, toDate: string, dateField:
       const fromBound = isTimestamp ? `${fromDate}T00:00:00` : fromDate;
       const toBound = isTimestamp ? `${toDate}T23:59:59.999` : toDate;
 
+      const STATUSES = ["submitted", "processing", "completed", "issues"];
       const { data: dated, error: e1 } = await supabase
         .from("sales_orders")
         .select(selectCols)
         .gte(dateField, fromBound)
         .lte(dateField, toBound)
-        .in("status", ["submitted", "processing"]);
+        .in("status", STATUSES);
       if (e1) throw e1;
 
       let undated: any[] = [];
@@ -70,7 +71,7 @@ function useStoreOrderConsolidation(fromDate: string, toDate: string, dateField:
           .from("sales_orders")
           .select(selectCols)
           .is("delivery_date", null)
-          .in("status", ["submitted", "processing"]);
+          .in("status", STATUSES);
         if (e2) throw e2;
         undated = data || [];
       }
@@ -414,7 +415,7 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
         </div>
       </div>
       <p className="text-xs text-muted-foreground">
-        Filtering by <strong>{dateField === "delivery_date" ? "delivery date" : dateField === "submitted_at" ? "submitted date" : "created date"}</strong> using the range above. Showing orders in <strong>submitted</strong> / <strong>processing</strong>.
+        Filtering by <strong>{dateField === "delivery_date" ? "delivery date" : dateField === "submitted_at" ? "submitted date" : "created date"}</strong> using the range above. Showing orders in <strong>submitted</strong>, <strong>processing</strong>, <strong>completed</strong>, and <strong>issues</strong>.
         On-hand is from local inventory and may differ from AutoCount in real time. Unit cost is the value set on the inventory master.
       </p>
 
