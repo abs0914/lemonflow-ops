@@ -417,7 +417,7 @@ export default function PurchasingCreate() {
                           </div>
                           <div className="space-y-1">
                             <Label className="text-xs">Unit Price</Label>
-                            <Input type="number" min="0" step="0.01" value={line.unit_price} onChange={e => updateLine(index, "unit_price", parseFloat(e.target.value) || 0)} className="h-8 text-sm" />
+                            <Input type="number" min="0" step="0.00001" value={line.unit_price} onChange={e => updateLine(index, "unit_price", parseFloat(e.target.value) || 0)} className="h-8 text-sm" />
                           </div>
                         </div>
                         <div className="flex items-center justify-between text-sm">
