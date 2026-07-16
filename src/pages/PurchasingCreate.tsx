@@ -453,7 +453,7 @@ export default function PurchasingCreate() {
                               <Input type="number" min="0" step="0.01" value={line.quantity} onChange={e => updateLine(index, "quantity", parseFloat(e.target.value) || 0)} className="w-full" />
                             </TableCell>
                             <TableCell>
-                              <Input type="number" min="0" step="0.01" value={line.unit_price} onChange={e => updateLine(index, "unit_price", parseFloat(e.target.value) || 0)} className="w-full" />
+                              <Input type="number" min="0" step="0.00001" value={line.unit_price} onChange={e => updateLine(index, "unit_price", parseFloat(e.target.value) || 0)} className="w-full" />
                             </TableCell>
                             <TableCell>{line.uom}</TableCell>
                             <TableCell className="font-medium">
