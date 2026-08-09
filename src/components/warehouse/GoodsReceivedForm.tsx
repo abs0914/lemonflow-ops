@@ -294,7 +294,7 @@ export function GoodsReceivedForm() {
                 className="w-full"
                 disabled={!quantityReceived || grnMutation.isPending}
               >
-                {grnMutation.isPending ? "Recording..." : "Record GRN & Sync to AutoCount"}
+                {grnMutation.isPending ? "Recording..." : "Record GRN"}
               </Button>
             </>
           )}
