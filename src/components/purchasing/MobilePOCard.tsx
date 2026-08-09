@@ -45,9 +45,6 @@ export function MobilePOCard({ order, onClick }: MobilePOCardProps) {
             <Badge variant={getStatusVariant(order.status)} className="text-xs">
               {order.status === 'partially_received' ? 'Partial' : order.status === 'received' ? 'Received' : order.status.charAt(0).toUpperCase() + order.status.slice(1)}
             </Badge>
-            <Badge variant={order.autocount_synced ? "default" : "outline"} className="text-xs">
-              {order.autocount_synced ? "Synced" : "Not Synced"}
-            </Badge>
           </div>
         </div>
         <MobileDataRow label="PO Number" value={order.po_number} />

@@ -46,7 +46,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { AutoSyncStatusIndicator } from "@/components/AutoSyncStatusIndicator";
 import {
   Collapsible,
   CollapsibleContent,
@@ -334,7 +333,6 @@ export function AppSidebar() {
       <SidebarFooter className="border-t border-sidebar-border p-1 space-y-1">
         {profile?.role === "Admin" && state === "expanded" && (
           <div className="px-1">
-            <AutoSyncStatusIndicator />
           </div>
         )}
         {state === "expanded" ? (

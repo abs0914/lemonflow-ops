@@ -51,9 +51,6 @@ export function MobileSupplierCard({ supplier, onEdit, onDelete }: MobileSupplie
             <Badge variant={supplier.is_active ? "default" : "secondary"} className="text-xs">
               {supplier.is_active ? "Active" : "Inactive"}
             </Badge>
-            <Badge variant={supplier.autocount_synced ? "default" : "outline"} className="text-xs">
-              {supplier.autocount_synced ? "Synced" : "Not Synced"}
-            </Badge>
           </div>
         </div>
         <MobileDataRow label="Code" value={supplier.supplier_code} />
