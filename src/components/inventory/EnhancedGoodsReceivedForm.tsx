@@ -338,73 +338,13 @@ export function EnhancedGoodsReceivedForm({ preselectedPOId }: EnhancedGoodsRece
         }
       }
 
-      // Sync each movement to AutoCount
-      const syncFailures: { itemName: string; message: string }[] = [];
-      const syncedDocNos: string[] = [];
-
-      for (const line of selectedLines) {
-        const itemId = line.item_type === "raw_material"
-          ? line.raw_material_id
-          : line.component_id;
-        const itemName =
-          line.item_type === "raw_material"
-            ? line.raw_materials?.name || "Unknown raw material"
-            : line.components?.name || "Unknown component";
-
-        try {
-          const { data, error } = await supabase.functions.invoke("sync-grn-to-autocount", {
-            body: {
-              purchaseOrderId: selectedPO,
-              itemId,
-              itemType: line.item_type,
-              quantity: parseFloat(line.quantityReceived || "0"),
-              batchNumber: line.batchNumber || null,
-              warehouseLocation,
-            },
-          });
-
-          if (error || data?.success === false) {
-            console.error("AutoCount sync error for line:", line.id, error, data);
-            syncFailures.push({
-              itemName,
-              message: (data?.error as string) || error?.message || "Unknown sync error",
-            });
-          } else if (data?.docNo) {
-            syncedDocNos.push(data.docNo as string);
-          }
-        } catch (syncError: any) {
-          console.error("AutoCount sync error for line:", line.id, syncError);
-          syncFailures.push({
-            itemName,
-            message: syncError?.message || "Sync request failed",
-          });
-        }
-      }
-
-      return {
-        count: selectedLines.length,
-        syncSuccessCount: selectedLines.length - syncFailures.length,
-        syncFailures,
-        syncedDocNos,
-      };
+      return { count: selectedLines.length };
     },
-    onSuccess: ({ count, syncSuccessCount, syncFailures, syncedDocNos }) => {
-      if (syncFailures.length > 0) {
-        const names = syncFailures.slice(0, 3).map((f) => f.itemName).join(", ");
-        const more = syncFailures.length > 3 ? ` and ${syncFailures.length - 3} more` : "";
-        toast({
-          title: `Received ${count} item(s) locally — AutoCount sync failed for ${syncFailures.length}`,
-          description: `Failed: ${names}${more}`,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Goods Received",
-          description: syncedDocNos.length > 0
-            ? `Received and synced ${syncSuccessCount} item(s) to AutoCount (${syncedDocNos.join(", ")})`
-            : `${count} item(s) received and recorded successfully.`,
-        });
-      }
+    onSuccess: ({ count }) => {
+      toast({
+        title: "Goods Received",
+        description: `${count} item(s) received and recorded successfully.`,
+      });
 
       // Reset form
       setSelectedPO("");
