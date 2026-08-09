@@ -44,7 +44,6 @@ interface InventoryFormData {
   price: number;
   stock_control: boolean;
   has_batch_no: boolean;
-  sync_to_autocount: boolean;
   visible_in_store_orders: boolean;
 }
 
@@ -52,7 +51,7 @@ export function AddInventoryDialog({ open, onOpenChange, isRawMaterial = false }
   const { toast } = useToast();
   const { profile } = useAuth();
   const queryClient = useQueryClient();
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [isSyncing] = useState(false);
   const [isLoadingCode, setIsLoadingCode] = useState(false);
   
   const {
@@ -66,7 +65,6 @@ export function AddInventoryDialog({ open, onOpenChange, isRawMaterial = false }
     defaultValues: {
       stock_control: true,
       has_batch_no: false,
-      sync_to_autocount: true,
       visible_in_store_orders: false,
       unit: "unit",
       item_type: "CONSUMABLE",
@@ -76,7 +74,6 @@ export function AddInventoryDialog({ open, onOpenChange, isRawMaterial = false }
     },
   });
 
-  const syncToAutocount = watch("sync_to_autocount");
 
   // Auto-generate item code when dialog opens
   useEffect(() => {
@@ -119,7 +116,7 @@ export function AddInventoryDialog({ open, onOpenChange, isRawMaterial = false }
         .from(tableName)
         .insert({
           sku: data.sku,
-          autocount_item_code: data.sku, // Set AutoCount item code to same as SKU
+          autocount_item_code: data.sku,
           name: data.name,
           description: data.description || null,
           item_group: data.item_group || null,
@@ -137,47 +134,6 @@ export function AddInventoryDialog({ open, onOpenChange, isRawMaterial = false }
 
       if (insertError) throw insertError;
 
-      // Sync to AutoCount if requested (only for components, not raw materials)
-      if (data.sync_to_autocount && !isRawMaterial) {
-        setIsSyncing(true);
-        
-        const { data: syncResult, error: syncError } = await supabase.functions.invoke(
-          "create-autocount-item",
-          {
-            body: {
-              itemCode: data.sku, // Use the generated TLCXXXXX code
-              description: data.name,
-              itemGroup: data.item_group,
-              itemType: data.item_type,
-              baseUom: data.unit,
-              stockControl: data.stock_control,
-              hasBatchNo: data.has_batch_no,
-              standardCost: data.cost_per_unit,
-              price: data.price,
-            },
-          }
-        );
-
-        if (syncError) {
-          console.error("AutoCount sync error:", syncError);
-          toast({
-            title: "Item created but sync failed",
-            description: "Item was created in inventory but could not be synced to AutoCount",
-            variant: "destructive",
-          });
-        } else {
-          // Update last_synced_at timestamp
-          await supabase
-            .from(tableName)
-            .update({
-              last_synced_at: new Date().toISOString(),
-            })
-            .eq("id", newItem.id);
-        }
-        
-        setIsSyncing(false);
-      }
-
       return newItem;
     },
     onSuccess: () => {
@@ -190,8 +146,6 @@ export function AddInventoryDialog({ open, onOpenChange, isRawMaterial = false }
         title: "Item Created",
         description: isRawMaterial
           ? "Raw material created successfully"
-          : syncToAutocount
-          ? "Item created and synced to AutoCount successfully"
           : "Item created in inventory successfully",
       });
       
@@ -220,8 +174,8 @@ export function AddInventoryDialog({ open, onOpenChange, isRawMaterial = false }
           </DialogTitle>
           <DialogDescription>
             {isRawMaterial
-              ? "Create a new raw material for production (local only, not synced to AutoCount)"
-              : "Create a new inventory item. Optionally sync it to AutoCount."}
+              ? "Create a new raw material for production"
+              : "Create a new inventory item."}
           </DialogDescription>
         </DialogHeader>
 
@@ -386,20 +340,6 @@ export function AddInventoryDialog({ open, onOpenChange, isRawMaterial = false }
             )}
 
 
-            {!isRawMaterial && profile?.role === "Admin" && (
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="sync_to_autocount"
-                  checked={watch("sync_to_autocount")}
-                  onCheckedChange={(checked) =>
-                    setValue("sync_to_autocount", checked as boolean)
-                  }
-                />
-                <Label htmlFor="sync_to_autocount" className="font-normal cursor-pointer">
-                  Sync to AutoCount
-                </Label>
-              </div>
-            )}
           </div>
 
           <DialogFooter>
