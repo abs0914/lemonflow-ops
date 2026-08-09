@@ -29,7 +29,6 @@ export default function PurchaseOrderDetail() {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showReceiveDialog, setShowReceiveDialog] = useState(false);
   const [showPrintView, setShowPrintView] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [isUploadingProof, setIsUploadingProof] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { profile, hasRole } = useAuth();
@@ -90,65 +89,6 @@ export default function PurchaseOrderDetail() {
     enabled: !!purchaseOrder?.cash_returned_to,
   });
 
-  const syncToAutocountMutation = useMutation({
-    mutationFn: async () => {
-      if (!purchaseOrder || !lines) throw new Error("PO data not loaded");
-      
-      // Cash Purchase POs with raw materials should not sync to AutoCount
-      if (purchaseOrder.is_cash_purchase) {
-        throw new Error("Cash Purchase POs cannot be synced to AutoCount. Raw materials are local-only.");
-      }
-      
-      setIsSyncing(true);
-      
-      const { data, error } = await supabase.functions.invoke("sync-po-create", {
-        body: {
-          poNumber: purchaseOrder.po_number,
-          supplierId: purchaseOrder.supplier_id,
-          docDate: purchaseOrder.doc_date,
-          deliveryDate: purchaseOrder.delivery_date,
-          remarks: purchaseOrder.remarks,
-          lines: lines.map((line) => {
-            const item = line.item_type === 'raw_material' ? line.raw_materials : line.components;
-            return {
-              itemCode: item?.autocount_item_code || item?.sku || "",
-              description: item?.name || "",
-              quantity: line.quantity,
-              unitPrice: line.unit_price,
-              uom: line.uom,
-              lineRemarks: line.line_remarks,
-            };
-          }),
-        },
-      });
-
-      if (error) throw error;
-      
-      // Update PO with AutoCount doc number
-      const { error: updateError } = await supabase
-        .from("purchase_orders")
-        .update({
-          autocount_synced: true,
-          autocount_doc_no: data.docNo,
-        })
-        .eq("id", id);
-
-      if (updateError) throw updateError;
-
-      setIsSyncing(false);
-      return data;
-    },
-    onSuccess: () => {
-      toast.success("Successfully synced to AutoCount");
-      queryClient.invalidateQueries({ queryKey: ["purchase-order", id] });
-      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
-    },
-    onError: (error) => {
-      setIsSyncing(false);
-      toast.error(`Failed to sync to AutoCount: ${error.message}`);
-    },
-  });
-
   const updateStatusMutation = useMutation({
     mutationFn: async (status: string) => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -191,47 +131,6 @@ export default function PurchaseOrderDetail() {
           });
       }
 
-      // Auto-sync to AutoCount when approved (non-cash purchases only)
-      if (status === "approved" && !purchaseOrder?.is_cash_purchase && !purchaseOrder?.autocount_synced) {
-        setIsSyncing(true);
-        
-        const { data: syncData, error: syncError } = await supabase.functions.invoke("sync-po-create", {
-          body: {
-            poNumber: purchaseOrder.po_number,
-            supplierId: purchaseOrder.supplier_id,
-            docDate: purchaseOrder.doc_date,
-            deliveryDate: purchaseOrder.delivery_date,
-            remarks: purchaseOrder.remarks,
-            lines: lines?.map((line) => {
-              const item = line.item_type === 'raw_material' ? line.raw_materials : line.components;
-              return {
-                itemCode: item?.autocount_item_code || item?.sku || "",
-                description: item?.name || "",
-                quantity: line.quantity,
-                unitPrice: line.unit_price,
-                uom: line.uom,
-                lineRemarks: line.line_remarks,
-              };
-            }) || [],
-          },
-        });
-
-        if (!syncError && syncData) {
-          // Update PO with AutoCount doc number
-          await supabase
-            .from("purchase_orders")
-            .update({
-              autocount_synced: true,
-              autocount_doc_no: syncData.docNo,
-            })
-            .eq("id", id);
-        } else {
-          console.error("AutoCount sync failed:", syncError);
-          toast.error("PO approved but failed to sync to AutoCount. You can retry manually.");
-        }
-
-        setIsSyncing(false);
-      }
     },
     onSuccess: () => {
       toast.success("Status updated successfully");
@@ -273,24 +172,6 @@ export default function PurchaseOrderDetail() {
           }
         });
 
-      // Sync to AutoCount if it was synced
-      if (purchaseOrder?.autocount_synced) {
-        setIsSyncing(true);
-        
-        const { error: syncError } = await supabase.functions.invoke("sync-po-cancel", {
-          body: {
-            poNumber: purchaseOrder.po_number,
-            autocountDocNo: purchaseOrder.autocount_doc_no,
-          },
-        });
-
-        setIsSyncing(false);
-
-        if (syncError) {
-          console.error("AutoCount cancel error:", syncError);
-          toast.error("PO cancelled locally but failed to sync to AutoCount");
-        }
-      }
     },
     onSuccess: () => {
       toast.success("Purchase order cancelled");
@@ -309,24 +190,6 @@ export default function PurchaseOrderDetail() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // If PO was synced to AutoCount, cancel it there first
-      if (purchaseOrder?.autocount_synced && purchaseOrder?.autocount_doc_no && !purchaseOrder?.is_cash_purchase) {
-        try {
-          const { error: cancelError } = await supabase.functions.invoke("sync-po-cancel", {
-            body: { 
-              poNumber: purchaseOrder.po_number,
-              autocountDocNo: purchaseOrder.autocount_doc_no 
-            },
-          });
-          if (cancelError) {
-            console.error("Failed to cancel in AutoCount:", cancelError);
-            toast.warning("PO will be deleted locally, but AutoCount cancellation failed");
-          }
-        } catch (err) {
-          console.error("AutoCount cancel error:", err);
-        }
-      }
-      
       // Delete lines first
       const { error: linesError } = await supabase
         .from("purchase_order_lines")
@@ -349,7 +212,6 @@ export default function PurchaseOrderDetail() {
         entity_id: id,
         details: { 
           po_number: purchaseOrder?.po_number,
-          autocount_cancelled: purchaseOrder?.autocount_synced && purchaseOrder?.autocount_doc_no ? true : false
         },
       });
     },
@@ -522,10 +384,10 @@ export default function PurchaseOrderDetail() {
               <>
                 <Button
                   onClick={() => updateStatusMutation.mutate("approved")}
-                  disabled={updateStatusMutation.isPending || isSyncing}
+                  disabled={updateStatusMutation.isPending}
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  {isSyncing ? "Approving & Syncing..." : "Approve"}
+                  Approve
                 </Button>
                 <Button
                   variant="outline"
@@ -546,16 +408,6 @@ export default function PurchaseOrderDetail() {
                   <Printer className="h-4 w-4 mr-2" />
                   Print PO (2 Copies)
                 </Button>
-                {!purchaseOrder.autocount_synced && !purchaseOrder.is_cash_purchase && (
-                  <Button
-                    variant="outline"
-                    onClick={() => syncToAutocountMutation.mutate()}
-                    disabled={isSyncing || syncToAutocountMutation.isPending}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    {isSyncing ? "Syncing..." : "Sync to AutoCount"}
-                  </Button>
-                )}
                 {canUploadProof && (
                   <>
                     <input
@@ -694,21 +546,6 @@ export default function PurchaseOrderDetail() {
               <div>
                 <p className="text-sm text-muted-foreground">Supplier Code</p>
                 <p className="font-medium font-mono">{purchaseOrder.suppliers?.supplier_code}</p>
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">AutoCount Status</p>
-                  <Badge variant={purchaseOrder.autocount_synced ? "default" : "outline"} className="mt-1">
-                    {purchaseOrder.autocount_synced ? "Synced" : "Not Synced"}
-                  </Badge>
-                </div>
-                {purchaseOrder.autocount_doc_no && (
-                  <div className="text-right">
-                    <p className="text-sm text-muted-foreground">Doc No</p>
-                    <p className="font-medium font-mono">{purchaseOrder.autocount_doc_no}</p>
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -919,7 +756,6 @@ export default function PurchaseOrderDetail() {
               <AlertDialogTitle>Cancel Purchase Order</AlertDialogTitle>
               <AlertDialogDescription>
                 Are you sure you want to cancel this purchase order? 
-                {purchaseOrder.autocount_synced && " This will also cancel it in AutoCount."}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -927,9 +763,9 @@ export default function PurchaseOrderDetail() {
               <AlertDialogAction
                 onClick={() => cancelPOMutation.mutate()}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                disabled={cancelPOMutation.isPending || isSyncing}
+                disabled={cancelPOMutation.isPending}
               >
-                {cancelPOMutation.isPending || isSyncing ? "Cancelling..." : "Yes, Cancel PO"}
+                {cancelPOMutation.isPending ? "Cancelling..." : "Yes, Cancel PO"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
