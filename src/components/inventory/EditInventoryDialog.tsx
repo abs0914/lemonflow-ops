@@ -52,7 +52,6 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
   const { toast } = useToast();
   const { profile } = useAuth();
   const queryClient = useQueryClient();
-  const [isSyncing] = useState(false);
   
   const {
     register,
@@ -342,18 +341,18 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={updateItemMutation.isPending || isSyncing}
+              disabled={updateItemMutation.isPending}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={updateItemMutation.isPending || isSyncing}
+              disabled={updateItemMutation.isPending}
             >
-              {(updateItemMutation.isPending || isSyncing) && (
+              {updateItemMutation.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              {isSyncing ? "Syncing..." : "Update Item"}
+              Update Item
             </Button>
           </DialogFooter>
         </form>

@@ -51,7 +51,6 @@ export function AddInventoryDialog({ open, onOpenChange, isRawMaterial = false }
   const { toast } = useToast();
   const { profile } = useAuth();
   const queryClient = useQueryClient();
-  const [isSyncing] = useState(false);
   const [isLoadingCode, setIsLoadingCode] = useState(false);
   
   const {
@@ -350,18 +349,18 @@ export function AddInventoryDialog({ open, onOpenChange, isRawMaterial = false }
                 reset();
                 onOpenChange(false);
               }}
-              disabled={createItemMutation.isPending || isSyncing}
+              disabled={createItemMutation.isPending}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={createItemMutation.isPending || isSyncing}
+              disabled={createItemMutation.isPending}
             >
-              {(createItemMutation.isPending || isSyncing) && (
+              {createItemMutation.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              {isSyncing ? "Syncing..." : "Create Item"}
+              Create Item
             </Button>
           </DialogFooter>
         </form>
