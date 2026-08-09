@@ -30,7 +30,6 @@ interface FulfillmentOrderActionsProps {
     status: string;
     delivery_date?: string;
     delivery_fee?: number;
-    autocount_synced?: boolean;
     stores?: {
       store_name?: string;
       store_type?: string;
@@ -181,7 +180,7 @@ export function FulfillmentOrderActions({
                 ) : (
                   <CheckCircle className="mr-2 h-4 w-4" />
                 )}
-                Approve & Sync
+                Approve Order
               </Button>
               <Button
                 variant="outline"
@@ -288,7 +287,6 @@ export function FulfillmentOrderActions({
               Are you sure you want to approve this order with delivery date{" "}
               <strong>{deliveryDate ? format(deliveryDate, "PPP") : ""}</strong> and delivery price{" "}
               <strong>₱{deliveryFee.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</strong>?
-              This will sync the order to AutoCount.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
