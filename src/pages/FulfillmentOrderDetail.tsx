@@ -54,19 +54,6 @@ export default function FulfillmentOrderDetail() {
     }
 
     try {
-      setIsSyncing(true);
-
-      // For own stores, proceed with AutoCount sync directly
-      const { data, error } = await supabase.functions.invoke("sync-sales-order", {
-        body: { salesOrderId: order.id },
-      });
-
-      if (error) throw error;
-
-      if (!data?.success) {
-        throw new Error(data?.error || "Sync failed");
-      }
-
       await updateMutation.mutateAsync({
         id: order.id,
         updates: {
@@ -75,20 +62,16 @@ export default function FulfillmentOrderDetail() {
           delivery_fee: deliveryFee,
           approved_by: user.id,
           approved_at: new Date().toISOString(),
-          autocount_synced: true,
-          autocount_doc_no: data?.documentNo || order.autocount_doc_no,
-          synced_at: new Date().toISOString(),
         },
       });
 
-      toast.success("Order approved and synced to AutoCount");
+      toast.success("Order approved");
       refetch();
     } catch (error: any) {
       toast.error(`Failed to approve: ${error.message}`);
-    } finally {
-      setIsSyncing(false);
     }
   };
+
 
   const handleRejectOrder = async (reason: string) => {
     if (!order) return;
