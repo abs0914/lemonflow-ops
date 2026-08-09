@@ -8,8 +8,6 @@ import { InventoryTable } from "@/components/inventory/InventoryTable";
 import { InventoryFilters } from "@/components/inventory/InventoryFilters";
 import { MobileInventoryCard } from "@/components/inventory/MobileInventoryCard";
 import { StockAdjustmentDialog } from "@/components/inventory/StockAdjustmentDialog";
-import { SyncInventoryDialog } from "@/components/inventory/SyncInventoryDialog";
-import { PushInventoryDialog } from "@/components/inventory/PushInventoryDialog";
 import { DeleteInventoryDialog } from "@/components/inventory/DeleteInventoryDialog";
 import { AddInventoryDialog } from "@/components/inventory/AddInventoryDialog";
 import { EditInventoryDialog } from "@/components/inventory/EditInventoryDialog";
@@ -38,8 +36,6 @@ export default function Inventory() {
   const [itemTypeFilter, setItemTypeFilter] = useState<string>("all");
   const [stockStatusFilter, setStockStatusFilter] = useState<string>("all");
   const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false);
-  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
-  const [pushDialogOpen, setPushDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
@@ -248,9 +244,9 @@ export default function Inventory() {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between px-[30px] py-[21px]">
           <div>
-            <h1 className="text-3xl font-bold">AutoCount Inventory</h1>
+            <h1 className="text-3xl font-bold">Inventory</h1>
             <p className="text-muted-foreground mt-2">
-              View and manage inventory synced from AutoCount
+              View and manage inventory items
             </p>
           </div>
           {!isMobile && (
@@ -267,18 +263,6 @@ export default function Inventory() {
                 <Upload className="mr-2 h-4 w-4" />
                 Import
               </Button>
-              {profile?.role === "Admin" && (
-                <>
-                  <Button variant="outline" onClick={() => setSyncDialogOpen(true)}>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Pull from AutoCount
-                  </Button>
-                  <Button variant="outline" onClick={() => setPushDialogOpen(true)}>
-                    <Database className="mr-2 h-4 w-4" />
-                    Sync to AutoCount
-                  </Button>
-                </>
-              )}
             </div>
           )}
         </div>
@@ -386,18 +370,6 @@ export default function Inventory() {
               label: "Add Item",
               onClick: () => setAddDialogOpen(true)
             },
-            ...(profile?.role === "Admin" ? [
-              {
-                icon: RefreshCw,
-                label: "Pull from AutoCount",
-                onClick: () => setSyncDialogOpen(true)
-              },
-              {
-                icon: Database,
-                label: "Sync to AutoCount",
-                onClick: () => setPushDialogOpen(true)
-              }
-            ] : [])
           ]}
         />
       )}
@@ -416,18 +388,6 @@ export default function Inventory() {
           hasBatchNo={selectedComponent.has_batch_no}
         />
       )}
-
-      <SyncInventoryDialog
-        open={syncDialogOpen}
-        onOpenChange={setSyncDialogOpen}
-        onSyncComplete={handleSyncComplete}
-      />
-
-      <PushInventoryDialog
-        open={pushDialogOpen}
-        onOpenChange={setPushDialogOpen}
-        onPushComplete={handleSyncComplete}
-      />
 
       <AddInventoryDialog
         open={addDialogOpen}
