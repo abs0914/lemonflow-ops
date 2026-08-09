@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, FileText, Trash2, Edit, RefreshCw, Upload, Download, CheckCircle, Clock, Package } from "lucide-react";
+import { Plus, Search, FileText, Trash2, Edit, RefreshCw, CheckCircle, Clock, Package } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
