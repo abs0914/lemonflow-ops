@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, CheckCircle, XCircle, Printer, RefreshCw, Truck } from "lucide-react";
+import { ArrowLeft, CheckCircle, XCircle, Printer, Truck } from "lucide-react";
 import { useSalesOrder, useSalesOrderLines, useUpdateSalesOrder } from "@/hooks/useSalesOrders";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
@@ -34,7 +34,6 @@ export default function FulfillmentOrderDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, profile } = useAuth();
-  const [isSyncing, setIsSyncing] = useState(false);
   const [showDeliveryOrder, setShowDeliveryOrder] = useState(false);
   const [deliveryNotes, setDeliveryNotes] = useState("");
 
@@ -265,15 +264,6 @@ export default function FulfillmentOrderDetail() {
                   </div>
                 )}
 
-                {order.autocount_synced && (
-                  <div>
-                    <div className="text-sm text-muted-foreground mb-1">AutoCount Status</div>
-                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                      Synced - {order.autocount_doc_no}
-                    </Badge>
-                  </div>
-                )}
-
                 {order.cancellation_reason && (
                   <div>
                     <div className="text-sm text-muted-foreground mb-1">Cancellation Reason</div>
@@ -363,7 +353,7 @@ export default function FulfillmentOrderDetail() {
               onReject={handleRejectOrder}
               onComplete={handleCompleteOrder}
               onMarkWithIssues={handleMarkWithIssues}
-              isLoading={updateMutation.isPending || isSyncing}
+              isLoading={updateMutation.isPending}
             />
 
             {isProcessing && (
