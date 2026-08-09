@@ -318,7 +318,7 @@ export function CashPurchaseForm() {
               >
                 {cashPurchaseMutation.isPending
                   ? "Processing..."
-                  : "Record Cash Purchase & Sync to AutoCount"}
+                  : "Record Cash Purchase"}
               </Button>
             </>
           )}

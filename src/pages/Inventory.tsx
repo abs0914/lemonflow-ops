@@ -54,7 +54,7 @@ export default function Inventory() {
     return null;
   }
 
-  // Fetch components inventory data from AutoCount
+  // Fetch components inventory data
   const { data: components, isLoading, refetch } = useQuery({
     queryKey: ["inventory", searchTerm, itemGroupFilter, itemTypeFilter, stockStatusFilter],
     queryFn: async () => {
@@ -152,7 +152,7 @@ export default function Inventory() {
       return;
     }
 
-    const headers = ["SKU", "AutoCount Code", "Name", "Item Group", "Item Type", "Stock Qty", "Reserved", "Available", "Unit", "Price", "Cost Per Unit", "Low Stock Threshold"];
+    const headers = ["SKU", "Name", "Item Group", "Item Type", "Stock Qty", "Reserved", "Available", "Unit", "Price", "Cost Per Unit", "Low Stock Threshold"];
     const csvRows = [headers.join(",")];
 
     components.forEach((item) => {

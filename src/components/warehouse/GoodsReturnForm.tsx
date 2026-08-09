@@ -295,7 +295,7 @@ export function GoodsReturnForm() {
                 className="w-full"
                 disabled={!quantity || !selectedSupplier || !reason || returnMutation.isPending}
               >
-                {returnMutation.isPending ? "Processing..." : "Record Goods Return & Sync to AutoCount"}
+                {returnMutation.isPending ? "Processing..." : "Record Goods Return"}
               </Button>
             </>
           )}
