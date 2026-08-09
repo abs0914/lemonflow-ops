@@ -263,21 +263,8 @@ export default function StoreOrderDetail() {
                 </div>
               )}
 
-              {order.autocount_synced && (
-                <div>
-                  <div className="text-sm text-muted-foreground mb-1">AutoCount Status</div>
-                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                    Synced - {order.autocount_doc_no}
-                  </Badge>
-                </div>
-              )}
 
-              {order.sync_error_message && (
-                <div>
-                  <div className="text-sm text-muted-foreground mb-1">Sync Error</div>
-                  <div className="text-sm text-destructive">{order.sync_error_message}</div>
-                </div>
-              )}
+
 
               {order.status === "cancelled" && order.cancellation_reason && (
                 <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
