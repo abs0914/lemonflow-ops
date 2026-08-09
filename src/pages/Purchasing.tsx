@@ -82,24 +82,6 @@ export default function Purchasing() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // If PO was synced to AutoCount, cancel it there first
-      if (po.autocount_synced && po.autocount_doc_no && !po.is_cash_purchase) {
-        try {
-          const { error: cancelError } = await supabase.functions.invoke("sync-po-cancel", {
-            body: { 
-              poNumber: po.po_number,
-              autocountDocNo: po.autocount_doc_no 
-            },
-          });
-          if (cancelError) {
-            console.error("Failed to cancel in AutoCount:", cancelError);
-            toast.warning("PO will be deleted locally, but AutoCount cancellation failed");
-          }
-        } catch (err) {
-          console.error("AutoCount cancel error:", err);
-        }
-      }
-      
       // Delete lines first
       const { error: linesError } = await supabase
         .from("purchase_order_lines")
@@ -122,7 +104,6 @@ export default function Purchasing() {
         entity_id: po.id,
         details: { 
           po_number: po.po_number,
-          autocount_cancelled: po.autocount_synced && po.autocount_doc_no ? true : false
         },
       });
     },
@@ -136,85 +117,6 @@ export default function Purchasing() {
       toast.error(`Failed to delete: ${error.message}`);
     },
   });
-
-  const syncPOMutation = useMutation({
-    mutationFn: async (purchaseOrderId: string) => {
-      const { data, error } = await supabase.functions.invoke("push-po-to-autocount", {
-        body: { purchaseOrderId },
-      });
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
-      toast.success("Purchase order synced to AutoCount successfully");
-    },
-    onError: (error: Error) => {
-      toast.error(`Failed to sync to AutoCount: ${error.message}`);
-    },
-  });
-
-  const handleSyncAllToAutoCount = async () => {
-    const unsyncedOrders = filteredOrders?.filter(o => !o.autocount_synced) || [];
-    
-    if (unsyncedOrders.length === 0) {
-      toast.info("All purchase orders are already synced to AutoCount");
-      return;
-    }
-
-    toast.info(`Syncing ${unsyncedOrders.length} purchase order(s) to AutoCount...`);
-    
-    let successCount = 0;
-    let failCount = 0;
-
-    for (const order of unsyncedOrders) {
-      try {
-        await supabase.functions.invoke("push-po-to-autocount", {
-          body: { purchaseOrderId: order.id },
-        });
-        successCount++;
-      } catch (error) {
-        failCount++;
-        console.error(`Failed to sync PO ${order.po_number}:`, error);
-      }
-    }
-
-    queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
-
-    if (successCount > 0 && failCount === 0) {
-      toast.success(`Successfully synced ${successCount} PO(s) to AutoCount`);
-    } else if (successCount > 0 && failCount > 0) {
-      toast.warning(`Synced ${successCount} PO(s), ${failCount} failed`);
-    } else {
-      toast.error(`Failed to sync all POs`);
-    }
-  };
-
-  const handlePullFromAutoCount = async () => {
-    try {
-      toast.info("Pulling purchase orders from AutoCount...");
-      
-      const { data, error } = await supabase.functions.invoke("pull-po-from-autocount");
-      
-      if (error) throw error;
-      
-      if (data.summary.toCreate === 0 && data.summary.toUpdate === 0) {
-        toast.info("No new purchase orders to import from AutoCount");
-        return;
-      }
-      
-      // Execute the sync
-      const { data: execData, error: execError } = await supabase.functions.invoke("pull-po-execute");
-      
-      if (execError) throw execError;
-      
-      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
-      toast.success(`Imported ${execData.results.created} PO(s), updated ${execData.results.updated}`);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      toast.error(`Failed to pull from AutoCount: ${errorMessage}`);
-    }
-  };
 
   const handleDeleteClick = (order: PurchaseOrder) => {
     setPoToDelete(order);
@@ -245,26 +147,6 @@ export default function Purchasing() {
     return <Badge variant={variants[status] || "outline"}>{label}</Badge>;
   };
 
-  const getSyncStatusBadge = (order: any) => {
-    if (order.autocount_synced && order.autocount_doc_no) {
-      return (
-        <div className="flex flex-col gap-1">
-          <Badge variant="default" className="bg-green-600">Synced</Badge>
-          <span className="text-xs text-muted-foreground">Doc: {order.autocount_doc_no}</span>
-        </div>
-      );
-    }
-    if (order.sync_error_message) {
-      return (
-        <div className="flex flex-col gap-1">
-          <Badge variant="destructive">Failed</Badge>
-          <span className="text-xs text-destructive">{order.sync_error_message}</span>
-        </div>
-      );
-    }
-    return <Badge variant="outline">Not Synced</Badge>;
-  };
-  
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -291,24 +173,6 @@ export default function Purchasing() {
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Refresh
               </Button>
-              {profile?.role === "Admin" && (
-                <>
-                  <Button
-                    variant="outline"
-                    onClick={handlePullFromAutoCount}
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    Pull from AutoCount
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleSyncAllToAutoCount}
-                  >
-                    <Upload className="mr-2 h-4 w-4" />
-                    Sync to AutoCount
-                  </Button>
-                </>
-              )}
               <Button onClick={() => navigate("/purchasing/create")}>
                 <Plus className="mr-2 h-4 w-4" />
                 New Purchase Order
@@ -471,17 +335,6 @@ export default function Purchasing() {
                           <Button variant="outline" size="sm" onClick={() => navigate(`/purchasing/${order.id}`)}>
                             View
                           </Button>
-                          {!isFinanceUser && !order.autocount_synced && profile?.role === "Admin" && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => syncPOMutation.mutate(order.id)}
-                              disabled={syncPOMutation.isPending}
-                            >
-                              <Upload className="h-4 w-4 mr-1" />
-                              Sync
-                            </Button>
-                          )}
                           {!isFinanceUser && (order.status === "draft" || order.status === "submitted") && (
                             <>
                               <Button 
