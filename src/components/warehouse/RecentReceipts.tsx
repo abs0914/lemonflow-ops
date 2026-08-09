@@ -131,13 +131,6 @@ export function RecentReceipts() {
                         {formatDistanceToNow(new Date(receipt.created_at), { addSuffix: true })}
                       </span>
                     </TableCell>
-                    <TableCell>
-                      {receipt.autocount_synced ? (
-                        <Badge variant="default" className="text-xs">Synced</Badge>
-                      ) : (
-                        <Badge variant="secondary" className="text-xs">Pending</Badge>
-                      )}
-                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

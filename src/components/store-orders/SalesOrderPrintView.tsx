@@ -153,13 +153,6 @@ export function SalesOrderPrintView({ order, lines, mode, onClose }: SalesOrderP
               <strong>Debtor Code:</strong> {order.debtor_code}
             </p>
           </div>
-          <div>
-            {order.autocount_doc_no && (
-              <p style={{ fontSize: "0.875rem" }}>
-                <strong>AutoCount Doc:</strong> {order.autocount_doc_no}
-              </p>
-            )}
-          </div>
         </div>
 
         {/* Description */}

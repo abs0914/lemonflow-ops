@@ -159,7 +159,6 @@ export default function Inventory() {
       const available = item.stock_quantity - item.reserved_quantity;
       const row = [
         item.sku,
-        item.autocount_item_code || "",
         `"${(item.name || "").replace(/"/g, '""')}"`,
         item.item_group || "",
         item.item_type || "",
