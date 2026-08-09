@@ -33,7 +33,6 @@ export default function Production() {
   const queryClient = useQueryClient();
   const [showLogDialog, setShowLogDialog] = useState(false);
   const [editingLog, setEditingLog] = useState<ProductionLogData | null>(null);
-  const [retryingId, setRetryingId] = useState<string | null>(null);
   const [adjustingLog, setAdjustingLog] = useState<ProductionLog | null>(null);
 
   const { data: productionLogs, isLoading } = useProductionLogs();
@@ -293,6 +292,34 @@ export default function Production() {
       });
     },
   });
+
+  const handleEdit = (log: ProductionLog) => {
+    setEditingLog({
+      id: log.id,
+      item_id: log.item_id,
+      item_type: log.item_type,
+      quantity: log.quantity,
+      notes: log.notes,
+    });
+    setShowLogDialog(true);
+  };
+
+  const handleSubmit = (data: { component_id: string; item_type: "component" | "raw_material"; quantity: number; notes?: string; product_id?: string; parent_raw_material_id?: string; actual_consumption?: { item_id: string; item_type: "component" | "raw_material"; quantity: number }[] }) => {
+    if (editingLog) {
+      updateProductionMutation.mutate({
+        id: editingLog.id,
+        component_id: data.component_id,
+        item_type: data.item_type,
+        quantity: data.quantity,
+        oldQuantity: editingLog.quantity,
+        notes: data.notes,
+        product_id: data.product_id,
+        parent_raw_material_id: data.parent_raw_material_id,
+      });
+    } else {
+      logProductionMutation.mutate(data);
+    }
+  };
 
   const handleDialogClose = (open: boolean) => {
     setShowLogDialog(open);
