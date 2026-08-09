@@ -56,53 +56,6 @@ export default function StoreOrderDetail() {
     });
   };
 
-  const handleSyncToAutoCount = async () => {
-    if (!order) return;
-
-    setIsSyncing(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("sync-sales-order", {
-        body: { salesOrderId: order.id },
-      });
-
-      if (error) throw error;
-
-      if (data?.success) {
-        toast.success(`Order synced successfully! Doc: ${data.documentNo}`);
-        await updateMutation.mutateAsync({
-          id: order.id,
-          updates: {
-            autocount_synced: true,
-            autocount_doc_no: data.documentNo,
-            synced_at: new Date().toISOString(),
-            status: "processing",
-          },
-        });
-      } else {
-        throw new Error(data?.error || "Sync failed");
-      }
-    } catch (error: any) {
-      // Extract clean error message, stripping HTML if present
-      let errorMessage = error.message || "Unknown sync error";
-      if (errorMessage.includes("<!DOCTYPE") || errorMessage.includes("<html")) {
-        // Extract HTTP status if present, otherwise show generic message
-        const statusMatch = errorMessage.match(/(\d{3})\s*-?\s*<!DOCTYPE/);
-        errorMessage = statusMatch 
-          ? `AutoCount API error (HTTP ${statusMatch[1]}): The sales order endpoint may not be configured on the backend.`
-          : "AutoCount API error: Received invalid response from server. Please contact support.";
-      }
-      toast.error(`Sync failed: ${errorMessage}`);
-      await updateMutation.mutateAsync({
-        id: order.id,
-        updates: {
-          sync_error_message: errorMessage,
-        },
-      });
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
   const handleDeleteOrder = async () => {
     if (!order) return;
     await deleteMutation.mutateAsync(order.id);
@@ -133,7 +86,7 @@ export default function StoreOrderDetail() {
   const isDraft = order.status === "draft";
   const isSubmitted = order.status === "submitted";
   const isAwaitingProof = order.status === "awaiting_proof";
-  const canSync = isSubmitted && !order.autocount_synced;
+
   const canDeleteRoles = ["Admin", "Warehouse", "Fulfillment"];
   const canDelete = isDraft || (isSubmitted && profile?.role && canDeleteRoles.includes(profile.role));
 
