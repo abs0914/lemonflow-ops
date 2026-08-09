@@ -661,7 +661,7 @@ export function EnhancedGoodsReceivedForm({ preselectedPOId }: EnhancedGoodsRece
               ) : (
                 <>
                   <ClipboardCheck className="h-4 w-4 mr-2" />
-                  Receive {selectedCount} Item{selectedCount !== 1 ? "s" : ""} & Sync to AutoCount
+                  Receive {selectedCount} Item{selectedCount !== 1 ? "s" : ""}
                 </>
               )}
             </Button>
