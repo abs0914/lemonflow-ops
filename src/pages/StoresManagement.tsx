@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, Pencil, Trash2, Download } from "lucide-react";
+import { Plus, Search, Pencil, Trash2 } from "lucide-react";
 import { useStores, useDeleteStore } from "@/hooks/useStores";
 import { StoreDialog } from "@/components/stores/StoreDialog";
 import { Store } from "@/types/sales-order";
