@@ -203,15 +203,6 @@ export default function StoreOrderDetail() {
                 Delete
               </Button>
             )}
-            {canSync && profile?.role === "Admin" && (
-              <Button
-                onClick={handleSyncToAutoCount}
-                disabled={isSyncing || updateMutation.isPending}
-              >
-                <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
-                Sync to AutoCount
-              </Button>
-            )}
             <Button variant="outline" onClick={() => setPrintMode("print")}>
               <Printer className="mr-2 h-4 w-4" />
               Print
