@@ -114,7 +114,6 @@ export function RecentReceipts() {
                   <TableHead>Batch</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>Received</TableHead>
-                  <TableHead>Synced</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
