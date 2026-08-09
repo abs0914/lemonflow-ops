@@ -58,15 +58,6 @@ export default function IncomingInventory() {
 
       if (todayError) throw todayError;
 
-      // Get pending AutoCount syncs
-      const { count: pendingSyncs, error: syncError } = await supabase
-        .from("stock_movements")
-        .select("*", { count: "exact", head: true })
-        .eq("movement_type", "receipt")
-        .or("autocount_synced.is.null,autocount_synced.eq.false");
-
-      if (syncError) throw syncError;
-
       // Get total pending line items
       const { data: pendingLines, error: linesError } = await supabase
         .from("purchase_order_lines")
@@ -82,7 +73,6 @@ export default function IncomingInventory() {
         pendingPOs: pendingPOs?.length || 0,
         pendingItems: pendingLines?.length || 0,
         todayReceipts: todayReceipts || 0,
-        pendingSyncs: pendingSyncs || 0,
       };
     },
   });
@@ -140,16 +130,6 @@ export default function IncomingInventory() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Syncs</CardTitle>
-              <AlertCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-amber-600">{kpiData?.pendingSyncs || 0}</div>
-              <p className="text-xs text-muted-foreground">AutoCount sync pending</p>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Main Content Tabs */}
