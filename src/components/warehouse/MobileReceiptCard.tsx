@@ -60,14 +60,6 @@ export function MobileReceiptCard({ receipt }: MobileReceiptCardProps) {
             </div>
             <h3 className="font-semibold mt-1">{receipt.components?.name}</h3>
           </div>
-          {receipt.autocount_synced ? (
-            <Badge variant="default" className="gap-1">
-              <CheckCircle className="h-3 w-3" />
-              Synced
-            </Badge>
-          ) : (
-            <Badge variant="secondary">Pending</Badge>
-          )}
         </div>
 
         <div className="grid grid-cols-2 gap-4">

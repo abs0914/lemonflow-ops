@@ -11,10 +11,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, Pencil, Trash2, Download } from "lucide-react";
+import { Plus, Search, Pencil, Trash2 } from "lucide-react";
 import { useStores, useDeleteStore } from "@/hooks/useStores";
 import { StoreDialog } from "@/components/stores/StoreDialog";
-import { ImportDebtorsDialog } from "@/components/stores/ImportDebtorsDialog";
 import { Store } from "@/types/sales-order";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -36,7 +35,6 @@ export default function StoresManagement() {
   const [selectedStore, setSelectedStore] = useState<Store | undefined>();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [storeToDelete, setStoreToDelete] = useState<Store | null>(null);
-  const [showImportDialog, setShowImportDialog] = useState(false);
 
   const { data: stores, isLoading } = useStores();
   const deleteMutation = useDeleteStore();
@@ -86,14 +84,10 @@ export default function StoresManagement() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Stores Management</h1>
             <p className="text-muted-foreground">
-              Manage store records and their AutoCount integration
+              Manage store records
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setShowImportDialog(true)}>
-              <Download className="mr-2 h-4 w-4" />
-              Import from AutoCount
-            </Button>
             <Button onClick={() => setShowStoreDialog(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Add Store
@@ -190,11 +184,6 @@ export default function StoresManagement() {
         open={showStoreDialog}
         onOpenChange={handleDialogClose}
         store={selectedStore}
-      />
-
-      <ImportDebtorsDialog
-        open={showImportDialog}
-        onOpenChange={setShowImportDialog}
       />
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

@@ -43,16 +43,6 @@ export function MobileOrderCard({ order, onClick }: MobileOrderCardProps) {
             label="Total"
             value={`₱${order.total_amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`}
           />
-          {order.autocount_synced && (
-            <MobileDataRow
-              label="AutoCount"
-              value={
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                  {order.autocount_doc_no || "Synced"}
-                </Badge>
-              }
-            />
-          )}
         </div>
       </div>
     </MobileDataCard>

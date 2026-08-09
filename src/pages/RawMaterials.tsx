@@ -8,7 +8,6 @@ import { InventoryTable } from "@/components/inventory/InventoryTable";
 import { InventoryFilters } from "@/components/inventory/InventoryFilters";
 import { MobileInventoryCard } from "@/components/inventory/MobileInventoryCard";
 import { StockAdjustmentDialog } from "@/components/inventory/StockAdjustmentDialog";
-import { SyncInventoryDialog } from "@/components/inventory/SyncInventoryDialog";
 import { DeleteInventoryDialog } from "@/components/inventory/DeleteInventoryDialog";
 import { AddInventoryDialog } from "@/components/inventory/AddInventoryDialog";
 import { EditInventoryDialog } from "@/components/inventory/EditInventoryDialog";
@@ -35,7 +34,6 @@ export default function RawMaterials() {
   const [itemTypeFilter, setItemTypeFilter] = useState<string>("all");
   const [stockStatusFilter, setStockStatusFilter] = useState<string>("all");
   const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false);
-  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
@@ -225,7 +223,7 @@ export default function RawMaterials() {
           <div>
             <h1 className="text-3xl font-bold">Raw Materials Inventory</h1>
             <p className="text-muted-foreground mt-2">
-              Local raw materials for production and BOM assembly (not synced to AutoCount)
+              Local raw materials for production and BOM assembly
             </p>
           </div>
           {!isMobile && (

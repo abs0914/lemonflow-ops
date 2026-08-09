@@ -21,7 +21,6 @@ interface StockAdjustmentFormData {
   reason: string;
   location: string;
   batch_number: string;
-  sync_to_autocount: boolean;
 }
 
 interface StockAdjustmentDialogProps {
@@ -62,11 +61,9 @@ export function StockAdjustmentDialog({
       reason: "Stock Count",
       location: "MAIN",
       batch_number: "",
-      sync_to_autocount: itemType !== "raw_material",
     },
   });
 
-  const syncToAutocount = watch("sync_to_autocount");
 
   useEffect(() => {
     if (open) {
@@ -78,8 +75,7 @@ export function StockAdjustmentDialog({
         reason: "Stock Count",
         location: "MAIN",
         batch_number: "",
-        sync_to_autocount: itemType !== "raw_material",
-      });
+        });
     }
   }, [open, reset, itemType]);
 
@@ -115,7 +111,6 @@ export function StockAdjustmentDialog({
       if (movementError) throw movementError;
 
       // Update local on-hand stock immediately so the Inventory screen reflects the change
-      // (AutoCount sync does not push the latest balance back into our DB)
       const tableByType = {
         product: "products",
         component: "components",
@@ -150,55 +145,6 @@ export function StockAdjustmentDialog({
       if (stockUpdateError) throw stockUpdateError;
 
 
-      // Sync to AutoCount if requested
-      if (data.sync_to_autocount) {
-        setIsSyncing(true);
-        
-        let adjustmentType: "IN" | "OUT" | "SET" = "IN";
-        if (currentMovementType === "issue") {
-          adjustmentType = "OUT";
-        } else if (currentMovementType === "adjustment") {
-          adjustmentType = "SET";
-        }
-
-        const { error: syncError } = await supabase.functions.invoke(
-          "sync-stock-adjustment",
-          {
-            body: {
-              itemCode: itemSku,
-              location: data.location,
-              adjustmentType: adjustmentType,
-              quantity: currentMovementType === "adjustment" ? parseFloat(data.quantity) : Math.abs(quantity),
-              uom: itemUnit,
-              description: itemName,
-              batchNumber: data.batch_number || undefined,
-              reason: data.reason,
-            },
-          }
-        );
-
-        if (syncError) {
-          console.error("AutoCount sync error:", syncError);
-          
-          // Check if it's a 404 error (item doesn't exist in AutoCount)
-          const errorMessage = syncError.message || '';
-          if (errorMessage.includes('does not exist in AutoCount')) {
-            toast({
-              title: "Item not found in AutoCount",
-              description: errorMessage,
-              variant: "destructive",
-            });
-          } else {
-            toast({
-              title: "Stock adjusted but sync failed",
-              description: "Stock was updated locally but could not be synced to AutoCount",
-              variant: "destructive",
-            });
-          }
-        }
-        
-        setIsSyncing(false);
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
@@ -206,10 +152,7 @@ export function StockAdjustmentDialog({
       queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "inventory" });
       queryClient.invalidateQueries({ queryKey: ["raw-materials"] });
       queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
-      toast({ 
-        title: "Stock updated successfully",
-        description: syncToAutocount ? "Changes synced to AutoCount" : undefined
-      });
+      toast({ title: "Stock updated successfully" });
       submittingRef.current = false;
       onOpenChange(false);
     },
@@ -325,20 +268,6 @@ export function StockAdjustmentDialog({
         />
       </div>
 
-      {itemType !== "raw_material" && profile?.role === "Admin" && (
-        <div className="flex items-center space-x-2 pt-2">
-          <Checkbox
-            id="sync_to_autocount"
-            checked={watch("sync_to_autocount")}
-            onCheckedChange={(checked) =>
-              setValue("sync_to_autocount", checked as boolean)
-            }
-          />
-          <Label htmlFor="sync_to_autocount" className="font-normal cursor-pointer">
-            Sync to AutoCount
-          </Label>
-        </div>
-      )}
 
       <div className="flex justify-end gap-2">
         <Button 

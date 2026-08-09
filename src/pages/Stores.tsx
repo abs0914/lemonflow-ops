@@ -11,11 +11,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, Pencil, Trash2, Download, Upload, RefreshCw, CheckCircle2, XCircle } from "lucide-react";
+import { Plus, Search, Pencil, Trash2 } from "lucide-react";
 import { useStores, useDeleteStore } from "@/hooks/useStores";
 import { StoreDialog } from "@/components/stores/StoreDialog";
-import { ImportDebtorsDialog } from "@/components/stores/ImportDebtorsDialog";
-import { SyncErrorsDialog } from "@/components/stores/SyncErrorsDialog";
 import { Store } from "@/types/sales-order";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -32,25 +30,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
-interface SyncResult {
-  success: boolean;
-  synced: number;
-  total: number;
-  errors?: { store: string; storeCode: string; error: string; operation: string }[];
-}
-
 export default function Stores() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showStoreDialog, setShowStoreDialog] = useState(false);
   const [selectedStore, setSelectedStore] = useState<Store | undefined>();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [storeToDelete, setStoreToDelete] = useState<Store | null>(null);
-  const [showImportDialog, setShowImportDialog] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [isPulling, setIsPulling] = useState(false);
-  const [syncingStoreId, setSyncingStoreId] = useState<string | null>(null);
-  const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
-  const [showSyncResultDialog, setShowSyncResultDialog] = useState(false);
 
   const { data: stores, isLoading, refetch } = useStores();
   const deleteMutation = useDeleteStore();
@@ -89,74 +74,6 @@ export default function Stores() {
     }
   };
 
-  const handleSyncToAutoCount = async (storeId?: string) => {
-    if (storeId) {
-      setSyncingStoreId(storeId);
-    } else {
-      setIsSyncing(true);
-    }
-    
-    try {
-      const body = storeId ? { storeId } : {};
-      const { data, error } = await supabase.functions.invoke('push-store-to-autocount', { body });
-      
-      if (error) throw error;
-      
-      const result: SyncResult = {
-        success: data?.success ?? false,
-        synced: data?.synced ?? 0,
-        total: data?.total ?? 0,
-        errors: data?.errors,
-      };
-      
-      if (result.success) {
-        toast.success(`Successfully synced ${result.synced} store(s) to AutoCount`);
-      } else if (result.synced > 0) {
-        toast.warning(`Synced ${result.synced} of ${result.total} stores. ${result.errors?.length || 0} failed.`);
-        setSyncResult(result);
-        setShowSyncResultDialog(true);
-      } else {
-        toast.error(`Failed to sync stores. Click for details.`);
-        setSyncResult(result);
-        setShowSyncResultDialog(true);
-      }
-      
-      refetch();
-    } catch (error: any) {
-      console.error('Sync error:', error);
-      toast.error(error.message || 'Failed to sync stores to AutoCount');
-    } finally {
-      setIsSyncing(false);
-      setSyncingStoreId(null);
-    }
-  };
-
-  const handlePullFromAutoCount = async () => {
-    setIsPulling(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('sync-debtors-execute');
-      
-      if (error) throw error;
-      
-      if (data?.success) {
-        const created = data.results?.created ?? data.created ?? 0;
-        const updated = data.results?.updated ?? data.updated ?? 0;
-        toast.success(`Pulled stores from AutoCount (${created} new, ${updated} updated)`);
-      } else {
-        toast.error(data?.error || 'Failed to pull stores from AutoCount');
-      }
-      
-      refetch();
-    } catch (error: any) {
-      console.error('Pull error:', error);
-      toast.error(error.message || 'Failed to pull stores from AutoCount');
-    } finally {
-      setIsPulling(false);
-    }
-  };
-
-  const unsyncedCount = stores?.filter(s => !s.autocount_synced).length || 0;
-
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -164,22 +81,10 @@ export default function Stores() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Stores</h1>
             <p className="text-muted-foreground">
-              Manage store/customer records with AutoCount sync
+              Manage store/customer records
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <Button variant="outline" onClick={handlePullFromAutoCount} disabled={isPulling}>
-              <Download className={`mr-2 h-4 w-4 ${isPulling ? 'animate-spin' : ''}`} />
-              {isPulling ? 'Pulling...' : 'Pull from AutoCount'}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleSyncToAutoCount()}
-              disabled={isSyncing || unsyncedCount === 0}
-            >
-              <Upload className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-              {isSyncing ? 'Syncing...' : `Sync to AutoCount${unsyncedCount > 0 ? ` (${unsyncedCount})` : ''}`}
-            </Button>
             <Button onClick={() => setShowStoreDialog(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Add Store
@@ -220,7 +125,6 @@ export default function Stores() {
                   <TableHead>Debtor Code</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Sync Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -246,37 +150,8 @@ export default function Stores() {
                         {store.is_active ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      {store.autocount_synced ? (
-                        <div className="flex items-center gap-1">
-                          <CheckCircle2 className="h-4 w-4 text-primary" />
-                          <span className="text-sm text-primary">Synced</span>
-                          {store.last_synced_at && (
-                            <span className="text-xs text-muted-foreground ml-1">
-                              {format(new Date(store.last_synced_at), 'MMM d, HH:mm')}
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1">
-                          <XCircle className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">Not Synced</span>
-                        </div>
-                      )}
-                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        {!store.autocount_synced && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleSyncToAutoCount(store.id)}
-                            disabled={syncingStoreId === store.id}
-                            title="Sync to AutoCount"
-                          >
-                            <RefreshCw className={`h-4 w-4 ${syncingStoreId === store.id ? 'animate-spin' : ''}`} />
-                          </Button>
-                        )}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -308,10 +183,8 @@ export default function Stores() {
         store={selectedStore}
       />
 
-      <ImportDebtorsDialog
-        open={showImportDialog}
-        onOpenChange={setShowImportDialog}
-      />
+
+
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
@@ -334,11 +207,6 @@ export default function Stores() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <SyncErrorsDialog
-        open={showSyncResultDialog}
-        onOpenChange={setShowSyncResultDialog}
-        result={syncResult}
-      />
     </DashboardLayout>
   );
 }

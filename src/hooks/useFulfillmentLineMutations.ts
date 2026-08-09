@@ -68,7 +68,7 @@ export function useFulfillmentLineMutations(orderId: string) {
     mutationFn: async (input: { lineId: string; quantity: number; unit_price: number; reason: string }) => {
       const { data: order } = await supabase
         .from("sales_orders")
-        .select("status, stock_reserved, autocount_synced")
+        .select("status, stock_reserved")
         .eq("id", orderId)
         .single();
 
@@ -94,9 +94,6 @@ export function useFulfillmentLineMutations(orderId: string) {
         before: { item_code: before?.item_code, quantity: before?.quantity, unit_price: before?.unit_price, sub_total: before?.sub_total },
         after: { item_code: before?.item_code, quantity: input.quantity, unit_price: input.unit_price, sub_total },
       });
-      if (order?.autocount_synced) {
-        toast.warning("Order is already synced to AutoCount — please update it there manually.");
-      }
     },
     onSuccess: () => { invalidate(); toast.success("Line updated"); },
     onError: (e: Error) => toast.error(`Failed: ${e.message}`),
@@ -106,7 +103,7 @@ export function useFulfillmentLineMutations(orderId: string) {
     mutationFn: async (input: { lineId: string; reason: string }) => {
       const { data: order } = await supabase
         .from("sales_orders")
-        .select("status, stock_reserved, autocount_synced")
+        .select("status, stock_reserved")
         .eq("id", orderId)
         .single();
 
@@ -130,9 +127,6 @@ export function useFulfillmentLineMutations(orderId: string) {
         reason: input.reason,
         before: { item_code: before?.item_code, item_name: before?.item_name, quantity: before?.quantity, unit_price: before?.unit_price, sub_total: before?.sub_total },
       });
-      if (order?.autocount_synced) {
-        toast.warning("Order is already synced to AutoCount — please update it there manually.");
-      }
     },
     onSuccess: () => { invalidate(); toast.success("Line removed"); },
     onError: (e: Error) => toast.error(`Failed: ${e.message}`),
@@ -142,7 +136,7 @@ export function useFulfillmentLineMutations(orderId: string) {
     mutationFn: async (input: { line: NewLineInput; reason: string }) => {
       const { data: order } = await supabase
         .from("sales_orders")
-        .select("status, stock_reserved, autocount_synced")
+        .select("status, stock_reserved")
         .eq("id", orderId)
         .single();
 
@@ -167,9 +161,6 @@ export function useFulfillmentLineMutations(orderId: string) {
         reason: input.reason,
         after: { item_code: input.line.item_code, item_name: input.line.item_name, quantity: input.line.quantity, unit_price: input.line.unit_price, sub_total: input.line.sub_total },
       });
-      if (order?.autocount_synced) {
-        toast.warning("Order is already synced to AutoCount — please update it there manually.");
-      }
     },
     onSuccess: () => { invalidate(); toast.success("Item added"); },
     onError: (e: Error) => toast.error(`Failed: ${e.message}`),

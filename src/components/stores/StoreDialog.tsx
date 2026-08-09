@@ -77,42 +77,8 @@ export function StoreDialog({ open, onOpenChange, store }: StoreDialogProps) {
   const createMutation = useCreateStore();
   const updateMutation = useUpdateStore();
   const { data: existingStores } = useStores();
-  const [isSyncing, setIsSyncing] = useState(false);
   const [generatedCode, setGeneratedCode] = useState("");
 
-  const handleSyncToAutoCount = async () => {
-    if (!store) return;
-    
-    setIsSyncing(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error("You must be logged in to sync");
-        return;
-      }
-
-      const { data, error } = await supabase.functions.invoke("push-store-to-autocount", {
-        body: { storeId: store.id },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (error) throw error;
-
-      if (data?.success) {
-        toast.success("Store synced to AutoCount successfully");
-        // Invalidate queries to refresh data
-        window.location.reload();
-      } else {
-        throw new Error(data?.error || "Sync failed");
-      }
-    } catch (error: any) {
-      toast.error(`Sync failed: ${error.message}`);
-    } finally {
-      setIsSyncing(false);
-    }
-  };
 
   const form = useForm<StoreFormData>({
     resolver: zodResolver(storeSchema),
@@ -190,37 +156,7 @@ export function StoreDialog({ open, onOpenChange, store }: StoreDialogProps) {
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle>{store ? "Edit Store" : "Add New Store"}</DialogTitle>
-            {store && (
-              <div className="flex items-center gap-2">
-                {store.autocount_synced ? (
-                  <Badge variant="outline" className="text-green-600 border-green-600">
-                    <Check className="h-3 w-3 mr-1" />
-                    Synced
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="text-orange-600 border-orange-600">
-                    <AlertCircle className="h-3 w-3 mr-1" />
-                    Not Synced
-                  </Badge>
-                )}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSyncToAutoCount}
-                  disabled={isSyncing}
-                >
-                  <RefreshCw className={`h-4 w-4 mr-1 ${isSyncing ? 'animate-spin' : ''}`} />
-                  {isSyncing ? 'Syncing...' : 'Sync to AutoCount'}
-                </Button>
-              </div>
-            )}
           </div>
-          {store?.last_synced_at && (
-            <p className="text-xs text-muted-foreground">
-              Last synced: {new Date(store.last_synced_at).toLocaleString()}
-            </p>
-          )}
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -247,7 +183,7 @@ export function StoreDialog({ open, onOpenChange, store }: StoreDialogProps) {
               <Input
                 id="debtor_code"
                 {...form.register("debtor_code")}
-                placeholder="AutoCount debtor code"
+                placeholder="Debtor code"
                 disabled={!store} // Read-only for new stores (same as store_code)
                 className={!store ? "bg-muted" : ""}
               />

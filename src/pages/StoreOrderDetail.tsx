@@ -4,7 +4,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Trash2, Send, RefreshCw, Upload, Image, Printer, Download } from "lucide-react";
+import { ArrowLeft, Trash2, Send, Upload, Image, Printer, Download } from "lucide-react";
 import { SalesOrderPrintView } from "@/components/store-orders/SalesOrderPrintView";
 import { useSalesOrder, useSalesOrderLines, useUpdateSalesOrder, useDeleteSalesOrder } from "@/hooks/useSalesOrders";
 import { DeleteOrderDialog } from "@/components/store-orders/DeleteOrderDialog";
@@ -34,7 +34,6 @@ export default function StoreOrderDetail() {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [isUploadingProof, setIsUploadingProof] = useState(false);
   const [printMode, setPrintMode] = useState<"print" | "download" | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -54,53 +53,6 @@ export default function StoreOrderDetail() {
         submitted_at: new Date().toISOString(),
       },
     });
-  };
-
-  const handleSyncToAutoCount = async () => {
-    if (!order) return;
-
-    setIsSyncing(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("sync-sales-order", {
-        body: { salesOrderId: order.id },
-      });
-
-      if (error) throw error;
-
-      if (data?.success) {
-        toast.success(`Order synced successfully! Doc: ${data.documentNo}`);
-        await updateMutation.mutateAsync({
-          id: order.id,
-          updates: {
-            autocount_synced: true,
-            autocount_doc_no: data.documentNo,
-            synced_at: new Date().toISOString(),
-            status: "processing",
-          },
-        });
-      } else {
-        throw new Error(data?.error || "Sync failed");
-      }
-    } catch (error: any) {
-      // Extract clean error message, stripping HTML if present
-      let errorMessage = error.message || "Unknown sync error";
-      if (errorMessage.includes("<!DOCTYPE") || errorMessage.includes("<html")) {
-        // Extract HTTP status if present, otherwise show generic message
-        const statusMatch = errorMessage.match(/(\d{3})\s*-?\s*<!DOCTYPE/);
-        errorMessage = statusMatch 
-          ? `AutoCount API error (HTTP ${statusMatch[1]}): The sales order endpoint may not be configured on the backend.`
-          : "AutoCount API error: Received invalid response from server. Please contact support.";
-      }
-      toast.error(`Sync failed: ${errorMessage}`);
-      await updateMutation.mutateAsync({
-        id: order.id,
-        updates: {
-          sync_error_message: errorMessage,
-        },
-      });
-    } finally {
-      setIsSyncing(false);
-    }
   };
 
   const handleDeleteOrder = async () => {
@@ -133,7 +85,7 @@ export default function StoreOrderDetail() {
   const isDraft = order.status === "draft";
   const isSubmitted = order.status === "submitted";
   const isAwaitingProof = order.status === "awaiting_proof";
-  const canSync = isSubmitted && !order.autocount_synced;
+
   const canDeleteRoles = ["Admin", "Warehouse", "Fulfillment"];
   const canDelete = isDraft || (isSubmitted && profile?.role && canDeleteRoles.includes(profile.role));
 
@@ -203,15 +155,6 @@ export default function StoreOrderDetail() {
                 Delete
               </Button>
             )}
-            {canSync && profile?.role === "Admin" && (
-              <Button
-                onClick={handleSyncToAutoCount}
-                disabled={isSyncing || updateMutation.isPending}
-              >
-                <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
-                Sync to AutoCount
-              </Button>
-            )}
             <Button variant="outline" onClick={() => setPrintMode("print")}>
               <Printer className="mr-2 h-4 w-4" />
               Print
@@ -263,21 +206,8 @@ export default function StoreOrderDetail() {
                 </div>
               )}
 
-              {order.autocount_synced && (
-                <div>
-                  <div className="text-sm text-muted-foreground mb-1">AutoCount Status</div>
-                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                    Synced - {order.autocount_doc_no}
-                  </Badge>
-                </div>
-              )}
 
-              {order.sync_error_message && (
-                <div>
-                  <div className="text-sm text-muted-foreground mb-1">Sync Error</div>
-                  <div className="text-sm text-destructive">{order.sync_error_message}</div>
-                </div>
-              )}
+
 
               {order.status === "cancelled" && order.cancellation_reason && (
                 <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">

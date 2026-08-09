@@ -68,21 +68,6 @@ export default function StoreOrders() {
     </Badge>
   );
 
-  const getSyncBadge = (synced: boolean, docNo?: string) => {
-    if (synced) {
-      return (
-        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-          {docNo || "Synced"}
-        </Badge>
-      );
-    }
-    return (
-      <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200">
-        Pending
-      </Badge>
-    );
-  };
-
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -171,7 +156,6 @@ export default function StoreOrders() {
                       <SortableTableHead sortKey="doc_date" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Date</SortableTableHead>
                       <SortableTableHead sortKey="status" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>Status</SortableTableHead>
                       <SortableTableHead sortKey="total_amount" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort} className="text-right">Total</SortableTableHead>
-                      <SortableTableHead sortKey="autocount_synced" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>AutoCount</SortableTableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -188,7 +172,6 @@ export default function StoreOrders() {
                         <TableCell className="text-right">
                           ₱{order.total_amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
                         </TableCell>
-                        <TableCell>{getSyncBadge(order.autocount_synced, order.autocount_doc_no)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

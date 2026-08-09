@@ -416,7 +416,7 @@ export function StoreOrderConsolidationReport({ dateRange }: Props) {
       </div>
       <p className="text-xs text-muted-foreground">
         Filtering by <strong>{dateField === "delivery_date" ? "delivery date" : dateField === "submitted_at" ? "submitted date" : "created date"}</strong> using the range above. Showing orders in <strong>submitted</strong>, <strong>processing</strong>, <strong>completed</strong>, and <strong>issues</strong>.
-        On-hand is from local inventory and may differ from AutoCount in real time. Unit cost is the value set on the inventory master.
+        On-hand is from local inventory. Unit cost is the value set on the inventory master.
       </p>
 
 

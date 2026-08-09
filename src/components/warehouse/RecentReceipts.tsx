@@ -114,7 +114,6 @@ export function RecentReceipts() {
                   <TableHead>Batch</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>Received</TableHead>
-                  <TableHead>Synced</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -130,13 +129,6 @@ export function RecentReceipts() {
                       <span className="text-xs text-muted-foreground">
                         {formatDistanceToNow(new Date(receipt.created_at), { addSuffix: true })}
                       </span>
-                    </TableCell>
-                    <TableCell>
-                      {receipt.autocount_synced ? (
-                        <Badge variant="default" className="text-xs">Synced</Badge>
-                      ) : (
-                        <Badge variant="secondary" className="text-xs">Pending</Badge>
-                      )}
                     </TableCell>
                   </TableRow>
                 ))}

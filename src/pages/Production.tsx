@@ -33,7 +33,6 @@ export default function Production() {
   const queryClient = useQueryClient();
   const [showLogDialog, setShowLogDialog] = useState(false);
   const [editingLog, setEditingLog] = useState<ProductionLogData | null>(null);
-  const [retryingId, setRetryingId] = useState<string | null>(null);
   const [adjustingLog, setAdjustingLog] = useState<ProductionLog | null>(null);
 
   const { data: productionLogs, isLoading } = useProductionLogs();
@@ -101,33 +100,6 @@ export default function Production() {
         raw_material_id: string | null;
         consumed_movement_ids?: string[];
       };
-
-      // AutoCount sync for component output only
-      if (data.item_type === "component" && result.component_id) {
-        try {
-          const { error: syncError } = await supabase.functions.invoke(
-            "sync-production-complete",
-            {
-              body: {
-                movement_id: result.movement_id,
-                component_id: result.component_id,
-                quantity: data.quantity,
-              },
-            }
-          );
-          if (syncError) {
-            console.error("AutoCount sync failed:", syncError);
-            toast({
-              title: "Production logged but sync failed",
-              description:
-                "Production was recorded locally but failed to sync to AutoCount.",
-              variant: "destructive",
-            });
-          }
-        } catch (syncError) {
-          console.error("AutoCount sync error:", syncError);
-        }
-      }
 
       return {
         id: result.movement_id,
@@ -321,40 +293,6 @@ export default function Production() {
     },
   });
 
-  const retrySyncMutation = useMutation({
-    mutationFn: async (movementId: string) => {
-      setRetryingId(movementId);
-      const { data, error } = await supabase.functions.invoke("retry-failed-sync", {
-        body: { 
-          reference_id: movementId,
-          sync_type: "production_complete"
-        },
-      });
-
-      if (error) throw error;
-      if (!data?.success) throw new Error(data?.error || "Retry failed");
-
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["production-logs"] });
-      queryClient.invalidateQueries({ queryKey: ["sync-logs"] });
-      toast({
-        title: "Sync retry successful",
-        description: "Production has been synced to AutoCount.",
-      });
-      setRetryingId(null);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Retry failed",
-        description: error.message,
-        variant: "destructive",
-      });
-      setRetryingId(null);
-    },
-  });
-
   const handleEdit = (log: ProductionLog) => {
     setEditingLog({
       id: log.id,
@@ -390,7 +328,6 @@ export default function Production() {
     }
   };
 
-  const pendingSyncCount = productionLogs?.filter(log => !log.autocount_synced).length || 0;
 
   return (
     <DashboardLayout>
@@ -431,24 +368,6 @@ export default function Production() {
                         <div>
                           <p className="font-medium">{log.components?.name || "Unknown"}</p>
                           <p className="text-xs text-muted-foreground">{log.components?.sku || "N/A"}</p>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {log.autocount_synced ? (
-                            <Badge variant="default">Synced</Badge>
-                          ) : (
-                            <>
-                              <Badge variant="secondary">Pending</Badge>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-6 w-6"
-                                onClick={() => retrySyncMutation.mutate(log.id)}
-                                disabled={retryingId === log.id}
-                              >
-                                <RefreshCw className={`h-3 w-3 ${retryingId === log.id ? "animate-spin" : ""}`} />
-                              </Button>
-                            </>
-                          )}
                         </div>
                       </div>
                       <div className="flex items-center justify-between text-sm">
@@ -495,7 +414,6 @@ export default function Production() {
                         <TableHead>SKU</TableHead>
                         <TableHead>Quantity</TableHead>
                         <TableHead>Logged By</TableHead>
-                        <TableHead>Sync Status</TableHead>
                         <TableHead>Notes</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
@@ -513,31 +431,6 @@ export default function Production() {
                           <TableCell>{log.quantity}</TableCell>
                           <TableCell>
                             {log.user_profiles?.full_name || "Unknown"}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              {log.autocount_synced ? (
-                                <Badge variant="default">Synced</Badge>
-                              ) : (
-                                <>
-                                  <Badge variant="secondary">Pending</Badge>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        className="h-6 w-6"
-                                        onClick={() => retrySyncMutation.mutate(log.id)}
-                                        disabled={retryingId === log.id}
-                                      >
-                                        <RefreshCw className={`h-3 w-3 ${retryingId === log.id ? "animate-spin" : ""}`} />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Retry sync</TooltipContent>
-                                  </Tooltip>
-                                </>
-                              )}
-                            </div>
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {log.notes || "-"}

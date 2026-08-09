@@ -24,36 +24,6 @@ export function MobileInventoryCard({ component, onAdjustStock, onDelete }: Mobi
     return <Badge variant="secondary">In Stock</Badge>;
   };
 
-  const getSyncStatusBadge = (lastSyncedAt: string | null) => {
-    if (!lastSyncedAt) {
-      return (
-        <Badge variant="outline" className="gap-1">
-          <XCircle className="h-3 w-3" />
-          Not Synced
-        </Badge>
-      );
-    }
-
-    const syncDate = new Date(lastSyncedAt);
-    const hoursSinceSync = (Date.now() - syncDate.getTime()) / (1000 * 60 * 60);
-
-    if (hoursSinceSync < 24) {
-      return (
-        <Badge variant="default" className="gap-1 bg-green-600 hover:bg-green-700">
-          <CheckCircle2 className="h-3 w-3" />
-          Synced
-        </Badge>
-      );
-    } else {
-      return (
-        <Badge variant="secondary" className="gap-1">
-          <Clock className="h-3 w-3" />
-          Synced
-        </Badge>
-      );
-    }
-  };
-
   const actions = (
     <div className="flex gap-2">
       <Button
@@ -97,13 +67,6 @@ export function MobileInventoryCard({ component, onAdjustStock, onDelete }: Mobi
       {component.description && (
         <MobileDataRow label="Description" value={component.description} />
       )}
-      <MobileDataRow 
-        label="Last Synced" 
-        value={component.last_synced_at 
-          ? formatDistanceToNow(new Date(component.last_synced_at), { addSuffix: true })
-          : "Never"
-        } 
-      />
       <div className="flex gap-2 flex-wrap">
         {component.stock_control && (
           <Badge variant="outline">Stock Control</Badge>
@@ -134,14 +97,13 @@ export function MobileInventoryCard({ component, onAdjustStock, onDelete }: Mobi
             <div className="flex items-center gap-2">
               <Package className="h-4 w-4 text-muted-foreground" />
               <span className="font-medium text-sm text-muted-foreground">
-                {component.autocount_item_code || component.sku}
+                {component.sku}
               </span>
             </div>
             <h3 className="font-semibold mt-1">{component.name}</h3>
           </div>
           <div className="flex flex-col gap-2 items-end">
             {getStockStatusBadge(available)}
-            {getSyncStatusBadge(component.last_synced_at)}
           </div>
         </div>
 
