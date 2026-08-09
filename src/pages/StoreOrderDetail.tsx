@@ -4,7 +4,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Trash2, Send, RefreshCw, Upload, Image, Printer, Download } from "lucide-react";
+import { ArrowLeft, Trash2, Send, Upload, Image, Printer, Download } from "lucide-react";
 import { SalesOrderPrintView } from "@/components/store-orders/SalesOrderPrintView";
 import { useSalesOrder, useSalesOrderLines, useUpdateSalesOrder, useDeleteSalesOrder } from "@/hooks/useSalesOrders";
 import { DeleteOrderDialog } from "@/components/store-orders/DeleteOrderDialog";
@@ -34,7 +34,6 @@ export default function StoreOrderDetail() {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [isUploadingProof, setIsUploadingProof] = useState(false);
   const [printMode, setPrintMode] = useState<"print" | "download" | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
