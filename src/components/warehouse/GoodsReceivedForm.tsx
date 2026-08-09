@@ -139,43 +139,13 @@ export function GoodsReceivedForm() {
         throw new Error("Stock update blocked by RLS");
       }
 
-      // Call AutoCount sync edge function
-      const { data: syncData, error: syncError } = await supabase.functions.invoke("sync-grn-to-autocount", {
-        body: {
-          purchaseOrderId: selectedPO,
-          componentId: selectedLineData.component_id,
-          quantity: qty,
-          batchNumber: batchNumber || null,
-          warehouseLocation: warehouseLocation,
-        },
+    },
+    onSuccess: () => {
+      toast({
+        title: "Goods Received",
+        description: "GRN has been recorded.",
       });
 
-      const syncFailed = !!syncError || syncData?.success === false;
-      if (syncFailed) {
-        console.error("AutoCount sync error:", syncError, syncData);
-      }
-
-      return {
-        docNo: syncData?.docNo as string | undefined,
-        syncFailed,
-        syncMessage: (syncData?.error as string | undefined) || syncError?.message,
-      };
-    },
-    onSuccess: (result) => {
-      if (result.syncFailed) {
-        toast({
-          title: "Received locally — AutoCount sync failed",
-          description: result.syncMessage || "GRN saved locally but did not reach AutoCount.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Goods Received",
-          description: result.docNo
-            ? `GRN synced to AutoCount: ${result.docNo}`
-            : "GRN has been recorded and synced to AutoCount.",
-        });
-      }
       
       setSelectedPO("");
       setSelectedLine("");
