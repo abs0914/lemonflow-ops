@@ -106,25 +106,11 @@ export function GoodsReturnForm() {
 
       if (error) throw error;
 
-      // Call AutoCount sync edge function
-      const { error: syncError } = await supabase.functions.invoke("sync-goods-return", {
-        body: {
-          supplierId: selectedSupplier,
-          componentId: selectedComponent.id,
-          quantity: qty,
-          reason,
-          batchNumber: batchNumber || null,
-        },
-      });
-
-      if (syncError) {
-        console.error("AutoCount sync error:", syncError);
-      }
     },
     onSuccess: () => {
       toast({
         title: "Goods Return Recorded",
-        description: "Return note has been created and synced to AutoCount.",
+        description: "Return note has been created.",
       });
       
       setSelectedComponent(null);

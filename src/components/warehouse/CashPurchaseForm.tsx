@@ -111,30 +111,12 @@ export function CashPurchaseForm() {
 
       if (movementError) throw movementError;
 
-      // Sync to AutoCount as Purchase Invoice
-      const { error: syncError } = await supabase.functions.invoke("sync-cash-purchase", {
-        body: {
-          movementId: movement.id,
-          supplierId: selectedSupplier,
-          componentId: selectedComponent.id,
-          quantity: qty,
-          unitPrice: price,
-          batchNumber: batchNumber || null,
-          warehouseLocation: warehouseLocation,
-          notes: notes || null,
-        },
-      });
-
-      if (syncError) {
-        console.error("AutoCount sync error:", syncError);
-      }
-
       return movement;
     },
     onSuccess: () => {
       toast({
         title: "Cash Purchase Recorded",
-        description: "Stock has been received and synced to AutoCount.",
+        description: "Stock has been received.",
       });
 
       // Reset form

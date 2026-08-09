@@ -144,19 +144,6 @@ export function ReceiveFromCashPO({
 
       if (poError) throw poError;
 
-      // Sync to AutoCount
-      await supabase.functions.invoke("sync-cash-purchase", {
-        body: {
-          purchaseOrderId,
-          lines: receiveLines.map((line, index) => ({
-            componentId: line.component_id,
-            quantity: line.quantity,
-            unitCost: line.unit_cost,
-            batchNumber: line.batch_number,
-            lineNumber: index + 1,
-          })),
-        },
-      });
     },
     onSuccess: () => {
       toast.success("Goods received successfully");
