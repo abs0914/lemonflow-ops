@@ -45,7 +45,6 @@ interface InventoryFormData {
   low_stock_threshold: number;
   stock_control: boolean;
   has_batch_no: boolean;
-  sync_to_autocount: boolean;
   visible_in_store_orders: boolean;
 }
 
@@ -53,7 +52,6 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
   const { toast } = useToast();
   const { profile } = useAuth();
   const queryClient = useQueryClient();
-  const [isSyncing, setIsSyncing] = useState(false);
   
   const {
     register,
@@ -66,7 +64,6 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
     defaultValues: {
       stock_control: true,
       has_batch_no: false,
-      sync_to_autocount: true,
       visible_in_store_orders: false,
       unit: "unit",
       item_type: "CONSUMABLE",
@@ -76,7 +73,6 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
     },
   });
 
-  const syncToAutocount = watch("sync_to_autocount");
 
   // Populate form when component changes
   useEffect(() => {
@@ -93,8 +89,7 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
         low_stock_threshold: component.low_stock_threshold ?? 10,
         stock_control: component.stock_control ?? true,
         has_batch_no: component.has_batch_no ?? false,
-        sync_to_autocount: true,
-        visible_in_store_orders: component.visible_in_store_orders ?? false,
+          visible_in_store_orders: component.visible_in_store_orders ?? false,
       });
     }
   }, [component, reset]);
@@ -124,46 +119,6 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
 
       if (updateError) throw updateError;
 
-      // Sync to AutoCount if requested
-      if (data.sync_to_autocount) {
-        setIsSyncing(true);
-        
-        const { error: syncError } = await supabase.functions.invoke(
-          "update-autocount-item",
-          {
-            body: {
-              itemCode: component.autocount_item_code || data.sku,
-              description: data.name,
-              itemGroup: data.item_group,
-              itemType: data.item_type,
-              baseUom: data.unit,
-              stockControl: data.stock_control,
-              hasBatchNo: data.has_batch_no,
-              standardCost: data.cost_per_unit,
-              price: data.price,
-            },
-          }
-        );
-
-        if (syncError) {
-          console.error("AutoCount sync error:", syncError);
-          toast({
-            title: "Item updated but sync failed",
-            description: "Item was updated in inventory but could not be synced to AutoCount",
-            variant: "destructive",
-          });
-        } else {
-          // Update the last synced timestamp
-          await supabase
-            .from("components")
-            .update({
-              last_synced_at: new Date().toISOString(),
-            })
-            .eq("id", component.id);
-        }
-        
-        setIsSyncing(false);
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
@@ -172,9 +127,7 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
       
       toast({
         title: "Item Updated",
-        description: syncToAutocount
-          ? "Item updated and synced to AutoCount successfully"
-          : "Item updated in inventory successfully",
+        description: "Item updated in inventory successfully",
       });
       
       onOpenChange(false);
@@ -200,7 +153,7 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
         <DialogHeader>
           <DialogTitle>Edit Inventory Item</DialogTitle>
           <DialogDescription>
-            Update inventory item details. Optionally sync changes to AutoCount.
+            Update inventory item details.
           </DialogDescription>
         </DialogHeader>
 
@@ -381,20 +334,6 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
             </div>
 
 
-            {profile?.role === "Admin" && (
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="sync_to_autocount"
-                  checked={watch("sync_to_autocount")}
-                  onCheckedChange={(checked) =>
-                    setValue("sync_to_autocount", checked as boolean)
-                  }
-                />
-                <Label htmlFor="sync_to_autocount" className="font-normal cursor-pointer">
-                  Sync changes to AutoCount
-                </Label>
-              </div>
-            )}
           </div>
 
           <DialogFooter>
@@ -402,18 +341,18 @@ export function EditInventoryDialog({ open, onOpenChange, component }: EditInven
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={updateItemMutation.isPending || isSyncing}
+              disabled={updateItemMutation.isPending}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={updateItemMutation.isPending || isSyncing}
+              disabled={updateItemMutation.isPending}
             >
-              {(updateItemMutation.isPending || isSyncing) && (
+              {updateItemMutation.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              {isSyncing ? "Syncing..." : "Update Item"}
+              Update Item
             </Button>
           </DialogFooter>
         </form>
