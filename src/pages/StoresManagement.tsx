@@ -14,7 +14,6 @@ import {
 import { Plus, Search, Pencil, Trash2, Download } from "lucide-react";
 import { useStores, useDeleteStore } from "@/hooks/useStores";
 import { StoreDialog } from "@/components/stores/StoreDialog";
-import { ImportDebtorsDialog } from "@/components/stores/ImportDebtorsDialog";
 import { Store } from "@/types/sales-order";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -185,11 +184,6 @@ export default function StoresManagement() {
         open={showStoreDialog}
         onOpenChange={handleDialogClose}
         store={selectedStore}
-      />
-
-      <ImportDebtorsDialog
-        open={showImportDialog}
-        onOpenChange={setShowImportDialog}
       />
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
