@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
+import { ExportCsvButton, STORE_CSV_COLUMNS } from "@/components/common/ExportCsvButton";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -85,6 +86,13 @@ export default function Stores() {
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
+            <ExportCsvButton
+              table="stores"
+              columns={STORE_CSV_COLUMNS}
+              fileName="stores-export"
+              label="Export CSV"
+              orderBy="store_name"
+            />
             <Button onClick={() => setShowStoreDialog(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Add Store

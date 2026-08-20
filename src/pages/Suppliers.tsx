@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
+import { ExportCsvButton, SUPPLIER_CSV_COLUMNS } from "@/components/common/ExportCsvButton";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -106,6 +107,13 @@ export default function Suppliers() {
           </div>
           {!isMobile && (
             <div className="flex gap-2 flex-wrap">
+              <ExportCsvButton
+                table="suppliers"
+                columns={SUPPLIER_CSV_COLUMNS}
+                fileName="suppliers-export"
+                label="Export CSV"
+                orderBy="company_name"
+              />
               <Button onClick={handleCreate}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add Supplier
