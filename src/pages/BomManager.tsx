@@ -26,12 +26,16 @@ export default function BomManager() {
   return (
     <DashboardLayout>
       <div className="p-4 md:p-8 space-y-6 md:space-y-8">
-        <div>
-          <h1 className="text-2xl md:text-4xl font-bold text-foreground">BOM Manager</h1>
-          <p className="text-muted-foreground mt-2">
-            Manage bills of materials for products and raw material recipes
-          </p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-2xl md:text-4xl font-bold text-foreground">BOM Manager</h1>
+            <p className="text-muted-foreground mt-2">
+              Manage bills of materials for products and raw material recipes
+            </p>
+          </div>
+          <ExportBomsButton />
         </div>
+
 
         <div className="grid gap-6 lg:grid-cols-2">
           <ProductList
