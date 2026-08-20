@@ -4,6 +4,8 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { ProductList, BomParentItem } from "@/components/bom/ProductList";
 import { BomEditor } from "@/components/bom/BomEditor";
+import { ExportBomsButton } from "@/components/bom/ExportBomsButton";
+
 
 export default function BomManager() {
   const { profile, loading } = useAuth();
