@@ -13,7 +13,7 @@ Parent SKU, Parent Name, Parent Type, Parent Unit, Item SKU, Item Name, Item Typ
 ```
 
 - BOMs with no line items still appear as one row with blank item fields, so nothing silently disappears.
-- Rows are grouped by parent (same sort order as the on-screen list) and each parent's lines are followed by its total cost value in the Line Total column of the last... no extra total rows — totals stay computable in Excel.
+- Rows are grouped by parent, in the same sort order as the on-screen list. No total rows are added — totals stay computable in Excel.
 - Toast on success; toast error if the fetch fails or there is nothing to export.
 
 ## Technical notes
